@@ -219,8 +219,8 @@
       background: #1a1a2e;
       width: 90%;
       max-width: 600px;
-      height: 80%;
-      max-height: 500px;
+      min-height: 400px;
+      max-height: 80vh;
       border-radius: 12px;
       position: relative;
       display: flex;
@@ -236,38 +236,135 @@
       font-size: 20px;
       cursor: pointer;
       padding: 4px 8px;
+      z-index: 10;
     }
     #review-close:hover {
       color: white;
+    }
+    #review-header {
+      padding: 16px 20px;
+      text-align: center;
+      color: #888;
+      font-size: 14px;
     }
     #review-container {
       flex: 1;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 40px;
+      padding: 20px 40px 40px;
     }
-    #review-placeholder {
+    .review-screen {
       text-align: center;
-      color: #666;
+      width: 100%;
     }
-    #review-placeholder i {
+    .review-screen i {
       font-size: 48px;
       color: #6c5ce7;
       margin-bottom: 20px;
     }
-    #review-placeholder h2 {
+    .review-screen h2 {
       color: white;
       margin-bottom: 10px;
       font-weight: 500;
     }
-    #review-placeholder p {
+    .review-screen p {
       color: #888;
       font-size: 14px;
+      margin-bottom: 8px;
     }
-    #review-count {
-      margin-top: 16px;
-      color: #6c5ce7;
+    #start-review-btn, #close-review-btn {
+      background: #6c5ce7;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #start-review-btn:hover, #close-review-btn:hover {
+      background: #5b4cdb;
+    }
+    #review-prompt {
+      background: #252542;
+      padding: 30px;
+      border-radius: 8px;
+      color: white;
+      font-size: 18px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      min-height: 80px;
+    }
+    #show-answer-btn {
+      background: #4a4d50;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #show-answer-btn:hover {
+      background: #5a5d60;
+    }
+    #review-answer {
+      background: #1e3a2f;
+      padding: 30px;
+      border-radius: 8px;
+      color: #a8e6cf;
+      font-size: 16px;
+      line-height: 1.5;
+      margin: 20px 0;
+      border-left: 3px solid #27ae60;
+    }
+    #rating-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .rating-btn {
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 70px;
+    }
+    .rating-btn .rating-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .rating-btn .rating-interval {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    .rating-btn.again {
+      background: #e74c3c;
+      color: white;
+    }
+    .rating-btn.again:hover { background: #c0392b; }
+    .rating-btn.hard {
+      background: #e67e22;
+      color: white;
+    }
+    .rating-btn.hard:hover { background: #d35400; }
+    .rating-btn.good {
+      background: #27ae60;
+      color: white;
+    }
+    .rating-btn.good:hover { background: #1e8449; }
+    .rating-btn.easy {
+      background: #3498db;
+      color: white;
+    }
+    .rating-btn.easy:hover { background: #2980b9; }
+    #review-complete i {
+      color: #27ae60;
     }
     .prompt-card {
       background: #f8f9fa;
@@ -394,12 +491,54 @@
   <div id="review-modal">
     <div id="review-modal-content">
       <button id="review-close"><i class="fa-solid fa-xmark"></i></button>
+      <div id="review-header">
+        <span id="review-progress"></span>
+      </div>
       <div id="review-container">
-        <div id="review-placeholder">
+        <!-- Start screen -->
+        <div id="review-start" class="review-screen">
           <i class="fa-solid fa-graduation-cap"></i>
-          <h2>Review Mode</h2>
-          <p>SRS flashcard review coming soon</p>
-          <p id="review-count"></p>
+          <h2>Ready to Review</h2>
+          <p id="review-summary"></p>
+          <button id="start-review-btn">Start Review</button>
+        </div>
+        <!-- Card screen -->
+        <div id="review-card" class="review-screen" style="display:none;">
+          <div id="review-prompt"></div>
+          <button id="show-answer-btn">Show Answer</button>
+          <div id="review-answer" style="display:none;"></div>
+          <div id="rating-buttons" style="display:none;">
+            <button class="rating-btn again" data-rating="1">
+              <span class="rating-label">Again</span>
+              <span class="rating-interval" id="interval-again"></span>
+            </button>
+            <button class="rating-btn hard" data-rating="2">
+              <span class="rating-label">Hard</span>
+              <span class="rating-interval" id="interval-hard"></span>
+            </button>
+            <button class="rating-btn good" data-rating="3">
+              <span class="rating-label">Good</span>
+              <span class="rating-interval" id="interval-good"></span>
+            </button>
+            <button class="rating-btn easy" data-rating="4">
+              <span class="rating-label">Easy</span>
+              <span class="rating-interval" id="interval-easy"></span>
+            </button>
+          </div>
+        </div>
+        <!-- Complete screen -->
+        <div id="review-complete" class="review-screen" style="display:none;">
+          <i class="fa-solid fa-check-circle"></i>
+          <h2>Session Complete!</h2>
+          <p id="review-stats"></p>
+          <button id="close-review-btn">Close</button>
+        </div>
+        <!-- Empty state -->
+        <div id="review-empty" class="review-screen" style="display:none;">
+          <i class="fa-solid fa-inbox"></i>
+          <h2>All Caught Up!</h2>
+          <p>No cards due for review.</p>
+          <p id="next-due-info"></p>
         </div>
       </div>
     </div>
@@ -424,7 +563,252 @@
     const reviewBtn = document.getElementById('review-btn');
     const reviewModal = document.getElementById('review-modal');
     const reviewClose = document.getElementById('review-close');
-    const reviewCount = document.getElementById('review-count');
+
+    // Review UI elements
+    const reviewStartScreen = document.getElementById('review-start');
+    const reviewCardScreen = document.getElementById('review-card');
+    const reviewCompleteScreen = document.getElementById('review-complete');
+    const reviewEmptyScreen = document.getElementById('review-empty');
+    const reviewProgress = document.getElementById('review-progress');
+    const reviewSummary = document.getElementById('review-summary');
+    const reviewPromptEl = document.getElementById('review-prompt');
+    const reviewAnswerEl = document.getElementById('review-answer');
+    const showAnswerBtn = document.getElementById('show-answer-btn');
+    const ratingButtons = document.getElementById('rating-buttons');
+    const startReviewBtn = document.getElementById('start-review-btn');
+    const closeReviewBtn = document.getElementById('close-review-btn');
+    const reviewStats = document.getElementById('review-stats');
+    const nextDueInfo = document.getElementById('next-due-info');
+
+    // Review session state
+    let reviewQueue = [];
+    let currentCardIndex = 0;
+    let sessionStats = { reviewed: 0, again: 0, hard: 0, good: 0, easy: 0 };
+
+    // ========== FSRS Algorithm ==========
+    const FSRS = {
+      requestRetention: 0.9,
+      maxInterval: 365,
+      w: [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61],
+
+      initSRS() {
+        return {
+          stability: 0,
+          difficulty: 5,
+          due: Date.now(),
+          lastReview: null,
+          reps: 0,
+          lapses: 0,
+          state: 'new'
+        };
+      },
+
+      getRetrievability(srs) {
+        if (!srs.lastReview || srs.stability === 0) return 0;
+        const elapsedDays = (Date.now() - srs.lastReview) / (1000 * 60 * 60 * 24);
+        return Math.exp(-elapsedDays / srs.stability);
+      },
+
+      calculateInterval(stability) {
+        const interval = stability * (Math.log(this.requestRetention) / Math.log(0.9));
+        return Math.min(Math.max(Math.round(interval), 1), this.maxInterval);
+      },
+
+      getNextStability(srs, rating, retrievability) {
+        const w = this.w;
+        if (srs.state === 'new' || srs.reps === 0) {
+          // Initial stability based on rating
+          const initialStabilities = [0.4, 0.6, 2.4, 5.8];
+          return initialStabilities[rating - 1] || 1;
+        }
+
+        const s = srs.stability;
+        const d = srs.difficulty;
+
+        if (rating === 1) {
+          // Again - lapse
+          return Math.max(0.1, s * w[11]);
+        }
+
+        // Success - calculate new stability
+        const hardPenalty = rating === 2 ? w[15] : 1;
+        const easyBonus = rating === 4 ? w[16] : 1;
+        const newS = s * (1 + Math.exp(w[8]) * (11 - d) * Math.pow(s, -w[9]) *
+                    (Math.exp((1 - retrievability) * w[10]) - 1) * hardPenalty * easyBonus);
+        return Math.min(newS, this.maxInterval);
+      },
+
+      getNextDifficulty(difficulty, rating) {
+        const w = this.w;
+        const newD = difficulty - w[6] * (rating - 3);
+        return Math.min(Math.max(newD, 1), 10);
+      },
+
+      review(srs, rating) {
+        const now = Date.now();
+        const retrievability = this.getRetrievability(srs);
+        const newStability = this.getNextStability(srs, rating, retrievability);
+        const newDifficulty = this.getNextDifficulty(srs.difficulty, rating);
+        const intervalDays = this.calculateInterval(newStability);
+
+        return {
+          stability: newStability,
+          difficulty: newDifficulty,
+          due: now + intervalDays * 24 * 60 * 60 * 1000,
+          lastReview: now,
+          reps: srs.reps + 1,
+          lapses: rating === 1 ? srs.lapses + 1 : srs.lapses,
+          state: rating === 1 ? 'relearning' : 'review'
+        };
+      },
+
+      predictIntervals(srs) {
+        const intervals = {};
+        for (let rating = 1; rating <= 4; rating++) {
+          const newSRS = this.review({ ...srs }, rating);
+          const days = Math.round((newSRS.due - Date.now()) / (1000 * 60 * 60 * 24));
+          intervals[rating] = this.formatInterval(days);
+        }
+        return intervals;
+      },
+
+      formatInterval(days) {
+        if (days < 1) {
+          const mins = Math.max(1, Math.round(days * 24 * 60));
+          return mins < 60 ? `${mins}m` : `${Math.round(mins / 60)}h`;
+        }
+        if (days < 30) return `${days}d`;
+        if (days < 365) return `${Math.round(days / 30)}mo`;
+        return `${Math.round(days / 365)}y`;
+      }
+    };
+
+    // ========== Review Session Functions ==========
+    function getReviewableCards() {
+      const now = Date.now();
+      return prompts.filter(p => {
+        if (!p.prompt) return false; // Skip cards without prompts
+        if (!p.srs) return true; // New cards
+        return p.srs.due <= now; // Due cards
+      });
+    }
+
+    function getNewCards() {
+      return prompts.filter(p => p.prompt && !p.srs);
+    }
+
+    function getDueCards() {
+      const now = Date.now();
+      return prompts.filter(p => p.prompt && p.srs && p.srs.due <= now);
+    }
+
+    function shuffleArray(arr) {
+      const shuffled = [...arr];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    function showScreen(screen) {
+      [reviewStartScreen, reviewCardScreen, reviewCompleteScreen, reviewEmptyScreen]
+        .forEach(s => s.style.display = 'none');
+      screen.style.display = 'block';
+    }
+
+    function openReviewModal() {
+      const reviewable = getReviewableCards();
+      const newCards = getNewCards();
+      const dueCards = getDueCards();
+
+      if (reviewable.length === 0) {
+        // Find next due card
+        const futureDue = prompts
+          .filter(p => p.prompt && p.srs)
+          .sort((a, b) => a.srs.due - b.srs.due)[0];
+
+        if (futureDue) {
+          const dueIn = Math.ceil((futureDue.srs.due - Date.now()) / (1000 * 60 * 60 * 24));
+          nextDueInfo.textContent = `Next card due in ${dueIn} day${dueIn !== 1 ? 's' : ''}`;
+        } else {
+          nextDueInfo.textContent = 'Add some flashcards to get started!';
+        }
+        showScreen(reviewEmptyScreen);
+      } else {
+        reviewSummary.textContent = `${reviewable.length} card${reviewable.length !== 1 ? 's' : ''} to review (${newCards.length} new, ${dueCards.length} due)`;
+        showScreen(reviewStartScreen);
+      }
+
+      reviewProgress.textContent = '';
+      reviewModal.classList.add('show');
+    }
+
+    function startReviewSession() {
+      reviewQueue = shuffleArray(getReviewableCards());
+      currentCardIndex = 0;
+      sessionStats = { reviewed: 0, again: 0, hard: 0, good: 0, easy: 0 };
+      showCurrentCard();
+    }
+
+    function showCurrentCard() {
+      if (currentCardIndex >= reviewQueue.length) {
+        endSession();
+        return;
+      }
+
+      const card = reviewQueue[currentCardIndex];
+      showScreen(reviewCardScreen);
+      reviewProgress.textContent = `${currentCardIndex + 1} of ${reviewQueue.length}`;
+
+      // Initialize SRS if new card
+      if (!card.srs) {
+        card.srs = FSRS.initSRS();
+      }
+
+      // Show prompt
+      reviewPromptEl.textContent = card.prompt || '(No prompt)';
+      reviewAnswerEl.textContent = card.answer || '(No answer)';
+      reviewAnswerEl.style.display = 'none';
+      showAnswerBtn.style.display = 'block';
+      ratingButtons.style.display = 'none';
+
+      // Update interval predictions
+      const intervals = FSRS.predictIntervals(card.srs);
+      document.getElementById('interval-again').textContent = intervals[1];
+      document.getElementById('interval-hard').textContent = intervals[2];
+      document.getElementById('interval-good').textContent = intervals[3];
+      document.getElementById('interval-easy').textContent = intervals[4];
+    }
+
+    function revealAnswer() {
+      showAnswerBtn.style.display = 'none';
+      reviewAnswerEl.style.display = 'block';
+      ratingButtons.style.display = 'flex';
+    }
+
+    function rateCard(rating) {
+      const card = reviewQueue[currentCardIndex];
+      card.srs = FSRS.review(card.srs, rating);
+
+      // Update stats
+      sessionStats.reviewed++;
+      if (rating === 1) sessionStats.again++;
+      else if (rating === 2) sessionStats.hard++;
+      else if (rating === 3) sessionStats.good++;
+      else if (rating === 4) sessionStats.easy++;
+
+      // Save and move to next
+      savePrompts();
+      currentCardIndex++;
+      showCurrentCard();
+    }
+
+    function endSession() {
+      showScreen(reviewCompleteScreen);
+      reviewProgress.textContent = 'Complete';
+      reviewStats.textContent = `Reviewed ${sessionStats.reviewed} card${sessionStats.reviewed !== 1 ? 's' : ''}`;
+    }
 
     // Load prompts from server
     async function loadPrompts() {
@@ -766,12 +1150,13 @@
     });
 
     // Review modal
-    reviewBtn.addEventListener('click', () => {
-      reviewCount.textContent = `${prompts.length} flashcard${prompts.length !== 1 ? 's' : ''} available`;
-      reviewModal.classList.add('show');
-    });
+    reviewBtn.addEventListener('click', openReviewModal);
 
     reviewClose.addEventListener('click', () => {
+      reviewModal.classList.remove('show');
+    });
+
+    closeReviewBtn.addEventListener('click', () => {
       reviewModal.classList.remove('show');
     });
 
@@ -779,6 +1164,17 @@
       if (e.target === reviewModal) {
         reviewModal.classList.remove('show');
       }
+    });
+
+    startReviewBtn.addEventListener('click', startReviewSession);
+    showAnswerBtn.addEventListener('click', revealAnswer);
+
+    // Rating button handlers
+    document.querySelectorAll('.rating-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rating = parseInt(btn.dataset.rating);
+        rateCard(rating);
+      });
     });
 
     async function loadPDF() {
