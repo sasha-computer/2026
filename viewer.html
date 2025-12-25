@@ -80,6 +80,7 @@
       background: white;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       position: relative;
+      overflow: hidden;
     }
     canvas {
       display: block;
@@ -114,7 +115,19 @@
       position: absolute;
       top: 0;
       left: 0;
+      right: 0;
+      bottom: 0;
       z-index: 2;
+      overflow: hidden;
+      line-height: 1;
+    }
+    .textLayer span {
+      position: absolute;
+      white-space: pre;
+      transform-origin: 0 0;
+    }
+    .textLayer span::selection {
+      background: rgba(0, 0, 255, 0.3);
     }
     #loading {
       color: white;
@@ -328,6 +341,17 @@
       line-height: 1.5;
       margin-bottom: 20px;
       min-height: 80px;
+      text-align: left;
+    }
+    #review-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #show-answer-wrapper {
+      width: 100%;
+      padding: 0 30px;
+      text-align: center;
     }
     #show-answer-btn {
       background: #4a4d50;
@@ -350,6 +374,7 @@
       line-height: 1.5;
       margin: 20px 0;
       border-left: 3px solid #27ae60;
+      text-align: left;
     }
     #rating-buttons {
       display: flex;
@@ -542,7 +567,9 @@
         <!-- Card screen -->
         <div id="review-card" class="review-screen" style="display:none;">
           <div id="review-prompt"></div>
-          <button id="show-answer-btn">Show Answer</button>
+          <div id="show-answer-wrapper">
+            <button id="show-answer-btn">Show Answer</button>
+          </div>
           <div id="review-answer" style="display:none;"></div>
           <div id="rating-buttons" style="display:none;">
             <button class="rating-btn again" data-rating="1">
@@ -808,7 +835,7 @@
       reviewPromptEl.textContent = card.prompt || '(No prompt)';
       reviewAnswerEl.textContent = card.answer || '(No answer)';
       reviewAnswerEl.style.display = 'none';
-      showAnswerBtn.style.display = 'block';
+      showAnswerBtn.parentElement.style.display = 'block';
       ratingButtons.style.display = 'none';
 
       // Update interval predictions
@@ -820,7 +847,7 @@
     }
 
     function revealAnswer() {
-      showAnswerBtn.style.display = 'none';
+      showAnswerBtn.parentElement.style.display = 'none';
       reviewAnswerEl.style.display = 'block';
       ratingButtons.style.display = 'flex';
     }
@@ -966,6 +993,9 @@
       const wrapper = document.getElementById(`page-${pageNum}`);
       if (!wrapper) return;
 
+      // Update wrapper dimensions to match actual page size
+      wrapper.style.width = Math.floor(viewport.width) + 'px';
+      wrapper.style.height = Math.floor(viewport.height) + 'px';
       wrapper.style.background = 'white';
       wrapper.innerHTML = '';
 
@@ -987,8 +1017,6 @@
       // Text layer
       const textLayerDiv = document.createElement('div');
       textLayerDiv.className = 'textLayer';
-      textLayerDiv.style.width = Math.floor(viewport.width) + 'px';
-      textLayerDiv.style.height = Math.floor(viewport.height) + 'px';
       wrapper.appendChild(textLayerDiv);
 
       // Render canvas
@@ -1136,15 +1164,11 @@
       renderedPages.clear();
       container.innerHTML = '';
 
-      // Get first page to determine viewport dimensions at current scale
-      const firstPage = await pdfDoc.getPage(1);
-      const baseViewport = firstPage.getViewport({ scale });
-
-      // Create placeholders for all pages
+      // Create placeholders for all pages with actual dimensions
       for (let i = 1; i <= pdfDoc.numPages; i++) {
-        // For simplicity, use first page dimensions for all placeholders
-        // (pages will adjust when rendered if different)
-        const row = createPagePlaceholder(i, baseViewport);
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale });
+        const row = createPagePlaceholder(i, viewport);
         container.appendChild(row);
       }
 
