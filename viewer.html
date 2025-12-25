@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Viewer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="/pdfjs-css/pdf_viewer.css">
   <style>
     * {
@@ -123,25 +124,150 @@
       left: 50%;
       transform: translate(-50%, -50%);
     }
-    #clear-all-btn {
+    #bottom-bar {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: #e74c3c;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      z-index: 1000;
+    }
+    #review-btn {
+      background: #6c5ce7;
       color: white;
       border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
+      padding: 10px 18px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 500;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      z-index: 1000;
-      opacity: 0.7;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    #clear-all-btn:hover {
-      opacity: 1;
-      background: #c0392b;
+    #review-btn:hover {
+      background: #5b4cdb;
+    }
+    #menu-container {
+      position: relative;
+    }
+    #menu-btn {
+      background: #4a4d50;
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    #menu-btn:hover {
+      background: #5a5d60;
+    }
+    #menu-dropdown {
+      display: none;
+      position: absolute;
+      bottom: 50px;
+      right: 0;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      min-width: 150px;
+      overflow: hidden;
+    }
+    #menu-dropdown.show {
+      display: block;
+    }
+    #menu-dropdown button {
+      width: 100%;
+      background: white;
+      color: #333;
+      border: none;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #menu-dropdown button:hover {
+      background: #f5f5f5;
+    }
+    #menu-dropdown #clear-all-btn {
+      color: #e74c3c;
+    }
+    #review-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    #review-modal.show {
+      display: flex;
+    }
+    #review-modal-content {
+      background: #1a1a2e;
+      width: 90%;
+      max-width: 600px;
+      height: 80%;
+      max-height: 500px;
+      border-radius: 12px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    #review-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    #review-close:hover {
+      color: white;
+    }
+    #review-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+    #review-placeholder {
+      text-align: center;
+      color: #666;
+    }
+    #review-placeholder i {
+      font-size: 48px;
+      color: #6c5ce7;
+      margin-bottom: 20px;
+    }
+    #review-placeholder h2 {
+      color: white;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    #review-placeholder p {
+      color: #888;
+      font-size: 14px;
+    }
+    #review-count {
+      margin-top: 16px;
+      color: #6c5ce7;
     }
     .prompt-card {
       background: #f8f9fa;
@@ -153,12 +279,24 @@
       font-size: 12px;
       position: absolute;
       right: 0;
+      display: flex;
+      gap: 8px;
     }
     .prompt-card.right-side {
       border-left: none;
       border-right: 3px solid #6c5ce7;
       right: auto;
       left: 0;
+    }
+    .prompt-icon {
+      color: #6c5ce7;
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .prompt-fields {
+      flex: 1;
+      min-width: 0;
     }
     /* Anchor text display (commented out for now)
     .prompt-anchor {
@@ -243,7 +381,29 @@
   <div id="viewer-container">
     <div id="loading">Loading PDF...</div>
   </div>
-  <button id="clear-all-btn">Clear All</button>
+  <div id="bottom-bar">
+    <button id="review-btn"><i class="fa-solid fa-graduation-cap"></i> Review</button>
+    <div id="menu-container">
+      <button id="menu-btn"><i class="fa-solid fa-bars"></i></button>
+      <div id="menu-dropdown">
+        <button id="clear-all-btn"><i class="fa-solid fa-trash"></i> Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="review-modal">
+    <div id="review-modal-content">
+      <button id="review-close"><i class="fa-solid fa-xmark"></i></button>
+      <div id="review-container">
+        <div id="review-placeholder">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <h2>Review Mode</h2>
+          <p>SRS flashcard review coming soon</p>
+          <p id="review-count"></p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="/pdfjs/pdf.min.mjs" type="module"></script>
   <script type="module">
@@ -259,6 +419,12 @@
     const pageInfo = document.getElementById('page-info');
     const loading = document.getElementById('loading');
     const clearAllBtn = document.getElementById('clear-all-btn');
+    const menuBtn = document.getElementById('menu-btn');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    const reviewBtn = document.getElementById('review-btn');
+    const reviewModal = document.getElementById('review-modal');
+    const reviewClose = document.getElementById('review-close');
+    const reviewCount = document.getElementById('review-count');
 
     // Load prompts from server
     async function loadPrompts() {
@@ -447,10 +613,18 @@
           renderAllPages();
         });
 
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-note-sticky prompt-icon';
+
+        const fieldsContainer = document.createElement('div');
+        fieldsContainer.className = 'prompt-fields';
+        fieldsContainer.appendChild(promptField);
+        fieldsContainer.appendChild(answerField);
+
         card.appendChild(deleteBtn);
         // card.appendChild(anchorDiv);
-        card.appendChild(promptField);
-        card.appendChild(answerField);
+        card.appendChild(icon);
+        card.appendChild(fieldsContainer);
 
         // Position in closest margin
         if (p.xCenter < 0.5) {
@@ -568,6 +742,16 @@
       window.getSelection().removeAllRanges();
     });
 
+    // Menu toggle
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuDropdown.classList.toggle('show');
+    });
+
+    document.addEventListener('click', () => {
+      menuDropdown.classList.remove('show');
+    });
+
     // Clear all prompts
     clearAllBtn.addEventListener('click', async () => {
       if (!confirm('Clear all prompts for this PDF?')) return;
@@ -577,7 +761,24 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompts: [] })
       });
+      menuDropdown.classList.remove('show');
       renderAllPages();
+    });
+
+    // Review modal
+    reviewBtn.addEventListener('click', () => {
+      reviewCount.textContent = `${prompts.length} flashcard${prompts.length !== 1 ? 's' : ''} available`;
+      reviewModal.classList.add('show');
+    });
+
+    reviewClose.addEventListener('click', () => {
+      reviewModal.classList.remove('show');
+    });
+
+    reviewModal.addEventListener('click', (e) => {
+      if (e.target === reviewModal) {
+        reviewModal.classList.remove('show');
+      }
     });
 
     async function loadPDF() {
