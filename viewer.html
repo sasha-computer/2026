@@ -160,6 +160,7 @@
       right: auto;
       left: 0;
     }
+    /* Anchor text display (commented out for now)
     .prompt-anchor {
       color: #888;
       font-size: 10px;
@@ -179,38 +180,42 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
+    */
     .prompt-field {
       width: 100%;
-      min-height: 40px;
-      border: 1px solid #ddd;
-      border-radius: 3px;
-      padding: 6px;
+      height: 18px;
+      border: none;
+      padding: 2px 0;
       font-size: 12px;
+      line-height: 14px;
       font-family: inherit;
-      resize: vertical;
-      background: white;
+      resize: none;
+      background: transparent;
       color: #333;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #eee;
+      overflow: hidden;
     }
     .prompt-field:focus {
       outline: none;
-      border-color: #6c5ce7;
+    }
+    .prompt-field::placeholder,
+    .answer-field::placeholder {
+      opacity: 0.5;
     }
     .answer-field {
       width: 100%;
-      min-height: 50px;
-      border: 1px solid #ddd;
-      border-radius: 3px;
-      padding: 6px;
+      min-height: 24px;
+      border: none;
+      padding: 2px 0;
       font-size: 12px;
       font-family: inherit;
-      resize: vertical;
-      background: white;
+      resize: none;
+      background: transparent;
       color: #333;
     }
     .answer-field:focus {
       outline: none;
-      border-color: #00b894;
     }
     .prompt-delete {
       position: absolute;
@@ -398,31 +403,34 @@
         const topY = p.rects.length > 0 ? p.rects[0].top * scale : 0;
         card.style.top = topY + 'px';
 
-        const anchorDiv = document.createElement('div');
-        anchorDiv.className = 'prompt-anchor';
-        anchorDiv.textContent = p.anchorText.length > 60 ? p.anchorText.substring(0, 60) + '...' : p.anchorText;
-
-        const promptLabel = document.createElement('div');
-        promptLabel.className = 'prompt-label';
-        promptLabel.textContent = 'Prompt';
+        // Anchor text display (commented out for now)
+        // const anchorDiv = document.createElement('div');
+        // anchorDiv.className = 'prompt-anchor';
+        // anchorDiv.textContent = p.anchorText.length > 60 ? p.anchorText.substring(0, 60) + '...' : p.anchorText;
 
         const promptField = document.createElement('textarea');
         promptField.className = 'prompt-field';
-        promptField.placeholder = 'Enter your question...';
+        promptField.placeholder = 'Type a prompt here';
         promptField.value = p.prompt || '';
+        promptField.rows = 1;
+
+        const autoResize = (el) => {
+          el.style.height = '18px';
+          el.style.height = el.scrollHeight + 'px';
+        };
+
         promptField.addEventListener('input', () => {
           p.prompt = promptField.value;
           savePrompts();
+          autoResize(promptField);
         });
 
-        const answerLabel = document.createElement('div');
-        answerLabel.className = 'prompt-label';
-        answerLabel.style.color = '#00b894';
-        answerLabel.textContent = 'Answer';
+        // Initial resize if there's existing content
+        if (p.prompt) setTimeout(() => autoResize(promptField), 0);
 
         const answerField = document.createElement('textarea');
         answerField.className = 'answer-field';
-        answerField.placeholder = 'Enter the answer...';
+        answerField.placeholder = 'Type a response here';
         answerField.value = p.answer || '';
         answerField.addEventListener('input', () => {
           p.answer = answerField.value;
@@ -440,10 +448,8 @@
         });
 
         card.appendChild(deleteBtn);
-        card.appendChild(anchorDiv);
-        card.appendChild(promptLabel);
+        // card.appendChild(anchorDiv);
         card.appendChild(promptField);
-        card.appendChild(answerLabel);
         card.appendChild(answerField);
 
         // Position in closest margin
