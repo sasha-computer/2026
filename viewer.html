@@ -146,9 +146,42 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      position: relative;
     }
     #review-btn:hover {
       background: #5b4cdb;
+    }
+    #review-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #ff6b6b;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    #jump-latest {
+      background: #4a4d50;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #jump-latest:hover {
+      background: #5a5d60;
     }
     #menu-container {
       position: relative;
@@ -474,12 +507,16 @@
     <button id="zoom-in">+</button>
     <span id="page-info">Loading...</span>
     <button id="fit-width">Fit Width</button>
+    <button id="jump-latest" style="display:none;"><i class="fa-solid fa-forward"></i> Latest</button>
   </div>
   <div id="viewer-container">
     <div id="loading">Loading PDF...</div>
   </div>
   <div id="bottom-bar">
-    <button id="review-btn"><i class="fa-solid fa-graduation-cap"></i> Review</button>
+    <button id="review-btn">
+      <i class="fa-solid fa-graduation-cap"></i> Review
+      <span id="review-badge" style="display:none;"></span>
+    </button>
     <div id="menu-container">
       <button id="menu-btn"><i class="fa-solid fa-bars"></i></button>
       <div id="menu-dropdown">
@@ -579,6 +616,7 @@
     const closeReviewBtn = document.getElementById('close-review-btn');
     const reviewStats = document.getElementById('review-stats');
     const nextDueInfo = document.getElementById('next-due-info');
+    const reviewBadge = document.getElementById('review-badge');
 
     // Review session state
     let reviewQueue = [];
@@ -808,7 +846,50 @@
       showScreen(reviewCompleteScreen);
       reviewProgress.textContent = 'Complete';
       reviewStats.textContent = `Reviewed ${sessionStats.reviewed} card${sessionStats.reviewed !== 1 ? 's' : ''}`;
+      updateBadge();
     }
+
+    function updateBadge() {
+      const count = getReviewableCards().length;
+      if (count > 0) {
+        reviewBadge.textContent = count > 99 ? '99+' : count;
+        reviewBadge.style.display = 'flex';
+      } else {
+        reviewBadge.style.display = 'none';
+      }
+    }
+
+    // Jump to latest flashcard
+    const jumpLatestBtn = document.getElementById('jump-latest');
+
+    function updateJumpButton() {
+      if (prompts.length > 0) {
+        jumpLatestBtn.style.display = 'inline-flex';
+      } else {
+        jumpLatestBtn.style.display = 'none';
+      }
+    }
+
+    function jumpToLatest() {
+      if (prompts.length === 0) return;
+
+      // Find the most recently created prompt
+      const latestPrompt = prompts.reduce((latest, p) =>
+        (p.createdAt || 0) > (latest.createdAt || 0) ? p : latest
+      , prompts[0]);
+
+      const pageNum = latestPrompt.pageNumber;
+      const row = document.getElementById(`row-${pageNum}`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Ensure the page is rendered
+        if (!renderedPages.has(pageNum)) {
+          renderPageContent(pageNum);
+        }
+      }
+    }
+
+    jumpLatestBtn.addEventListener('click', jumpToLatest);
 
     // Load prompts from server
     async function loadPrompts() {
@@ -842,14 +923,15 @@
       return Math.random().toString(36).substr(2, 9);
     }
 
-    async function renderPage(page, pageNum) {
-      const viewport = page.getViewport({ scale });
-      const pixelRatio = window.devicePixelRatio || 1;
+    // Track rendered pages
+    const renderedPages = new Set();
+    let pageObserver = null;
 
-      // Create page row with margins
+    function createPagePlaceholder(pageNum, viewport) {
       const row = document.createElement('div');
       row.className = 'page-row';
       row.id = `row-${pageNum}`;
+      row.dataset.pageNum = pageNum;
 
       const leftMargin = document.createElement('div');
       leftMargin.className = 'margin-column margin-left';
@@ -864,6 +946,28 @@
       wrapper.id = `page-${pageNum}`;
       wrapper.style.width = Math.floor(viewport.width) + 'px';
       wrapper.style.height = Math.floor(viewport.height) + 'px';
+      wrapper.style.background = '#e0e0e0';
+
+      row.appendChild(leftMargin);
+      row.appendChild(wrapper);
+      row.appendChild(rightMargin);
+
+      return row;
+    }
+
+    async function renderPageContent(pageNum) {
+      if (renderedPages.has(pageNum)) return;
+      renderedPages.add(pageNum);
+
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale });
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      const wrapper = document.getElementById(`page-${pageNum}`);
+      if (!wrapper) return;
+
+      wrapper.style.background = 'white';
+      wrapper.innerHTML = '';
 
       // Canvas layer
       const canvas = document.createElement('canvas');
@@ -886,11 +990,6 @@
       textLayerDiv.style.width = Math.floor(viewport.width) + 'px';
       textLayerDiv.style.height = Math.floor(viewport.height) + 'px';
       wrapper.appendChild(textLayerDiv);
-
-      row.appendChild(leftMargin);
-      row.appendChild(wrapper);
-      row.appendChild(rightMargin);
-      container.appendChild(row);
 
       // Render canvas
       context.scale(pixelRatio, pixelRatio);
@@ -995,6 +1094,7 @@
           prompts = prompts.filter(x => x.id !== p.id);
           savePrompts();
           renderAllPages();
+          updateBadge();
         });
 
         const icon = document.createElement('i');
@@ -1019,13 +1119,65 @@
       }
     }
 
-    async function renderAllPages() {
-      container.innerHTML = '';
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        await renderPage(page, i);
+    async function renderAllPages(preserveScroll = false) {
+      // Store scroll position if preserving
+      let scrollRatio = 0;
+      let scrollTop = 0;
+      if (preserveScroll && container.scrollHeight > 0) {
+        scrollTop = container.scrollTop;
+        scrollRatio = scrollTop / container.scrollHeight;
       }
+
+      // Clean up old observer
+      if (pageObserver) {
+        pageObserver.disconnect();
+        pageObserver = null;
+      }
+      renderedPages.clear();
+      container.innerHTML = '';
+
+      // Get first page to determine viewport dimensions at current scale
+      const firstPage = await pdfDoc.getPage(1);
+      const baseViewport = firstPage.getViewport({ scale });
+
+      // Create placeholders for all pages
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        // For simplicity, use first page dimensions for all placeholders
+        // (pages will adjust when rendered if different)
+        const row = createPagePlaceholder(i, baseViewport);
+        container.appendChild(row);
+      }
+
       pageInfo.textContent = `${pdfDoc.numPages} page${pdfDoc.numPages > 1 ? 's' : ''}`;
+
+      // Restore scroll position
+      if (preserveScroll && scrollRatio > 0) {
+        container.scrollTop = scrollRatio * container.scrollHeight;
+      }
+
+      // Set up IntersectionObserver for lazy loading
+      pageObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const pageNum = parseInt(entry.target.dataset.pageNum);
+            if (pageNum && !renderedPages.has(pageNum)) {
+              renderPageContent(pageNum);
+            }
+          }
+        }
+      }, {
+        root: container,
+        rootMargin: '200px 0px', // Preload pages 200px before they're visible
+        threshold: 0
+      });
+
+      // Observe all page rows
+      document.querySelectorAll('.page-row').forEach(row => {
+        pageObserver.observe(row);
+      });
+
+      // Update jump button visibility
+      updateJumpButton();
     }
 
     // Get selection rects relative to page
@@ -1117,6 +1269,8 @@
 
       prompts.push(prompt);
       savePrompts();
+      updateBadge();
+      updateJumpButton();
 
       // Re-render this page's anchors and prompts
       renderAnchorsForPage(pageNum, viewport);
@@ -1147,6 +1301,7 @@
       });
       menuDropdown.classList.remove('show');
       renderAllPages();
+      updateBadge();
     });
 
     // Review modal
@@ -1183,6 +1338,7 @@
         pdfDoc = await pdfjsLib.getDocument('/pdf').promise;
         loading.style.display = 'none';
         await renderAllPages();
+        updateBadge();
       } catch (error) {
         loading.textContent = 'Error loading PDF: ' + error.message;
         console.error(error);
@@ -1191,12 +1347,12 @@
 
     document.getElementById('zoom-in').addEventListener('click', () => {
       scale *= 1.25;
-      renderAllPages();
+      renderAllPages(true); // Preserve scroll
     });
 
     document.getElementById('zoom-out').addEventListener('click', () => {
       scale /= 1.25;
-      renderAllPages();
+      renderAllPages(true); // Preserve scroll
     });
 
     document.getElementById('fit-width').addEventListener('click', async () => {
@@ -1206,7 +1362,7 @@
       // Account for margins (220px each side + gaps)
       const availableWidth = container.clientWidth - 220 - 220 - 32 - 40;
       scale = availableWidth / viewport.width;
-      renderAllPages();
+      renderAllPages(true); // Preserve scroll
     });
 
     loadPDF();
