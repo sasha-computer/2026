@@ -1071,14 +1071,31 @@
 
       const pagePrompts = prompts.filter(p => p.pageNumber === pageNum);
 
-      for (const p of pagePrompts) {
+      // Sort by Y position
+      const sortedPrompts = [...pagePrompts].sort((a, b) => {
+        const aTop = a.rects.length > 0 ? a.rects[0].top : 0;
+        const bTop = b.rects.length > 0 ? b.rects[0].top : 0;
+        return aTop - bTop;
+      });
+
+      // Track bottom position for each margin to prevent overlaps
+      let leftBottomY = 0;
+      let rightBottomY = 0;
+      const cardGap = 8;
+
+      for (const p of sortedPrompts) {
         const card = document.createElement('div');
-        card.className = 'prompt-card' + (p.xCenter >= 0.5 ? ' right-side' : '');
+        const isRightSide = p.xCenter >= 0.5;
+        card.className = 'prompt-card' + (isRightSide ? ' right-side' : '');
         card.dataset.promptId = p.id;
 
-        // Position card at the Y position of the first highlight rect
-        const topY = p.rects.length > 0 ? p.rects[0].top * scale : 0;
-        card.style.top = topY + 'px';
+        // Calculate desired Y position
+        const desiredY = p.rects.length > 0 ? p.rects[0].top * scale : 0;
+
+        // Get the current bottom for this margin and ensure no overlap
+        const currentBottom = isRightSide ? rightBottomY : leftBottomY;
+        const actualY = Math.max(desiredY, currentBottom);
+        card.style.top = actualY + 'px';
 
         // Anchor text display (commented out for now)
         // const anchorDiv = document.createElement('div');
@@ -1138,11 +1155,14 @@
         card.appendChild(icon);
         card.appendChild(fieldsContainer);
 
-        // Position in closest margin
-        if (p.xCenter < 0.5) {
-          leftMargin.appendChild(card);
-        } else {
+        // Position in closest margin and update tracking
+        if (isRightSide) {
           rightMargin.appendChild(card);
+          // Update bottom position after card is in DOM
+          rightBottomY = actualY + card.offsetHeight + cardGap;
+        } else {
+          leftMargin.appendChild(card);
+          leftBottomY = actualY + card.offsetHeight + cardGap;
         }
       }
     }
