@@ -1,0 +1,11 @@
+baseURL = 'https://sashas.life/'
+languageCode = 'en-us'
+title = 'sashas.life'
+
+[build]
+  writeStats = false
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
