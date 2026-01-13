@@ -1,0 +1,294 @@
+{
+  "days": [
+    {
+      "day": 1,
+      "date": "2026-03-06",
+      "title": "Arrival in Tokyo",
+      "city": "tokyo",
+      "summary": "Land early, settle in, light exploration",
+      "activities": [
+        { "time": "morning", "type": "arrival", "description": "Land 7:30am, clear immigration, get Suica card, train to hotel" },
+        { "time": "afternoon", "type": "walk", "description": "Light exploration of Yanaka/Nezu if energy permits" },
+        { "time": "evening", "type": "food", "description": "Early dinner near hotel, early night to beat jet lag" }
+      ],
+      "travelInfo": {
+        "from": "London",
+        "to": "Tokyo",
+        "method": "Flight",
+        "notes": "Depart Thu Mar 5, arrive Fri Mar 6 7:30am. Skyliner or NEX to Ueno."
+      }
+    },
+    {
+      "day": 2,
+      "date": "2026-03-07",
+      "title": "Tokyo: Old Town Yanaka",
+      "city": "tokyo",
+      "summary": "Explore Yanaka, Nezu, and Sendagi neighborhoods",
+      "activities": [
+        { "time": "morning", "type": "walk", "description": "Yanaka Cemetery walk", "placeId": "yanaka-cemetery" },
+        { "time": "morning", "type": "food", "description": "Yanaka Ginza shopping street - menchi-katsu", "placeId": "yanaka-ginza" },
+        { "time": "afternoon", "type": "temple", "description": "Nezu Shrine", "placeId": "nezu-shrine" },
+        { "time": "afternoon", "type": "walk", "description": "Explore backstreets of Yanaka" },
+        { "time": "evening", "type": "food", "description": "Dinner at local izakaya" }
+      ]
+    },
+    {
+      "day": 3,
+      "date": "2026-03-08",
+      "title": "Tokyo: Museums & Coffee",
+      "city": "tokyo",
+      "summary": "Ueno museums, then coffee district Kiyosumi-Shirakawa",
+      "activities": [
+        { "time": "morning", "type": "museum", "description": "Ueno Park and museums" },
+        { "time": "morning", "type": "food", "description": "Ameyoko market under train tracks" },
+        { "time": "afternoon", "type": "coffee", "description": "Kiyosumi-Shirakawa coffee crawl", "placeId": "arise-coffee" },
+        { "time": "afternoon", "type": "garden", "description": "Kiyosumi Garden", "placeId": "kiyosumi-garden" },
+        { "time": "evening", "type": "food", "description": "Dinner in Monzen-Nakacho" }
+      ]
+    },
+    {
+      "day": 4,
+      "date": "2026-03-09",
+      "title": "Day Trip: Kamakura",
+      "city": "kamakura",
+      "summary": "Temples, Great Buddha, coastal walks",
+      "activities": [
+        { "time": "morning", "type": "temple", "description": "Great Buddha (Kotoku-in)" },
+        { "time": "morning", "type": "temple", "description": "Hasedera Temple - sea views" },
+        { "time": "afternoon", "type": "walk", "description": "Walk to Yuigahama Beach" },
+        { "time": "afternoon", "type": "shopping", "description": "Komachi-dori shopping street" },
+        { "time": "evening", "type": "food", "description": "Dinner in Ebisu back in Tokyo", "placeId": "afuri-ebisu" }
+      ],
+      "travelInfo": {
+        "from": "Tokyo",
+        "to": "Kamakura",
+        "method": "JR Line",
+        "duration": "~1 hour",
+        "jrPass": true
+      }
+    },
+    {
+      "day": 5,
+      "date": "2026-03-10",
+      "title": "Tokyo → Kanazawa",
+      "city": "kanazawa",
+      "summary": "Travel to Kanazawa, explore geisha district",
+      "activities": [
+        { "time": "morning", "type": "travel", "description": "Shinkansen to Kanazawa (2.5 hours)" },
+        { "time": "afternoon", "type": "walk", "description": "Higashi Chaya geisha district", "placeId": "higashi-chaya" },
+        { "time": "afternoon", "type": "coffee", "description": "Coffee at Petra or Curio", "placeId": "petra-kanazawa" },
+        { "time": "evening", "type": "food", "description": "Local seafood dinner near Omicho Market" }
+      ],
+      "travelInfo": {
+        "from": "Tokyo",
+        "to": "Kanazawa",
+        "method": "Hokuriku Shinkansen",
+        "duration": "2.5 hours",
+        "jrPass": true
+      }
+    },
+    {
+      "day": 6,
+      "date": "2026-03-11",
+      "title": "Kanazawa: Gardens & Samurai",
+      "city": "kanazawa",
+      "summary": "Kenrokuen Garden, contemporary art, samurai district",
+      "activities": [
+        { "time": "morning", "type": "garden", "description": "Kenrokuen Garden (early)", "placeId": "kenrokuen" },
+        { "time": "morning", "type": "walk", "description": "Kanazawa Castle Park" },
+        { "time": "afternoon", "type": "museum", "description": "21st Century Museum of Contemporary Art", "placeId": "21st-century-museum" },
+        { "time": "afternoon", "type": "walk", "description": "Nagamachi samurai district", "placeId": "nagamachi" },
+        { "time": "evening", "type": "food", "description": "Kaiseki dinner" }
+      ]
+    },
+    {
+      "day": 7,
+      "date": "2026-03-12",
+      "title": "Kanazawa: Markets & Temples",
+      "city": "kanazawa",
+      "summary": "Omicho Market breakfast, Ninja Temple, tea districts",
+      "activities": [
+        { "time": "morning", "type": "food", "description": "Omicho Market - kaisendon breakfast", "placeId": "omicho-market" },
+        { "time": "afternoon", "type": "temple", "description": "Myoryuji Ninja Temple (book ahead!)", "placeId": "myoryuji" },
+        { "time": "afternoon", "type": "walk", "description": "Teramachi temple district" },
+        { "time": "afternoon", "type": "coffee", "description": "Tea at Gyokusen-an", "placeId": "gyokusen-an" },
+        { "time": "evening", "type": "food", "description": "Final Kanazawa dinner" }
+      ]
+    },
+    {
+      "day": 8,
+      "date": "2026-03-13",
+      "title": "Kanazawa → Shirakawa-go → Takayama",
+      "city": "takayama",
+      "summary": "UNESCO village stop, arrive mountain town",
+      "activities": [
+        { "time": "morning", "type": "travel", "description": "Bus to Shirakawa-go (1.5 hours)" },
+        { "time": "midday", "type": "walk", "description": "Explore Shirakawa-go village (2-3 hours)" },
+        { "time": "midday", "type": "food", "description": "Light lunch in village" },
+        { "time": "afternoon", "type": "travel", "description": "Bus to Takayama (1 hour)" },
+        { "time": "evening", "type": "walk", "description": "Evening walk in Sanmachi Suji", "placeId": "sanmachi-suji" },
+        { "time": "evening", "type": "food", "description": "Hida beef dinner", "placeId": "suzuya" }
+      ],
+      "travelInfo": {
+        "from": "Kanazawa",
+        "to": "Takayama",
+        "method": "Nohi Bus via Shirakawa-go",
+        "duration": "2.5 hours total",
+        "jrPass": false,
+        "cost": "~¥4,500"
+      }
+    },
+    {
+      "day": 9,
+      "date": "2026-03-14",
+      "title": "Takayama Full Day",
+      "city": "takayama",
+      "summary": "Morning markets, folk village, sake breweries",
+      "activities": [
+        { "time": "morning", "type": "market", "description": "Miyagawa Morning Market", "placeId": "miyagawa-market" },
+        { "time": "morning", "type": "museum", "description": "Takayama Jinya" },
+        { "time": "midday", "type": "museum", "description": "Hida Folk Village", "placeId": "hida-folk-village" },
+        { "time": "afternoon", "type": "sake", "description": "Sake brewery visits", "placeId": "hirase-sake" },
+        { "time": "afternoon", "type": "coffee", "description": "Coffee at Kissako Katsute", "placeId": "kissako-katsute" },
+        { "time": "evening", "type": "food", "description": "More Hida beef!", "placeId": "sakaguchiya" }
+      ]
+    },
+    {
+      "day": 10,
+      "date": "2026-03-15",
+      "title": "Takayama → Kyoto",
+      "city": "kyoto",
+      "summary": "Scenic train ride, evening in Gion",
+      "activities": [
+        { "time": "morning", "type": "travel", "description": "Train via Nagoya (4 hours total)" },
+        { "time": "afternoon", "type": "arrival", "description": "Check into hotel in Nishijin" },
+        { "time": "evening", "type": "walk", "description": "Evening walk in Gion - Hanamikoji, Shirakawa canal" },
+        { "time": "evening", "type": "food", "description": "Dinner in Pontocho alley" }
+      ],
+      "travelInfo": {
+        "from": "Takayama",
+        "to": "Kyoto",
+        "method": "JR Wide View Hida + Tokaido Shinkansen",
+        "duration": "~4 hours",
+        "jrPass": true
+      }
+    },
+    {
+      "day": 11,
+      "date": "2026-03-16",
+      "title": "Kyoto: Fushimi",
+      "city": "kyoto",
+      "summary": "Fushimi Inari at sunrise, sake district",
+      "activities": [
+        { "time": "early-morning", "type": "temple", "description": "Fushimi Inari at sunrise", "placeId": "fushimi-inari" },
+        { "time": "morning", "type": "walk", "description": "Hike partway up Mt Inari" },
+        { "time": "midday", "type": "sake", "description": "Gekkeikan Sake Museum", "placeId": "fushimi-sake" },
+        { "time": "afternoon", "type": "sake", "description": "Kizakura Kappa Country", "placeId": "kizakura" },
+        { "time": "evening", "type": "food", "description": "Nishiki Market exploring", "placeId": "nishiki-market" }
+      ]
+    },
+    {
+      "day": 12,
+      "date": "2026-03-17",
+      "title": "Kyoto: Philosopher's Path & Temples",
+      "city": "kyoto",
+      "summary": "Philosopher's Path, eastern temples",
+      "activities": [
+        { "time": "morning", "type": "walk", "description": "Philosopher's Path", "placeId": "philosophers-path" },
+        { "time": "morning", "type": "temple", "description": "Ginkaku-ji (Silver Pavilion)", "placeId": "ginkakuji" },
+        { "time": "midday", "type": "food", "description": "Lunch near Philosopher's Path" },
+        { "time": "afternoon", "type": "temple", "description": "Nanzen-ji Temple" },
+        { "time": "afternoon", "type": "temple", "description": "Eikan-do Temple", "placeId": "eikando" },
+        { "time": "evening", "type": "food", "description": "Dinner in Gion" }
+      ]
+    },
+    {
+      "day": 13,
+      "date": "2026-03-18",
+      "title": "Day Trip: Uji - Matcha Capital",
+      "city": "uji",
+      "summary": "World-famous matcha tea, beautiful temples, riverside walks",
+      "activities": [
+        { "time": "morning", "type": "travel", "description": "Train to Uji (20-30 min from Kyoto)" },
+        { "time": "morning", "type": "temple", "description": "Byodo-in Temple - iconic Phoenix Hall", "placeId": "byodoin" },
+        { "time": "midday", "type": "coffee", "description": "Matcha tasting at Nakamura Tokichi (est. 1854)", "placeId": "nakamura-tokichi" },
+        { "time": "midday", "type": "food", "description": "Matcha soba noodles for lunch" },
+        { "time": "afternoon", "type": "walk", "description": "Uji River riverside walk" },
+        { "time": "afternoon", "type": "temple", "description": "Ujigami Shrine - oldest shrine building in Japan", "placeId": "ujigami" },
+        { "time": "afternoon", "type": "shopping", "description": "Omotesando tea street - matcha shops", "placeId": "uji-omotesando" },
+        { "time": "evening", "type": "food", "description": "Final Kyoto dinner - splurge on kaiseki" }
+      ],
+      "travelInfo": {
+        "from": "Kyoto",
+        "to": "Uji",
+        "method": "JR Nara Line or Keihan Line",
+        "duration": "20-30 min",
+        "jrPass": true
+      },
+      "notes": "Uji is Japan's matcha capital - try matcha everything! Green tea ice cream, parfaits, soba, and of course the tea itself."
+    },
+    {
+      "day": 14,
+      "date": "2026-03-19",
+      "title": "Kyoto → Hiroshima",
+      "city": "hiroshima",
+      "summary": "Peace Memorial, okonomiyaki",
+      "activities": [
+        { "time": "morning", "type": "travel", "description": "Shinkansen to Hiroshima (1.5 hours)" },
+        { "time": "afternoon", "type": "museum", "description": "Peace Memorial Park & Museum (allow 2+ hours)", "placeId": "peace-memorial" },
+        { "time": "afternoon", "type": "walk", "description": "A-Bomb Dome (exterior)" },
+        { "time": "evening", "type": "walk", "description": "Walk along river" },
+        { "time": "evening", "type": "food", "description": "Hiroshima okonomiyaki", "placeId": "okonomimura" }
+      ],
+      "travelInfo": {
+        "from": "Kyoto",
+        "to": "Hiroshima",
+        "method": "Sanyo Shinkansen",
+        "duration": "1.5 hours",
+        "jrPass": true
+      }
+    },
+    {
+      "day": 15,
+      "date": "2026-03-20",
+      "title": "Miyajima Island",
+      "city": "miyajima",
+      "summary": "Floating torii, Mount Misen, island exploration",
+      "activities": [
+        { "time": "morning", "type": "travel", "description": "Ferry to Miyajima (50 min total)" },
+        { "time": "morning", "type": "temple", "description": "Itsukushima Shrine", "placeId": "itsukushima" },
+        { "time": "morning", "type": "temple", "description": "Daisho-in Temple", "placeId": "daishoin" },
+        { "time": "midday", "type": "nature", "description": "Mount Misen ropeway + hike", "placeId": "mt-misen" },
+        { "time": "afternoon", "type": "food", "description": "Momiji manju and island exploring", "placeId": "momiji-manju" },
+        { "time": "afternoon", "type": "coffee", "description": "Itsuki Coffee", "placeId": "itsuki-coffee-miyajima" },
+        { "time": "evening", "type": "food", "description": "Final Hiroshima dinner" }
+      ],
+      "travelInfo": {
+        "from": "Hiroshima",
+        "to": "Miyajima",
+        "method": "Tram + JR Ferry",
+        "duration": "50 min",
+        "jrPass": true
+      },
+      "notes": "Vernal Equinox Day (public holiday) - may be busier than usual"
+    },
+    {
+      "day": 16,
+      "date": "2026-03-21",
+      "title": "Departure",
+      "city": "hiroshima",
+      "summary": "Early train to Tokyo, fly home",
+      "activities": [
+        { "time": "early-morning", "type": "travel", "description": "~6:30am Shinkansen to Tokyo (4 hours)" },
+        { "time": "midday", "type": "travel", "description": "Train to airport" },
+        { "time": "afternoon", "type": "departure", "description": "1pm flight to London" }
+      ],
+      "travelInfo": {
+        "from": "Hiroshima",
+        "to": "London",
+        "method": "Shinkansen + Flight",
+        "notes": "Early start required! Hiroshima→Tokyo ~4hrs, then airport transfer. Leave hotel ~6am."
+      }
+    }
+  ]
+}
