@@ -14,3 +14,22 @@ Changes:
 Files: web/src/App.svelte
 
 Build/tests pass.
+
+---
+
+## Requestor Tracker: UI improvements
+
+PRD: "Requestor Tracker improvements: Remove nickname field from request order ID adder, add "Orders" heading under current requestor, remove OK button, replace "note" text with note icon"
+
+Changes:
+- Removed nickname input field from add-request form (requests use truncated ID as nickname)
+- Removed newRequestNickname state var
+- Added "Orders" heading above request list
+- Removed "ok" text from toggle button - now just shows "!" always, faded when not problematic
+- Replaced "note" text with document SVG icon
+- Note button highlights blue when request has a note
+- Shortened "Add Request" button text to "Add"
+
+Files: web/src/App.svelte
+
+Build/tests pass.

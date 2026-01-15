@@ -53,7 +53,6 @@
   let newRequestorAddress = $state('');
   let newRequestorNickname = $state('');
   let newRequestId = $state('');
-  let newRequestNickname = $state('');
   let editingRequestIndex = $state<number | null>(null);
   let editNote = $state('');
   let trackerViewRequestId = $state<string | null>(null);
@@ -110,7 +109,7 @@
     if (requestor.requests.some(r => r.id === reqId)) return;
     requestor.requests = [...requestor.requests, {
       id: reqId,
-      nickname: newRequestNickname.trim() || reqId.slice(0, 12),
+      nickname: reqId.slice(0, 12),
       problematic: false,
       note: '',
       addedAt: Date.now()
@@ -118,7 +117,6 @@
     trackerData.requestors = [...trackerData.requestors];
     saveTrackerData();
     newRequestId = '';
-    newRequestNickname = '';
   }
 
   function removeTrackedRequest(reqIndex: number) {
@@ -644,6 +642,7 @@
             <code class="full-address">{requestor.address}</code>
           </div>
 
+          <h4 class="orders-heading">Orders</h4>
           <div class="add-request">
             <input
               type="text"
@@ -651,14 +650,8 @@
               bind:value={newRequestId}
               onkeydown={(e) => e.key === 'Enter' && addTrackedRequest()}
             />
-            <input
-              type="text"
-              placeholder="Nickname (optional)"
-              bind:value={newRequestNickname}
-              onkeydown={(e) => e.key === 'Enter' && addTrackedRequest()}
-            />
             <button onclick={addTrackedRequest} disabled={!newRequestId.trim()}>
-              Add Request
+              Add
             </button>
           </div>
 
@@ -672,19 +665,20 @@
                   </div>
                   <div class="request-actions">
                     <button
-                      class="action-btn"
+                      class="action-btn problematic-btn"
                       class:active={req.problematic}
                       onclick={() => toggleProblematic(ri)}
                       title={req.problematic ? 'Mark as OK' : 'Mark as problematic'}
                     >
-                      {req.problematic ? '!' : 'ok'}
+                      !
                     </button>
                     <button
-                      class="action-btn"
+                      class="action-btn note-btn"
+                      class:has-note={req.note}
                       onclick={() => startEditingNote(ri)}
-                      title="Edit note"
+                      title={req.note ? 'Edit note' : 'Add note'}
                     >
-                      note
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
                     </button>
                     <button
                       class="action-btn view-btn"
@@ -1357,6 +1351,15 @@
     word-break: break-all;
   }
 
+  .orders-heading {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
   .add-request {
     display: flex;
     gap: 0.5rem;
@@ -1444,6 +1447,39 @@
 
   .action-btn.active {
     background: #f44336;
+    color: white;
+  }
+
+  .action-btn.problematic-btn {
+    opacity: 0.3;
+  }
+
+  .action-btn.problematic-btn:hover {
+    opacity: 1;
+    background: #ff9800;
+    color: white;
+  }
+
+  .action-btn.problematic-btn.active {
+    opacity: 1;
+    background: #f44336;
+    color: white;
+  }
+
+  .action-btn.note-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+  }
+
+  .action-btn.note-btn.has-note {
+    background: #88f;
+    color: white;
+  }
+
+  .action-btn.note-btn:hover {
+    background: #88f;
     color: white;
   }
 
