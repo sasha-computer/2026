@@ -71,6 +71,9 @@
   }
   let removeConfirmation = $state<RemoveConfirmation | null>(null);
 
+  // Duplicate order modal state
+  let showDuplicateModal = $state(false);
+
   function loadTrackerData(): TrackerData {
     if (typeof localStorage === 'undefined') return { requestors: [] };
     const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
@@ -126,7 +129,10 @@
     if (selectedRequestorIndex === null || !newRequestId.trim()) return;
     const reqId = newRequestId.trim();
     const requestor = trackerData.requestors[selectedRequestorIndex];
-    if (requestor.requests.some(r => r.id === reqId)) return;
+    if (requestor.requests.some(r => r.id === reqId)) {
+      showDuplicateModal = true;
+      return;
+    }
 
     // Get short suffix for display
     const shortId = getShortOrderId(reqId, requestor.address);
@@ -961,6 +967,31 @@
           <div class="modal-actions">
             <button class="modal-btn cancel" onclick={cancelRemove}>Cancel</button>
             <button class="modal-btn confirm" onclick={executeRemove}>Remove</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if showDuplicateModal}
+      <div
+        class="modal-overlay"
+        role="button"
+        tabindex="-1"
+        onclick={() => showDuplicateModal = false}
+        onkeydown={(e) => e.key === 'Escape' && (showDuplicateModal = false)}
+      >
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          tabindex="-1"
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+        >
+          <h3>Order already added</h3>
+          <p>This order is already being tracked for this requestor.</p>
+          <div class="modal-actions">
+            <button class="modal-btn cancel" onclick={() => showDuplicateModal = false}>OK</button>
           </div>
         </div>
       </div>

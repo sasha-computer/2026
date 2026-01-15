@@ -16,12 +16,11 @@
 - Requestor Tracker improvements: Remove nickname field from request order ID adder, add "Orders" heading under current requestor, remove OK button, replace "note" text with note icon
 - Requestor Tracker: Make X (remove) button trigger a separate confirmation modal
 - Auto-call API when request added, auto-open view panel; show orders with git-style short IDs (8-char suffix), status badge, and ISO timestamp; minimize hex chain repetition by extracting suffix from requestor address prefix
+- Show "Order already added" modal when trying to add duplicate order
 
 ---
 
 ## Planned
-
-- If you try to add a duplicate order, open a modal that said "Order already added"!
 
 ---
 

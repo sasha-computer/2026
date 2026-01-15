@@ -1,3 +1,16 @@
+## 2026-01-15: Duplicate order modal
+
+### Completed
+- PRD item: "If you try to add a duplicate order, open a modal that said 'Order already added'!"
+
+### Changes
+- web/src/App.svelte:
+  - Added `showDuplicateModal` state
+  - Modified `addTrackedRequest()` to show modal instead of silently returning
+  - Added modal UI with "Order already added" message and OK button
+
+---
+
 ## 2026-01-15: Order ID display improvements
 
 ### Completed
