@@ -95,14 +95,31 @@ export interface MarketRequest {
   client_address: string;
   lock_prover_address: string | null;
   fulfill_prover_address: string | null;
+  // Timestamps
   created_at: number;
   created_at_iso: string;
+  updated_at?: number;
+  updated_at_iso?: string;
+  locked_at?: number | null;
+  locked_at_iso?: string | null;
+  fulfilled_at?: number | null;
+  fulfilled_at_iso?: string | null;
+  expires_at?: number | null;
+  expires_at_iso?: string | null;
+  lock_end?: number | null;
+  lock_end_iso?: string | null;
+  // Pricing
   min_price: string;
   min_price_formatted: string;
   max_price: string;
   max_price_formatted: string;
+  lock_price?: string | null;
+  lock_price_formatted?: string | null;
   lock_collateral: string;
   lock_collateral_formatted: string;
+  // Cycles
+  total_cycles?: number | null;
+  program_cycles?: number | null;
 }
 
 export interface MarketRequestsResponse {

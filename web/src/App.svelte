@@ -518,6 +518,46 @@
       setTimeout(() => copySuccess = false, 1500);
     }
   }
+
+  // Format cycles with M/B suffix
+  function formatCycles(cycles: number | null | undefined): string {
+    if (cycles == null) return '—';
+    if (cycles >= 1e9) {
+      return `${(cycles / 1e9).toPrecision(3)}B`;
+    }
+    if (cycles >= 1e6) {
+      return `${(cycles / 1e6).toPrecision(3)}M`;
+    }
+    return cycles.toLocaleString();
+  }
+
+  // Format price to 3 significant figures
+  function formatPrice3sf(formattedPrice: string): string {
+    // Input like "0.001234 ETH" -> "0.00123 ETH"
+    const match = formattedPrice.match(/^([\d.]+)\s*(.*)$/);
+    if (!match) return formattedPrice;
+    const num = parseFloat(match[1]);
+    const unit = match[2];
+    if (isNaN(num)) return formattedPrice;
+    return `${num.toPrecision(3)} ${unit}`.trim();
+  }
+
+  // Calculate proof latency (time between creation and fulfillment)
+  function calculateProofLatency(createdAt: number, fulfilledAt: number | null | undefined): string | null {
+    if (fulfilledAt == null) return null;
+    const diffSeconds = fulfilledAt - createdAt;
+    if (diffSeconds < 60) {
+      return `${diffSeconds}s`;
+    }
+    if (diffSeconds < 3600) {
+      const mins = Math.floor(diffSeconds / 60);
+      const secs = diffSeconds % 60;
+      return `${mins}m ${secs}s`;
+    }
+    const hours = Math.floor(diffSeconds / 3600);
+    const mins = Math.floor((diffSeconds % 3600) / 60);
+    return `${hours}h ${mins}m`;
+  }
 </script>
 
 <header>
@@ -904,6 +944,13 @@
                 </button>
                 <div class="request-actions">
                   <button
+                    class="action-btn copy-id-btn"
+                    onclick={(e) => { e.stopPropagation(); copyToClipboard(req.id); }}
+                    title="Copy request ID"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                  <button
                     class="action-btn problematic-btn"
                     class:active={req.problematic}
                     onclick={(e) => { e.stopPropagation(); toggleProblematic(ri); }}
@@ -976,68 +1023,109 @@
             </div>
 
             <div class="request-section">
-              <h3>Identifiers</h3>
-              <div class="request-field">
-                <span class="field-label">Request ID</span>
-                <code class="field-value mono">{trackerViewData.request_id}</code>
-              </div>
-              <div class="request-field">
-                <span class="field-label">Request Digest</span>
-                <code class="field-value mono">{trackerViewData.request_digest}</code>
-              </div>
-              <div class="request-field">
-                <span class="field-label">Chain ID</span>
-                <span class="field-value">{trackerViewData.chain_id}</span>
+              <h3>Request ID</h3>
+              <div class="request-field id-field">
+                <code class="field-value mono" title={trackerViewData.request_id}>{trackerViewData.request_id}</code>
+                <button
+                  class="copy-btn small"
+                  class:copied={copySuccess}
+                  onclick={() => copyToClipboard(trackerViewData.request_id)}
+                  title="Copy request ID"
+                >
+                  {#if copySuccess}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  {/if}
+                </button>
               </div>
             </div>
 
             <div class="request-section">
-              <h3>Addresses</h3>
+              <h3>Prover</h3>
+              {#if trackerViewData.lock_prover_address}
+                <div class="request-field">
+                  <a
+                    href="https://explorer.boundless.network/provers/{trackerViewData.lock_prover_address}?from=provers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="explorer-link prover-link"
+                    title="View prover on explorer"
+                  >
+                    <code class="field-value mono">{trackerViewData.lock_prover_address}</code>
+                    <span class="link-icon">↗</span>
+                  </a>
+                </div>
+              {:else}
+                <div class="request-field">
+                  <span class="field-value muted">No prover assigned</span>
+                </div>
+              {/if}
+            </div>
+
+            <div class="request-section">
+              <h3>Timing</h3>
               <div class="request-field">
-                <span class="field-label">Client</span>
-                <code class="field-value mono" title={trackerViewData.client_address}>{trackerViewData.client_address}</code>
+                <span class="field-label">Created</span>
+                <span class="field-value">{formatOrderTime(trackerViewData.created_at_iso)}</span>
               </div>
-              <div class="request-field">
-                <span class="field-label">Lock Prover</span>
-                <code class="field-value mono" title={trackerViewData.lock_prover_address ?? ''}>
-                  {trackerViewData.lock_prover_address ?? '—'}
-                </code>
-              </div>
-              <div class="request-field">
-                <span class="field-label">Fulfill Prover</span>
-                <code class="field-value mono" title={trackerViewData.fulfill_prover_address ?? ''}>
-                  {trackerViewData.fulfill_prover_address ?? '—'}
-                </code>
-              </div>
+              {#if trackerViewData.locked_at_iso}
+                <div class="request-field">
+                  <span class="field-label">Locked</span>
+                  <span class="field-value">{formatOrderTime(trackerViewData.locked_at_iso)}</span>
+                </div>
+              {/if}
+              {#if trackerViewData.expires_at_iso}
+                <div class="request-field">
+                  <span class="field-label">Expires</span>
+                  <span class="field-value">{formatOrderTime(trackerViewData.expires_at_iso)}</span>
+                </div>
+              {/if}
+              {#if trackerViewData.fulfilled_at_iso}
+                <div class="request-field">
+                  <span class="field-label">Fulfilled</span>
+                  <span class="field-value">{formatOrderTime(trackerViewData.fulfilled_at_iso)}</span>
+                </div>
+                {#if calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}
+                  <div class="request-field highlight">
+                    <span class="field-label">Proof Latency</span>
+                    <span class="field-value">{calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}</span>
+                  </div>
+                {/if}
+              {/if}
             </div>
 
             <div class="request-section">
               <h3>Pricing</h3>
               <div class="request-field">
                 <span class="field-label">Min Price</span>
-                <span class="field-value">{trackerViewData.min_price_formatted}</span>
+                <span class="field-value">{formatPrice3sf(trackerViewData.min_price_formatted)}</span>
               </div>
               <div class="request-field">
                 <span class="field-label">Max Price</span>
-                <span class="field-value">{trackerViewData.max_price_formatted}</span>
+                <span class="field-value">{formatPrice3sf(trackerViewData.max_price_formatted)}</span>
               </div>
               <div class="request-field">
                 <span class="field-label">Lock Collateral</span>
-                <span class="field-value">{trackerViewData.lock_collateral_formatted}</span>
+                <span class="field-value">{formatPrice3sf(trackerViewData.lock_collateral_formatted)}</span>
               </div>
+              {#if trackerViewData.lock_price_formatted}
+                <div class="request-field">
+                  <span class="field-label">Lock Price</span>
+                  <span class="field-value">{formatPrice3sf(trackerViewData.lock_price_formatted)}</span>
+                </div>
+              {/if}
             </div>
 
-            <div class="request-section">
-              <h3>Timing</h3>
-              <div class="request-field">
-                <span class="field-label">Created At</span>
-                <span class="field-value">{formatOrderTime(trackerViewData.created_at_iso)}</span>
+            {#if trackerViewData.total_cycles != null}
+              <div class="request-section">
+                <h3>Cycles</h3>
+                <div class="request-field">
+                  <span class="field-label">Total Cycles</span>
+                  <span class="field-value">{formatCycles(trackerViewData.total_cycles)}</span>
+                </div>
               </div>
-              <div class="request-field">
-                <span class="field-label">Unix Timestamp</span>
-                <span class="field-value mono">{trackerViewData.created_at}</span>
-              </div>
-            </div>
+            {/if}
 
             <details class="raw-json">
               <summary>Raw JSON</summary>
@@ -1485,6 +1573,59 @@
   .field-value.mono {
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.8125rem;
+  }
+
+  .field-value.muted {
+    color: #999;
+    font-style: italic;
+  }
+
+  .request-field.id-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .request-field.id-field .field-value {
+    flex: 1;
+    text-align: left;
+    font-size: 0.75rem;
+  }
+
+  .request-field.highlight {
+    background: #e3f2fd;
+    margin: 0 -1.5rem;
+    padding: 0.5rem 1.5rem;
+  }
+
+  .prover-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .prover-link:hover {
+    color: #2196f3;
+  }
+
+  .prover-link .field-value {
+    text-align: left;
+    font-size: 0.75rem;
+  }
+
+  .copy-btn.small {
+    padding: 0.25rem;
+    min-width: auto;
+  }
+
+  .copy-id-btn {
+    color: #666;
+  }
+
+  .copy-id-btn:hover {
+    color: #2196f3;
   }
 
   .raw-json {

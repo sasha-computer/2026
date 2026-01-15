@@ -1,27 +1,23 @@
-## 2026-01-15: Add copy button for requestor address
+## 2026-01-15: Improved request details view in Requestor Tracker
 
-**Task:** PRD item "add a button to copy the requestor ID somewhere, like the classic two pages overlapping"
+PRD item: "Add a button to each order... Fix the view in the third column..."
 
-**Implementation:** Added copy button next to requestor address in Requestor Tracker header with:
-- Classic "two overlapping pages" icon (SVG)
-- Checkmark icon on successful copy
-- 1.5s visual feedback on copy success
-- Clipboard API with fallback for older browsers
+Changes:
+- Added copy button for each order (middle column) + request ID (third column)
+- Added prover link to explorer (https://explorer.boundless.network/provers/{addr}?from=provers)
+- Timing section now shows: created, locked, expires, fulfilled (when available)
+- Added proof latency calculation (time from creation to fulfillment)
+- Prices now displayed in 3 s.f. using formatPrice3sf()
+- Total cycles displayed with M/B suffix using formatCycles()
+- Removed chain ID (single chain only)
+- Added lock_price to display when available
+- Updated MarketRequest type with new API fields (timestamps, cycles, lock_price)
 
-**Files:** web/src/App.svelte (added copyToClipboard function, copy button UI, CSS styles)
+Files changed:
+- web/src/lib/types.ts - extended MarketRequest interface
+- web/src/App.svelte - new formatters, redesigned detail view, copy button per order
 
-**Tests:** All pass, build succeeds
-
----
-
-## 2026-01-15: Fix Fetch Recent Orders button
-
-**Task:** PRD item "when I click 'Fetch Recent Orders' and choose a number nothing happens"
-
-**Root cause:** In `autoPopulateOrders`, API response parsing used `data.requests` but API returns `data.data`
-
-**Fix:** Changed line 270 from `data.requests || []` to `data.data || []`
-
-**Files:** web/src/App.svelte (line 270)
-
-**Tests:** All pass, build succeeds
+Decisions:
+- Kept source field in header (was already there)
+- Used existing copySuccess state for all copy buttons (single success indicator)
+- Proof latency shows as Xs, Xm Xs, or Xh Xm depending on duration
