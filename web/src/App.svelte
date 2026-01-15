@@ -20,6 +20,9 @@
     problematic: boolean;
     note: string;
     addedAt: number;
+    // Auto-fetched metadata
+    createdAt?: string; // ISO format from API
+    status?: string;
   }
 
   interface TrackedRequestor {
@@ -119,21 +122,54 @@
     }
   }
 
-  function addTrackedRequest() {
+  async function addTrackedRequest() {
     if (selectedRequestorIndex === null || !newRequestId.trim()) return;
     const reqId = newRequestId.trim();
     const requestor = trackerData.requestors[selectedRequestorIndex];
     if (requestor.requests.some(r => r.id === reqId)) return;
-    requestor.requests = [...requestor.requests, {
+
+    // Get short suffix for display
+    const shortId = getShortOrderId(reqId, requestor.address);
+
+    // Create the request entry with placeholder
+    const newRequest: TrackedRequest = {
       id: reqId,
-      nickname: reqId.slice(0, 12),
+      nickname: shortId,
       problematic: false,
       note: '',
       addedAt: Date.now()
-    }];
+    };
+
+    requestor.requests = [...requestor.requests, newRequest];
     trackerData.requestors = [...trackerData.requestors];
     saveTrackerData();
     newRequestId = '';
+
+    // Auto-fetch API data and auto-open view panel
+    const reqIndex = requestor.requests.length - 1;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requests/${reqId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const requestData = Array.isArray(data) && data.length > 0 ? data[0] : data;
+        if (requestData) {
+          // Update metadata
+          requestor.requests[reqIndex].createdAt = requestData.created_at_iso;
+          requestor.requests[reqIndex].status = requestData.request_status;
+          trackerData.requestors = [...trackerData.requestors];
+          saveTrackerData();
+
+          // Auto-open the view panel with this data
+          trackerViewRequestId = reqId;
+          trackerViewData = requestData;
+          trackerViewError = null;
+          trackerViewLoading = false;
+        }
+      }
+    } catch {
+      // Silently fail - metadata is optional enhancement
+    }
   }
 
   function confirmRemoveRequest(reqIndex: number) {
@@ -362,6 +398,37 @@
   function shortenAddress(addr: string | null): string {
     if (!addr) return '—';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }
+
+  // Extract short order ID suffix (like git short hash)
+  // Request ID format: 0x + requestor_address (40 chars) + unique_suffix (8+ chars)
+  // e.g., 0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e83572afa
+  //       |------ requestor (42 chars with 0x) ------||suffix|
+  function getOrderSuffix(requestId: string, requestorAddress: string): string {
+    // Normalize addresses
+    const reqId = requestId.toLowerCase();
+    const reqAddr = requestorAddress.toLowerCase();
+
+    // If the request ID starts with the requestor address, extract suffix
+    if (reqId.startsWith(reqAddr)) {
+      return reqId.slice(reqAddr.length);
+    }
+    // Fallback: just return last 8 chars
+    return reqId.slice(-8);
+  }
+
+  // Get short display format for order (like git short commit hash)
+  function getShortOrderId(requestId: string, requestorAddress: string): string {
+    const suffix = getOrderSuffix(requestId, requestorAddress);
+    // Show first 8 chars of suffix (like git's 7-8 char short hash)
+    return suffix.slice(0, 8);
+  }
+
+  // Format ISO timestamp to concise display
+  function formatOrderTime(isoString: string): string {
+    // Input: "2026-01-15T14:20:01Z"
+    // Output: "2026-01-15 14:20:01 UTC"
+    return isoString.replace('T', ' ').replace('Z', ' UTC');
   }
 </script>
 
@@ -701,8 +768,17 @@
               <li class="tracked-request" class:problematic={req.problematic}>
                 <div class="request-row">
                   <div class="request-main">
-                    <span class="request-nickname">{req.nickname}</span>
-                    <code class="request-id" title={req.id}>{req.id.slice(0, 20)}...</code>
+                    <div class="request-header-line">
+                      <code class="short-order-id" title={req.id}>{getShortOrderId(req.id, requestor.address)}</code>
+                      {#if req.status}
+                        <span class="order-status" style="--status-color: {getStatusColor(req.status as MarketRequest['request_status'])}">{req.status}</span>
+                      {/if}
+                    </div>
+                    {#if req.createdAt}
+                      <span class="order-time">{formatOrderTime(req.createdAt)}</span>
+                    {:else}
+                      <code class="request-id-fallback" title={req.id}>...{getOrderSuffix(req.id, requestor.address)}</code>
+                    {/if}
                   </div>
                   <div class="request-actions">
                     <button
@@ -1484,11 +1560,40 @@
     overflow: hidden;
   }
 
-  .request-nickname {
-    font-weight: 500;
+  .request-header-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
-  .request-id {
+  .short-order-id {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    background: #e8e8f0;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+  }
+
+  .order-status {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    background: var(--status-color);
+    color: white;
+  }
+
+  .order-time {
+    font-size: 0.75rem;
+    color: #666;
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+
+  .request-id-fallback {
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.75rem;
     color: #888;

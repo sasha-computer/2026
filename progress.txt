@@ -1,56 +1,24 @@
-## Requestor Tracker: Third column for request details
+## 2026-01-15: Order ID display improvements
 
-PRD: "Requestor Tracker: Add third column showing request details (same UI as Request Debugger) when View button is clicked"
+### Completed
+- PRD item: "Each order added should show the header with a short syntax like git commits..."
 
-Changes:
-- Added state vars for tracker detail view (trackerViewRequestId, trackerViewLoading, trackerViewError, trackerViewData)
-- Added viewRequestInTracker() fn to fetch request data for inline display
-- Added closeTrackerView() fn to dismiss detail panel
-- Modified "View" btn to call viewRequestInTracker instead of switching tabs
-- Added third column with request card UI (reuses same layout as Request Debugger)
-- Grid switches from 2-col to 3-col layout when detail panel open
-- Active view button highlighted in blue
+### Key decisions
+- Order ID structure: requestor_address (42 chars) + unique_suffix (8+ chars)
+- Short ID display: first 8 chars of suffix (like git's 7-char hash)
+- Auto-fetch API on add: gets created_at_iso and request_status
+- Auto-opens view panel after adding order
+- Minimized hex repetition: shows suffix only, not full requestor address prefix
 
-Files: web/src/App.svelte
+### Changes
+- web/src/App.svelte:
+  - Added `createdAt` and `status` fields to TrackedRequest interface
+  - Added helper functions: getOrderSuffix(), getShortOrderId(), formatOrderTime()
+  - Updated addTrackedRequest() to async, auto-fetch API, auto-open view panel
+  - New UI layout: short ID badge + status tag on first line, ISO timestamp on second
+  - Added CSS for .short-order-id, .order-status, .order-time, .request-header-line
+  - Removed unused CSS selectors
 
-Build/tests pass.
-
----
-
-## Requestor Tracker: UI improvements
-
-PRD: "Requestor Tracker improvements: Remove nickname field from request order ID adder, add "Orders" heading under current requestor, remove OK button, replace "note" text with note icon"
-
-Changes:
-- Removed nickname input field from add-request form (requests use truncated ID as nickname)
-- Removed newRequestNickname state var
-- Added "Orders" heading above request list
-- Removed "ok" text from toggle button - now just shows "!" always, faded when not problematic
-- Replaced "note" text with document SVG icon
-- Note button highlights blue when request has a note
-- Shortened "Add Request" button text to "Add"
-
-Files: web/src/App.svelte
-
-Build/tests pass.
-
----
-
-## Requestor Tracker: Remove confirmation modal
-
-PRD: "Requestor Tracker: Make X (remove) button trigger a separate confirmation modal"
-
-Changes:
-- Added RemoveConfirmation interface to track pending removal (type, index, name)
-- Added removeConfirmation state var
-- Added confirmRemoveRequestor() and confirmRemoveRequest() fns to open modal
-- Added executeRemove() and cancelRemove() fns for modal actions
-- Changed X button handlers from direct remove to confirmation trigger
-- Added modal overlay with centered dialog box
-- Modal shows item name and type (requestor/request) being removed
-- Escape key closes modal, clicking overlay closes modal
-- Proper ARIA roles for accessibility (dialog, button)
-
-Files: web/src/App.svelte
-
-Build/tests pass.
+### Notes
+- If API call fails, gracefully falls back to showing suffix without metadata
+- Status displayed with same color coding as detail panel
