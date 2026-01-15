@@ -432,9 +432,12 @@
 
   // Format ISO timestamp to concise display
   function formatOrderTime(isoString: string): string {
-    // Input: "2026-01-15T14:20:01Z"
+    // Input: "2026-01-15T14:20:01Z" or "2026-01-15T14:20:01+00:00"
     // Output: "2026-01-15 14:20:01 UTC"
-    return isoString.replace('T', ' ').replace('Z', ' UTC');
+    return isoString
+      .replace('T', ' ')
+      .replace('Z', ' UTC')
+      .replace('+00:00', ' UTC');
   }
 </script>
 
@@ -683,7 +686,7 @@
           <h3>Timing</h3>
           <div class="request-field">
             <span class="field-label">Created At</span>
-            <span class="field-value">{requestData.created_at_iso}</span>
+            <span class="field-value">{formatOrderTime(requestData.created_at_iso)}</span>
           </div>
           <div class="request-field">
             <span class="field-label">Unix Timestamp</span>
@@ -926,7 +929,7 @@
                 <h3>Timing</h3>
                 <div class="request-field">
                   <span class="field-label">Created At</span>
-                  <span class="field-value">{trackerViewData.created_at_iso}</span>
+                  <span class="field-value">{formatOrderTime(trackerViewData.created_at_iso)}</span>
                 </div>
                 <div class="request-field">
                   <span class="field-label">Unix Timestamp</span>
