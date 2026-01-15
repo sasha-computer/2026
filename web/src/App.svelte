@@ -74,6 +74,10 @@
   // Duplicate order modal state
   let showDuplicateModal = $state(false);
 
+  // Auto-populate modal state
+  let showAutoPopulateModal = $state(false);
+  let autoPopulateLoading = $state(false);
+
   function loadTrackerData(): TrackerData {
     if (typeof localStorage === 'undefined') return { requestors: [] };
     const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
@@ -249,6 +253,63 @@
     requestId = reqId;
     activeTab = 'debugger';
     fetchRequest();
+  }
+
+  async function autoPopulateOrders(count: number) {
+    if (selectedRequestorIndex === null) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    showAutoPopulateModal = false;
+    autoPopulateLoading = true;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=${count}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.requests || [];
+
+      let addedCount = 0;
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (!reqId || requestor.requests.some(r => r.id === reqId)) {
+          continue; // Skip if no ID or already tracked
+        }
+
+        const shortId = getShortOrderId(reqId, requestor.address);
+        const newRequest: TrackedRequest = {
+          id: reqId,
+          nickname: shortId,
+          problematic: req.request_status === 'expired',
+          note: '',
+          addedAt: Date.now(),
+          createdAt: req.created_at_iso,
+          status: req.request_status
+        };
+
+        requestor.requests = [...requestor.requests, newRequest];
+        addedCount++;
+      }
+
+      if (addedCount > 0) {
+        trackerData.requestors = [...trackerData.requestors];
+        saveTrackerData();
+
+        // Auto-select the first added order in view panel
+        const firstNewReq = requestor.requests[requestor.requests.length - addedCount];
+        if (firstNewReq) {
+          trackerViewRequestId = firstNewReq.id;
+          // Set view data from already fetched info
+          trackerViewData = requests.find((r: { request_id: string }) => r.request_id === firstNewReq.id) || null;
+          trackerViewError = null;
+          trackerViewLoading = false;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch orders:', e);
+    } finally {
+      autoPopulateLoading = false;
+    }
   }
 
   async function viewRequestInTracker(reqId: string) {
@@ -763,6 +824,13 @@
               <code class="full-address">{requestor.address}</code>
               <span class="link-icon">↗</span>
             </a>
+            <button
+              class="auto-populate-btn"
+              onclick={() => showAutoPopulateModal = true}
+              disabled={autoPopulateLoading}
+            >
+              {autoPopulateLoading ? 'Loading...' : 'Fetch Recent Orders'}
+            </button>
           </div>
 
           <h4 class="orders-heading">Orders</h4>
@@ -998,6 +1066,34 @@
           <p>This order is already being tracked for this requestor.</p>
           <div class="modal-actions">
             <button class="modal-btn cancel" onclick={() => showDuplicateModal = false}>OK</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if showAutoPopulateModal}
+      <div
+        class="modal-overlay"
+        role="button"
+        tabindex="-1"
+        onclick={() => showAutoPopulateModal = false}
+        onkeydown={(e) => e.key === 'Escape' && (showAutoPopulateModal = false)}
+      >
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          tabindex="-1"
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+        >
+          <h3>Fetch Recent Orders</h3>
+          <p>How many recent orders would you like to add?</p>
+          <div class="modal-actions auto-populate-options">
+            <button class="modal-btn option" onclick={() => autoPopulateOrders(3)}>3</button>
+            <button class="modal-btn option" onclick={() => autoPopulateOrders(5)}>5</button>
+            <button class="modal-btn option" onclick={() => autoPopulateOrders(10)}>10</button>
+            <button class="modal-btn cancel" onclick={() => showAutoPopulateModal = false}>Cancel</button>
           </div>
         </div>
       </div>
@@ -1551,6 +1647,26 @@
     color: #4a9eff;
   }
 
+  .auto-populate-btn {
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: #2a2a4e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+
+  .auto-populate-btn:hover:not(:disabled) {
+    background: #3a3a6e;
+  }
+
+  .auto-populate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   .orders-heading {
     margin: 0 0 0.75rem 0;
     font-size: 0.875rem;
@@ -1931,5 +2047,20 @@
 
   .modal-btn.confirm:hover {
     background: #d32f2f;
+  }
+
+  .auto-populate-options {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .modal-btn.option {
+    background: #1a1a2e;
+    color: white;
+    min-width: 60px;
+  }
+
+  .modal-btn.option:hover {
+    background: #2a2a4e;
   }
 </style>

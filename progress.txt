@@ -33,3 +33,13 @@
 - Opens in new tab with proper security attrs
 - Files: web/src/App.svelte (lines 755-766, 1531-1549)
 - Build passes
+
+## Auto-populate recent orders
+- PRD item: "button at the top under the nickname...that can auto-populate the last X number of orders"
+- Added "Fetch Recent Orders" button below requestor address
+- Modal with 3/5/10 options for how many orders to fetch
+- Uses /v1/market/requestors/{addr}/requests?limit=N endpoint
+- Skips orders already tracked, auto-flags expired as problematic
+- Auto-opens first fetched order in detail panel
+- Files: web/src/App.svelte (autoPopulateOrders fn, modal, button, styles)
+- Build passes
