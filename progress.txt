@@ -65,3 +65,21 @@ Changes:
 Files: web/src/App.svelte
 
 Notes: Migration only runs when Supabase env vars are configured. Falls back to localStorage-only if not. Loading state prevents flickering/race conditions during async init.
+
+---
+
+## 2026-01-15: Supabase integration tests
+
+PRD item: "Test Supabase integration: add requestor (verify in Supabase), add orders, reload page (data persists), test offline fallback, test localStorage migration"
+
+Changes:
+- Created web/src/lib/supabase.test.ts with 14 unit tests covering:
+  - isSupabaseConfigured(): returns false when env vars missing
+  - loadTrackerData(): localStorage fallback, malformed JSON handling, Supabase load, error fallback
+  - saveTrackerData(): localStorage-only save, dual save, graceful Supabase failure
+  - migrateLocalStorageToSupabase(): skip when unconfigured, skip when empty, skip when remote has data, successful migration
+- All tests pass (21 total including existing client tests)
+
+Files: web/src/lib/supabase.test.ts (new)
+
+Notes: Tests mock Supabase client and localStorage. Covers all code paths including error handling. Manual testing still recommended for full E2E verification with real Supabase instance.

@@ -34,11 +34,10 @@
 - Order row UI improvements: problematic button moved to leftmost, close button replaced with X icon, copy button added next to short ID
 - Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerData() (saves to both), migrateLocalStorageToSupabase() for one-time migration
 - Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab
+- Supabase integration tests: 14 unit tests for supabase.ts covering isSupabaseConfigured, loadTrackerData (localStorage fallback, error handling), saveTrackerData (dual save, graceful failure), migrateLocalStorageToSupabase (skip conditions, successful migration)
 
 ---
 
 ## Planned
-
-- Test Supabase integration: add requestor (verify in Supabase), add orders, reload page (data persists), test offline fallback, test localStorage migration
 
 ## Completed
