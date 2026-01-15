@@ -27,9 +27,13 @@
 
 - Improved third column detail view: copy button for request ID, prover link to explorer, human-readable timing (created/locked/expires/fulfilled), proof latency calculation, 3 s.f. pricing, total cycles with M/B suffix, removed chain ID
 - Add notification badge to "Fetch Recent Orders" button showing count of new orders not in localStorage; clicking when badge visible auto-fetches those orders without modal
+- Auto-fetch 10 most recent orders when adding a new requestor
 
 ---
 
 ## Planned
+
+- can you make the problematic button the furthest left one on each order. Can you make the close button a bit nicer, maybe an icon as well? can you put the copy and apste button next to the short ID for each order which would copy and paste the order ID.
+- add the notification badge from "Fetch Recent Orders" to the Tracked Requestors column (left-most) on each requestor. When clicking the notification badge, it should turn into a spinning circle as orders are fetched. Once they are fetched open that requestors view in the centre and right hand columns with the top request in the list (most recent) in the Viewing column in the right.
 
 ## Completed

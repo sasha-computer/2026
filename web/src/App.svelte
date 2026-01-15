@@ -98,7 +98,7 @@
     localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(trackerData));
   }
 
-  function addRequestor() {
+  async function addRequestor() {
     if (!newRequestorAddress.trim()) return;
     const addr = newRequestorAddress.trim().toLowerCase();
     if (trackerData.requestors.some(r => r.address === addr)) return;
@@ -112,6 +112,8 @@
     newRequestorAddress = '';
     newRequestorNickname = '';
     selectedRequestorIndex = trackerData.requestors.length - 1;
+    // Auto-fetch 10 most recent orders for newly added requestor
+    await autoPopulateOrders(10);
   }
 
   function confirmRemoveRequestor(index: number) {

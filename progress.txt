@@ -1,45 +1,10 @@
-## 2026-01-15: Notification badge for Fetch Recent Orders button
+## Auto-fetch orders on new requestor add
 
-PRD item: "Add notification badge to Fetch Recent Orders button..."
+PRD: "when you add a new requestor, the 10 most recent orders are added and populated"
 
-Changes:
-- Added notification badge (red circle) showing count of new orders not in localStorage
-- On requestor selection, auto-checks API for new orders
-- Click behavior: if badge > 0, auto-fetches that many without modal; otherwise shows modal
-- New state: newOrderCount, checkingNewOrders
-- New functions: checkForNewOrders(), handleFetchRecentOrders()
-- Badge styled with absolute positioning in top-right corner
+Changed addRequestor() to async, calls autoPopulateOrders(10) after setting selectedRequestorIndex.
+Reuses existing autoPopulateOrders() logic - no code duplication.
 
-Files changed:
-- web/src/App.svelte - added badge state, check function, effect, CSS
+Files: web/src/App.svelte (lines 101-117)
 
-Decisions:
-- Check for up to 10 recent orders when determining new count
-- Reset count when switching requestors
-- Badge shows exact count of new orders found
-
----
-
-## 2026-01-15: Improved request details view in Requestor Tracker
-
-PRD item: "Add a button to each order... Fix the view in the third column..."
-
-Changes:
-- Added copy button for each order (middle column) + request ID (third column)
-- Added prover link to explorer (https://explorer.boundless.network/provers/{addr}?from=provers)
-- Timing section now shows: created, locked, expires, fulfilled (when available)
-- Added proof latency calculation (time from creation to fulfillment)
-- Prices now displayed in 3 s.f. using formatPrice3sf()
-- Total cycles displayed with M/B suffix using formatCycles()
-- Removed chain ID (single chain only)
-- Added lock_price to display when available
-- Updated MarketRequest type with new API fields (timestamps, cycles, lock_price)
-
-Files changed:
-- web/src/lib/types.ts - extended MarketRequest interface
-- web/src/App.svelte - new formatters, redesigned detail view, copy button per order
-
-Decisions:
-- Kept source field in header (was already there)
-- Used existing copySuccess state for all copy buttons (single success indicator)
-- Proof latency shows as Xs, Xm Xs, or Xh Xm depending on duration
+Build + tests pass.
