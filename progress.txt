@@ -1,45 +1,11 @@
-## Timestamp format simplification
-- PRD item: "the time doesnt need the +00:00 on the end, just say UTC"
-- Updated formatOrderTime() to handle both Z and +00:00 suffixes
-- Applied formatting to all 3 timestamp displays: order list, Request Debugger, Tracker View
-- Files: web/src/App.svelte (lines 433-440, 686, 929)
-- Build passes
+## 2026-01-15: Fix Fetch Recent Orders button
 
-## Auto-flag expired orders
-- PRD item: "have it be automatically flagged as ! when the order is 'Expired'"
-- Added auto-flag logic in addTrackedRequest() after API fetch
-- When request_status === 'expired', sets problematic = true automatically
-- Manual toggle still works for other statuses
-- Files: web/src/App.svelte (line 167-169)
-- Build passes
+**Task:** PRD item "when I click 'Fetch Recent Orders' and choose a number nothing happens"
 
-## Always show third column, remove View button
-- PRD item: "get rid of the view button and just always have the third column open"
-- Third column now always visible in Requestor Tracker (3-column layout always)
-- Removed "view" button from order actions
-- Clicking order row now selects and loads details in third column
-- Added selected state styling for orders (.selected class)
-- Removed closeTrackerView() and close button since panel always open
-- Shows placeholder "Select an order to view its details" when nothing selected
-- Cleaned up unused CSS (.close-btn, .view-btn.active)
-- Files: web/src/App.svelte
-- Build passes
+**Root cause:** In `autoPopulateOrders`, API response parsing used `data.requests` but API returns `data.data`
 
-## Explorer link for requestor address
-- PRD item: "add an explorer link for their requestor ID thats under the nickname"
-- Wrapped requestor address in link to https://explorer.boundless.network/requestors/{address}?from=requestors
-- Added ↗ icon to indicate external link
-- Hover state changes color to blue (#4a9eff)
-- Opens in new tab with proper security attrs
-- Files: web/src/App.svelte (lines 755-766, 1531-1549)
-- Build passes
+**Fix:** Changed line 270 from `data.requests || []` to `data.data || []`
 
-## Auto-populate recent orders
-- PRD item: "button at the top under the nickname...that can auto-populate the last X number of orders"
-- Added "Fetch Recent Orders" button below requestor address
-- Modal with 3/5/10 options for how many orders to fetch
-- Uses /v1/market/requestors/{addr}/requests?limit=N endpoint
-- Skips orders already tracked, auto-flags expired as problematic
-- Auto-opens first fetched order in detail panel
-- Files: web/src/App.svelte (autoPopulateOrders fn, modal, button, styles)
-- Build passes
+**Files:** web/src/App.svelte (line 270)
+
+**Tests:** All pass, build succeeds

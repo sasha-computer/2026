@@ -22,9 +22,12 @@
 - Remove view button, always show third column with request details
 - Add explorer link for requestor address (links to https://explorer.boundless.network/requestors/{address})
 - Add "Fetch Recent Orders" button to auto-populate last 3/5/10 orders from requestor address
+- Fix "Fetch Recent Orders" button not working (API response parsing bug)
 
 ---
 
 ## Planned
+
+- add a button to copy the requestor ID somewhere, like the classic two pages overlapping
 
 ## Completed

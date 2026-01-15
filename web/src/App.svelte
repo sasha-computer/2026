@@ -267,7 +267,7 @@
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
-      const requests = Array.isArray(data) ? data : data.requests || [];
+      const requests = Array.isArray(data) ? data : data.data || [];
 
       let addedCount = 0;
       for (const req of requests) {
