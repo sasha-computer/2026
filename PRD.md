@@ -26,11 +26,10 @@
 - Add copy button for requestor address in Requestor Tracker (two overlapping pages icon)
 
 - Improved third column detail view: copy button for request ID, prover link to explorer, human-readable timing (created/locked/expires/fulfilled), proof latency calculation, 3 s.f. pricing, total cycles with M/B suffix, removed chain ID
+- Add notification badge to "Fetch Recent Orders" button showing count of new orders not in localStorage; clicking when badge visible auto-fetches those orders without modal
 
 ---
 
 ## Planned
-
-- Since the API is free and internal, lets add a feature to the "Fetch Recent Orders" button which is a notification badge. Just as you'd expect, if there are two new orders that are not stored in localStorage, then show a notifaction badge that says 2 in the top right corner of the "Fetch Recent Orders" button. The idea is to let me know that mroe orders have come in; if there is a ntoification badge, clicking the button should pull all the recent orders i.e. badge says 2, pull latest 2 automatically no modal pop up at all.
 
 ## Completed

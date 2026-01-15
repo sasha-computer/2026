@@ -78,6 +78,10 @@
   let showAutoPopulateModal = $state(false);
   let autoPopulateLoading = $state(false);
 
+  // New orders notification badge
+  let newOrderCount = $state(0);
+  let checkingNewOrders = $state(false);
+
   function loadTrackerData(): TrackerData {
     if (typeof localStorage === 'undefined') return { requestors: [] };
     const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
@@ -255,6 +259,50 @@
     fetchRequest();
   }
 
+  // Check for new orders that aren't in localStorage
+  async function checkForNewOrders() {
+    if (selectedRequestorIndex === null || checkingNewOrders) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    checkingNewOrders = true;
+
+    try {
+      // Fetch a reasonable number to check against (10 is enough to detect new ones)
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=10`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.data || [];
+
+      // Count how many are not in localStorage
+      let count = 0;
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (reqId && !requestor.requests.some(r => r.id === reqId)) {
+          count++;
+        }
+      }
+      newOrderCount = count;
+    } catch (e) {
+      console.error('Failed to check for new orders:', e);
+      newOrderCount = 0;
+    } finally {
+      checkingNewOrders = false;
+    }
+  }
+
+  // Handle Fetch Recent Orders button click
+  async function handleFetchRecentOrders() {
+    if (newOrderCount > 0) {
+      // Auto-fetch the new orders without showing modal
+      await autoPopulateOrders(newOrderCount);
+      newOrderCount = 0;
+    } else {
+      // Show the modal to choose count
+      showAutoPopulateModal = true;
+    }
+  }
+
   async function autoPopulateOrders(count: number) {
     if (selectedRequestorIndex === null) return;
     const requestor = trackerData.requestors[selectedRequestorIndex];
@@ -340,6 +388,16 @@
       trackerViewLoading = false;
     }
   }
+
+  // Check for new orders when requestor changes
+  $effect(() => {
+    if (selectedRequestorIndex !== null) {
+      // Reset count when switching requestors
+      newOrderCount = 0;
+      // Check for new orders
+      checkForNewOrders();
+    }
+  });
 
   // Derived
   const categories = getCategories();
@@ -900,10 +958,13 @@
             </div>
             <button
               class="auto-populate-btn"
-              onclick={() => showAutoPopulateModal = true}
-              disabled={autoPopulateLoading}
+              onclick={handleFetchRecentOrders}
+              disabled={autoPopulateLoading || checkingNewOrders}
             >
               {autoPopulateLoading ? 'Loading...' : 'Fetch Recent Orders'}
+              {#if newOrderCount > 0}
+                <span class="notification-badge">{newOrderCount}</span>
+              {/if}
             </button>
           </div>
 
@@ -1860,6 +1921,7 @@
     border-radius: 4px;
     font-size: 0.8125rem;
     cursor: pointer;
+    position: relative;
   }
 
   .auto-populate-btn:hover:not(:disabled) {
@@ -1869,6 +1931,24 @@
   .auto-populate-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .notification-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #f44336;
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   .orders-heading {

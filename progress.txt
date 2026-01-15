@@ -1,3 +1,25 @@
+## 2026-01-15: Notification badge for Fetch Recent Orders button
+
+PRD item: "Add notification badge to Fetch Recent Orders button..."
+
+Changes:
+- Added notification badge (red circle) showing count of new orders not in localStorage
+- On requestor selection, auto-checks API for new orders
+- Click behavior: if badge > 0, auto-fetches that many without modal; otherwise shows modal
+- New state: newOrderCount, checkingNewOrders
+- New functions: checkForNewOrders(), handleFetchRecentOrders()
+- Badge styled with absolute positioning in top-right corner
+
+Files changed:
+- web/src/App.svelte - added badge state, check function, effect, CSS
+
+Decisions:
+- Check for up to 10 recent orders when determining new count
+- Reset count when switching requestors
+- Badge shows exact count of new orders found
+
+---
+
 ## 2026-01-15: Improved request details view in Requestor Tracker
 
 PRD item: "Add a button to each order... Fix the view in the third column..."
