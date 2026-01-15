@@ -7,13 +7,24 @@
     type ParamDef,
   } from './lib/config';
   import { BASE_URL } from './lib/api/client';
+  import type { MarketRequest } from './lib/types';
 
-  // State
+  // Tab state
+  type Tab = 'browser' | 'debugger';
+  let activeTab = $state<Tab>('browser');
+
+  // Endpoint Browser state
   let selected = $state<EndpointConfig>(ENDPOINTS[0]);
   let params = $state<Record<string, string | number>>({});
   let result = $state<string>('');
   let loading = $state(false);
   let error = $state<string | null>(null);
+
+  // Request Debugger state
+  let requestId = $state('');
+  let debuggerLoading = $state(false);
+  let debuggerError = $state<string | null>(null);
+  let requestData = $state<MarketRequest | null>(null);
 
   // Derived
   const categories = getCategories();
@@ -86,16 +97,85 @@
         return 'text';
     }
   }
+
+  // Request Debugger functions
+  async function fetchRequest() {
+    if (!requestId.trim()) return;
+
+    debuggerLoading = true;
+    debuggerError = null;
+    requestData = null;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requests/${requestId.trim()}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Request not found');
+        }
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      // API returns array, take first element
+      if (Array.isArray(data) && data.length > 0) {
+        requestData = data[0];
+      } else if (data && !Array.isArray(data)) {
+        requestData = data;
+      } else {
+        throw new Error('Request not found');
+      }
+    } catch (e) {
+      debuggerError = e instanceof Error ? e.message : 'Unknown error';
+    } finally {
+      debuggerLoading = false;
+    }
+  }
+
+  function formatTimestamp(unix: number, iso: string): string {
+    return `${iso} (${unix})`;
+  }
+
+  function getStatusColor(status: MarketRequest['request_status']): string {
+    switch (status) {
+      case 'fulfilled': return '#4caf50';
+      case 'locked': return '#ff9800';
+      case 'submitted': return '#2196f3';
+      case 'slashed': return '#f44336';
+      case 'expired': return '#9e9e9e';
+      default: return '#666';
+    }
+  }
+
+  function shortenAddress(addr: string | null): string {
+    if (!addr) return '—';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }
 </script>
 
 <header>
   <h1>Boundless Explorer</h1>
+  <nav class="tabs">
+    <button
+      class="tab"
+      class:active={activeTab === 'browser'}
+      onclick={() => activeTab = 'browser'}
+    >
+      Endpoint Browser
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'debugger'}
+      onclick={() => activeTab = 'debugger'}
+    >
+      Request Debugger
+    </button>
+  </nav>
   <a href="https://d2mdvlnmyov1e1.cloudfront.net/docs/" target="_blank" rel="noopener">
     API Docs
   </a>
 </header>
 
 <main>
+  {#if activeTab === 'browser'}
   <section class="controls">
     <div class="field">
       <label for="endpoint">Endpoint</label>
@@ -222,6 +302,111 @@
       <p class="placeholder">Select an endpoint and click Fetch to see results</p>
     {/if}
   </section>
+  {:else if activeTab === 'debugger'}
+  <section class="debugger">
+    <div class="debugger-input">
+      <label for="request-id">Request Order ID</label>
+      <div class="input-row">
+        <input
+          type="text"
+          id="request-id"
+          placeholder="Enter request ID (e.g., 0x123...)"
+          bind:value={requestId}
+          onkeydown={(e) => e.key === 'Enter' && fetchRequest()}
+        />
+        <button onclick={fetchRequest} disabled={debuggerLoading || !requestId.trim()}>
+          {debuggerLoading ? 'Loading...' : 'Lookup'}
+        </button>
+      </div>
+    </div>
+
+    {#if debuggerError}
+      <div class="debugger-error">{debuggerError}</div>
+    {/if}
+
+    {#if requestData}
+      <div class="request-card">
+        <div class="request-header">
+          <div class="request-status" style="--status-color: {getStatusColor(requestData.request_status)}">
+            {requestData.request_status.toUpperCase()}
+          </div>
+          <div class="request-source">{requestData.source}</div>
+        </div>
+
+        <div class="request-section">
+          <h3>Identifiers</h3>
+          <div class="request-field">
+            <span class="field-label">Request ID</span>
+            <code class="field-value mono">{requestData.request_id}</code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Request Digest</span>
+            <code class="field-value mono">{requestData.request_digest}</code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Chain ID</span>
+            <span class="field-value">{requestData.chain_id}</span>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3>Addresses</h3>
+          <div class="request-field">
+            <span class="field-label">Client</span>
+            <code class="field-value mono" title={requestData.client_address}>{requestData.client_address}</code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Lock Prover</span>
+            <code class="field-value mono" title={requestData.lock_prover_address ?? ''}>
+              {requestData.lock_prover_address ?? '—'}
+            </code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Fulfill Prover</span>
+            <code class="field-value mono" title={requestData.fulfill_prover_address ?? ''}>
+              {requestData.fulfill_prover_address ?? '—'}
+            </code>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3>Pricing</h3>
+          <div class="request-field">
+            <span class="field-label">Min Price</span>
+            <span class="field-value">{requestData.min_price_formatted}</span>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Max Price</span>
+            <span class="field-value">{requestData.max_price_formatted}</span>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Lock Collateral</span>
+            <span class="field-value">{requestData.lock_collateral_formatted}</span>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3>Timing</h3>
+          <div class="request-field">
+            <span class="field-label">Created At</span>
+            <span class="field-value">{requestData.created_at_iso}</span>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Unix Timestamp</span>
+            <span class="field-value mono">{requestData.created_at}</span>
+          </div>
+        </div>
+
+        <details class="raw-json">
+          <summary>Raw JSON</summary>
+          <pre>{JSON.stringify(requestData, null, 2)}</pre>
+        </details>
+      </div>
+    {:else if !debuggerError}
+      <p class="debugger-placeholder">Enter a Request Order ID to view its details</p>
+    {/if}
+  </section>
+  {/if}
 </main>
 
 <footer>
@@ -240,6 +425,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
   }
 
   header h1 {
@@ -248,6 +434,32 @@
   }
 
   header a {
+    color: #88f;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .tab {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: #888;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s;
+  }
+
+  .tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+
+  .tab.active {
+    background: rgba(136, 136, 255, 0.2);
     color: #88f;
   }
 
@@ -396,5 +608,181 @@
 
   footer a {
     color: #88f;
+  }
+
+  /* Request Debugger styles */
+  .debugger {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .debugger-input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .debugger-input label {
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .input-row input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+
+  .input-row input:focus {
+    outline: none;
+    border-color: #88f;
+    box-shadow: 0 0 0 2px rgba(136, 136, 255, 0.2);
+  }
+
+  .input-row button {
+    padding: 0.75rem 1.5rem;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .input-row button:hover:not(:disabled) {
+    background: #2a2a4e;
+  }
+
+  .input-row button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .debugger-error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ef9a9a;
+  }
+
+  .debugger-placeholder {
+    color: #888;
+    text-align: center;
+    padding: 3rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+  }
+
+  .request-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .request-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .request-status {
+    padding: 0.25rem 0.75rem;
+    background: var(--status-color);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .request-source {
+    padding: 0.25rem 0.75rem;
+    background: #e0e0e0;
+    color: #666;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .request-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .request-section:last-of-type {
+    border-bottom: none;
+  }
+
+  .request-section h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .request-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    gap: 1rem;
+  }
+
+  .field-label {
+    color: #666;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .field-value {
+    text-align: right;
+    word-break: break-all;
+    font-size: 0.875rem;
+  }
+
+  .field-value.mono {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.8125rem;
+  }
+
+  .raw-json {
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .raw-json summary {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    color: #666;
+    font-size: 0.875rem;
+  }
+
+  .raw-json summary:hover {
+    background: #f5f5f5;
+  }
+
+  .raw-json pre {
+    margin: 0;
+    padding: 1rem 1.5rem;
+    background: #1a1a2e;
+    color: #0f0;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.75rem;
+    overflow-x: auto;
+    max-height: 300px;
   }
 </style>

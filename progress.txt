@@ -1,0 +1,17 @@
+## 2026-01-15: Request Debugger Tab
+
+Task: Add "Request Debugger" tab to web app (PRD Planned item)
+
+Decisions:
+- Added tab navigation to header (browser/debugger)
+- Debugger takes Request Order ID, displays formatted card with all fields
+- Sections: Identifiers, Addresses, Pricing, Timing
+- Color-coded status badges (fulfilled=green, locked=orange, etc.)
+- Raw JSON collapsible at bottom
+
+Files changed:
+- web/src/App.svelte - tab state, debugger UI, fetch logic, styles
+
+Notes:
+- Pre-existing type errors in endpoints.ts/vite.config.ts (not from this change)
+- Tests pass, build succeeds
