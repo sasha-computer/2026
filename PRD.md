@@ -10,6 +10,7 @@
 
 ## In Review
 
+- Add explorer link button next to copy button in order rows - links to https://explorer.boundless.network/orders/{requestId}?from=requestors/{requestorAddress}
 - Fix Fetch Recent Orders button disabled state: no longer disabled during check, shows "..." badge while checking; requestor badge repositioned to top-right corner with hover scale effect
 - Add notification badge to each requestor in Tracked Requestors column showing new order count; clicking badge shows spinner while fetching, then opens requestor view with most recent order in viewing panel
 - Add "Request Debugger" tab to web app that takes a Request Order ID and displays the request information from the API in a nicely formatted UI
@@ -36,7 +37,6 @@
 
 ## Planned
 
-- add a button to each request next to copy that takes you to the request ID i.e. https://explorer.boundless.network/orders/0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e83572afa?from=requestors/0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e
 - Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerData() (saves to both), migrateLocalStorageToSupabase() for one-time migration
 - Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace 8 saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab
 - Test Supabase integration: add requestor (verify in Supabase), add orders, reload page (data persists), test offline fallback, test localStorage migration

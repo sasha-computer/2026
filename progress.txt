@@ -1,3 +1,17 @@
+## 2026-01-15: Explorer link button for order rows
+
+PRD item: "add a button to each request next to copy that takes you to the request ID"
+
+Changes:
+- Added external link button next to copy button in order rows
+- Links to explorer.boundless.network/orders/{requestId}?from=requestors/{requestorAddress}
+- Uses external-link SVG icon, matches copy button styling
+- stopPropagation prevents row click when clicking link
+
+Files: web/src/App.svelte
+
+---
+
 ## 2026-01-15: Fetch button + badge positioning fix
 
 PRD item: "Not a big fan of the fetch recent orders button being disabled all the time..." + badge positioning
