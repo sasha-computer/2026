@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# ralph-wiggum: "I'm helping!"
+# Processes GitHub issues with Claude Code, creates PRs automatically.
+set -euo pipefail
+
+# Check for clean working directory
+if [[ -n "$(git status --porcelain)" ]]; then
+    echo "Error: working directory not clean. Commit or stash changes first."
+    exit 1
+fi
+
+# Get default branch name
+default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+# Fetch open issues
+echo "Fetching issues..."
+issues=$(gh issue list --state open --json number,title,body --limit 20)
+total=$(echo "$issues" | jq 'length')
+
+if [[ "$total" -eq 0 ]]; then
+    echo "No open issues found."
+    exit 0
+fi
+
+echo "Found ${total} open issues"
+echo ""
+
+# Track stats
+created=0
+skipped=0
+nochange=0
+i=0
+
+# Process each issue
+echo "$issues" | jq -c '.[]' | while read -r issue; do
+    ((i++)) || true
+    number=$(echo "$issue" | jq -r '.number')
+    title=$(echo "$issue" | jq -r '.title')
+    body=$(echo "$issue" | jq -r '.body // ""')
+    branch="issue-${number}"
+
+    echo "[${i}/${total}] Issue #${number}: ${title}"
+
+    # Skip if branch already exists
+    if git branch -a 2>/dev/null | grep -qE "(^|\s)${branch}$|origin/${branch}$"; then
+        echo "      → Skipping (branch already exists)"
+        ((skipped++)) || true
+        echo ""
+        continue
+    fi
+
+    # Ensure we're on default branch and up to date
+    echo "      → Creating branch ${branch}..."
+    git checkout "$default_branch" --quiet
+    git pull --ff-only --quiet 2>/dev/null || true
+    git checkout -b "$branch" --quiet
+
+    # Build prompt
+    prompt="GitHub Issue #${number}: ${title}
+
+${body}
+
+---
+Implement the changes requested in this issue. Make minimal, focused changes."
+
+    # Run Claude Code
+    echo "      → Running Claude Code..."
+    echo "$prompt" | claude -p --dangerously-skip-permissions || {
+        echo "      → Claude Code failed, cleaning up..."
+        git checkout "$default_branch" --quiet
+        git branch -D "$branch" --quiet 2>/dev/null || true
+        echo ""
+        continue
+    }
+
+    # Check if any changes were made
+    if git diff --quiet && git diff --cached --quiet; then
+        echo "      → No changes made"
+        git checkout "$default_branch" --quiet
+        git branch -D "$branch" --quiet
+        ((nochange++)) || true
+        echo ""
+        continue
+    fi
+
+    # Commit changes
+    echo "      → Committing changes..."
+    git add -A
+    git commit --quiet -m "fix: address issue #${number}
+
+${title}"
+
+    # Push and create PR
+    echo "      → Creating PR..."
+    git push -u origin "$branch" --quiet 2>&1
+    gh pr create \
+        --title "Fix #${number}: ${title}" \
+        --body "Closes #${number}
+
+Automated implementation by Claude Code." \
+        --head "$branch" \
+        --quiet
+
+    ((created++)) || true
+    echo "      ✓ PR created"
+    echo ""
+
+    # Return to default branch
+    git checkout "$default_branch" --quiet
+done
+
+echo "---"
+echo "Done: ${created} PRs created, ${skipped} skipped, ${nochange} no changes"
