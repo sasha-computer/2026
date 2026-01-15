@@ -14,12 +14,11 @@
 - Add "Requestor Tracker" tab to web app - allows tracking requestor addresses with nicknames, saving specific request IDs for quick access, marking orders as problematic, and adding notes (uses localStorage for persistence)
 - Requestor Tracker: Add third column showing request details (same UI as Request Debugger) when "View" button is clicked
 - Requestor Tracker improvements: Remove nickname field from request order ID adder, add "Orders" heading under current requestor, remove OK button, replace "note" text with note icon
+- Requestor Tracker: Make X (remove) button trigger a separate confirmation modal
 
 ---
 
 ## Planned
-
-- Requestor Tracker: Make X (remove) button trigger a separate confirmation modal
 
 ---
 

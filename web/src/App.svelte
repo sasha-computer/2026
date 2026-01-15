@@ -60,6 +60,14 @@
   let trackerViewError = $state<string | null>(null);
   let trackerViewData = $state<MarketRequest | null>(null);
 
+  // Remove confirmation modal state
+  interface RemoveConfirmation {
+    type: 'requestor' | 'request';
+    index: number;
+    name: string;
+  }
+  let removeConfirmation = $state<RemoveConfirmation | null>(null);
+
   function loadTrackerData(): TrackerData {
     if (typeof localStorage === 'undefined') return { requestors: [] };
     const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
@@ -92,6 +100,15 @@
     selectedRequestorIndex = trackerData.requestors.length - 1;
   }
 
+  function confirmRemoveRequestor(index: number) {
+    const requestor = trackerData.requestors[index];
+    removeConfirmation = {
+      type: 'requestor',
+      index,
+      name: requestor.nickname
+    };
+  }
+
   function removeRequestor(index: number) {
     trackerData.requestors = trackerData.requestors.filter((_, i) => i !== index);
     saveTrackerData();
@@ -119,6 +136,16 @@
     newRequestId = '';
   }
 
+  function confirmRemoveRequest(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    const request = trackerData.requestors[selectedRequestorIndex].requests[reqIndex];
+    removeConfirmation = {
+      type: 'request',
+      index: reqIndex,
+      name: request.nickname
+    };
+  }
+
   function removeTrackedRequest(reqIndex: number) {
     if (selectedRequestorIndex === null) return;
     const requestor = trackerData.requestors[selectedRequestorIndex];
@@ -128,6 +155,20 @@
     if (editingRequestIndex === reqIndex) {
       editingRequestIndex = null;
     }
+  }
+
+  function executeRemove() {
+    if (!removeConfirmation) return;
+    if (removeConfirmation.type === 'requestor') {
+      removeRequestor(removeConfirmation.index);
+    } else {
+      removeTrackedRequest(removeConfirmation.index);
+    }
+    removeConfirmation = null;
+  }
+
+  function cancelRemove() {
+    removeConfirmation = null;
   }
 
   function toggleProblematic(reqIndex: number) {
@@ -622,7 +663,7 @@
               </button>
               <button
                 class="remove-btn"
-                onclick={() => removeRequestor(i)}
+                onclick={() => confirmRemoveRequestor(i)}
                 title="Remove requestor"
               >
                 x
@@ -690,7 +731,7 @@
                     </button>
                     <button
                       class="action-btn remove-btn"
-                      onclick={() => removeTrackedRequest(ri)}
+                      onclick={() => confirmRemoveRequest(ri)}
                       title="Remove"
                     >
                       x
@@ -820,6 +861,34 @@
         </div>
       {/if}
     </div>
+
+    {#if removeConfirmation}
+      <div
+        class="modal-overlay"
+        role="button"
+        tabindex="-1"
+        onclick={cancelRemove}
+        onkeydown={(e) => e.key === 'Escape' && cancelRemove()}
+      >
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          tabindex="-1"
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+        >
+          <h3>Confirm Removal</h3>
+          <p>
+            Remove {removeConfirmation.type === 'requestor' ? 'requestor' : 'request'} <strong>{removeConfirmation.name}</strong>?
+          </p>
+          <div class="modal-actions">
+            <button class="modal-btn cancel" onclick={cancelRemove}>Cancel</button>
+            <button class="modal-btn confirm" onclick={executeRemove}>Remove</button>
+          </div>
+        </div>
+      </div>
+    {/if}
   </section>
   {/if}
 </main>
@@ -1629,5 +1698,67 @@
   .action-btn.view-btn.active {
     background: #88f;
     color: white;
+  }
+
+  /* Remove confirmation modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .modal h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.125rem;
+  }
+
+  .modal p {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .modal-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .modal-btn.cancel {
+    background: #f0f0f0;
+    color: #666;
+  }
+
+  .modal-btn.cancel:hover {
+    background: #e0e0e0;
+  }
+
+  .modal-btn.confirm {
+    background: #f44336;
+    color: white;
+  }
+
+  .modal-btn.confirm:hover {
+    background: #d32f2f;
   }
 </style>

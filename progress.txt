@@ -33,3 +33,24 @@ Changes:
 Files: web/src/App.svelte
 
 Build/tests pass.
+
+---
+
+## Requestor Tracker: Remove confirmation modal
+
+PRD: "Requestor Tracker: Make X (remove) button trigger a separate confirmation modal"
+
+Changes:
+- Added RemoveConfirmation interface to track pending removal (type, index, name)
+- Added removeConfirmation state var
+- Added confirmRemoveRequestor() and confirmRemoveRequest() fns to open modal
+- Added executeRemove() and cancelRemove() fns for modal actions
+- Changed X button handlers from direct remove to confirmation trigger
+- Added modal overlay with centered dialog box
+- Modal shows item name and type (requestor/request) being removed
+- Escape key closes modal, clicking overlay closes modal
+- Proper ARIA roles for accessibility (dialog, button)
+
+Files: web/src/App.svelte
+
+Build/tests pass.
