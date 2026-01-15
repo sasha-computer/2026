@@ -82,6 +82,10 @@
   let newOrderCount = $state(0);
   let checkingNewOrders = $state(false);
 
+  // Per-requestor notification badges
+  let requestorNewOrderCounts = $state<Record<number, number>>({});
+  let loadingRequestorBadge = $state<number | null>(null);
+
   function loadTrackerData(): TrackerData {
     if (typeof localStorage === 'undefined') return { requestors: [] };
     const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
@@ -391,6 +395,120 @@
     }
   }
 
+  // Check for new orders for a specific requestor (by index)
+  async function checkForNewOrdersForRequestor(index: number): Promise<number> {
+    const requestor = trackerData.requestors[index];
+    if (!requestor) return 0;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=10`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.data || [];
+
+      let count = 0;
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (reqId && !requestor.requests.some(r => r.id === reqId)) {
+          count++;
+        }
+      }
+      return count;
+    } catch (e) {
+      console.error('Failed to check for new orders:', e);
+      return 0;
+    }
+  }
+
+  // Check all requestors for new orders
+  async function checkAllRequestorsForNewOrders() {
+    const counts: Record<number, number> = {};
+    for (let i = 0; i < trackerData.requestors.length; i++) {
+      const count = await checkForNewOrdersForRequestor(i);
+      if (count > 0) {
+        counts[i] = count;
+      }
+    }
+    requestorNewOrderCounts = counts;
+  }
+
+  // Handle badge click on requestor - fetch new orders and open view
+  async function handleRequestorBadgeClick(index: number, event: MouseEvent) {
+    event.stopPropagation();
+    if (loadingRequestorBadge !== null) return;
+
+    loadingRequestorBadge = index;
+    const requestor = trackerData.requestors[index];
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=10`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.data || [];
+
+      let addedCount = 0;
+      let mostRecentNewOrder: MarketRequest | null = null;
+
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (!reqId || requestor.requests.some(r => r.id === reqId)) {
+          continue;
+        }
+
+        // Track the first (most recent) new order
+        if (!mostRecentNewOrder) {
+          mostRecentNewOrder = req;
+        }
+
+        const shortId = getShortOrderId(reqId, requestor.address);
+        const newRequest: TrackedRequest = {
+          id: reqId,
+          nickname: shortId,
+          problematic: req.request_status === 'expired',
+          note: '',
+          addedAt: Date.now(),
+          createdAt: req.created_at_iso,
+          status: req.request_status
+        };
+
+        requestor.requests = [...requestor.requests, newRequest];
+        addedCount++;
+      }
+
+      if (addedCount > 0) {
+        trackerData.requestors = [...trackerData.requestors];
+        saveTrackerData();
+      }
+
+      // Clear badge count for this requestor
+      const newCounts = { ...requestorNewOrderCounts };
+      delete newCounts[index];
+      requestorNewOrderCounts = newCounts;
+
+      // Select this requestor
+      selectedRequestorIndex = index;
+
+      // Open the most recent order in the view panel
+      if (mostRecentNewOrder) {
+        trackerViewRequestId = mostRecentNewOrder.request_id;
+        trackerViewData = mostRecentNewOrder;
+        trackerViewError = null;
+        trackerViewLoading = false;
+      }
+
+      // Update the main "Fetch Recent Orders" badge count
+      newOrderCount = 0;
+    } catch (e) {
+      console.error('Failed to fetch orders for requestor:', e);
+    } finally {
+      loadingRequestorBadge = null;
+    }
+  }
+
   // Check for new orders when requestor changes
   $effect(() => {
     if (selectedRequestorIndex !== null) {
@@ -398,6 +516,13 @@
       newOrderCount = 0;
       // Check for new orders
       checkForNewOrders();
+    }
+  });
+
+  // Check all requestors for new orders on initial load
+  $effect(() => {
+    if (trackerData.requestors.length > 0) {
+      checkAllRequestorsForNewOrders();
     }
   });
 
@@ -907,6 +1032,20 @@
         <ul class="requestor-list">
           {#each trackerData.requestors as requestor, i}
             <li class="requestor-item" class:selected={selectedRequestorIndex === i}>
+              {#if requestorNewOrderCounts[i]}
+                <button
+                  class="requestor-badge"
+                  class:loading={loadingRequestorBadge === i}
+                  onclick={(e) => handleRequestorBadgeClick(i, e)}
+                  title="Fetch {requestorNewOrderCounts[i]} new orders"
+                >
+                  {#if loadingRequestorBadge === i}
+                    <span class="spinner"></span>
+                  {:else}
+                    {requestorNewOrderCounts[i]}
+                  {/if}
+                </button>
+              {/if}
               <button
                 class="requestor-select-btn"
                 onclick={() => selectedRequestorIndex = i}
@@ -1811,6 +1950,48 @@
 
   .requestor-item.selected .requestor-address {
     color: #aaa;
+  }
+
+  .requestor-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 11px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .requestor-badge:hover {
+    background: #d32f2f;
+  }
+
+  .requestor-badge.loading {
+    background: #ff9800;
+    cursor: wait;
+  }
+
+  .spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .requestor-select-btn {

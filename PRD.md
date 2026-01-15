@@ -10,6 +10,7 @@
 
 ## In Review
 
+- Add notification badge to each requestor in Tracked Requestors column showing new order count; clicking badge shows spinner while fetching, then opens requestor view with most recent order in viewing panel
 - Add "Request Debugger" tab to web app that takes a Request Order ID and displays the request information from the API in a nicely formatted UI
 - Add "Requestor Tracker" tab to web app - allows tracking requestor addresses with nicknames, saving specific request IDs for quick access, marking orders as problematic, and adding notes (uses localStorage for persistence)
 - Requestor Tracker: Add third column showing request details (same UI as Request Debugger) when "View" button is clicked
@@ -33,7 +34,5 @@
 ---
 
 ## Planned
-
-- add the notification badge from "Fetch Recent Orders" to the Tracked Requestors column (left-most) on each requestor. When clicking the notification badge, it should turn into a spinning circle as orders are fetched. Once they are fetched open that requestors view in the centre and right hand columns with the top request in the list (most recent) in the Viewing column in the right.
 
 ## Completed

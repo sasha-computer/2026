@@ -23,3 +23,21 @@ Changes:
 Files: web/src/App.svelte (lines 993-1047, CSS ~2086-2161)
 
 Build + tests pass.
+
+## Per-requestor notification badges
+
+PRD: "add notification badge from Fetch Recent Orders to Tracked Requestors column on each requestor. Clicking badge shows spinner, fetches orders, opens requestor view with most recent order."
+
+Changes:
+- Added `requestorNewOrderCounts` state (Record<number, number>) to track per-requestor counts
+- Added `loadingRequestorBadge` state to track which requestor badge is loading
+- Added `checkForNewOrdersForRequestor(index)` to check single requestor
+- Added `checkAllRequestorsForNewOrders()` to check all on load via $effect
+- Added `handleRequestorBadgeClick()` to fetch orders, show spinner, select requestor, open most recent order in view
+- Badge UI in requestor list sidebar with red badge showing count
+- Spinner animation on badge while loading (orange background)
+- After fetch: selects requestor, clears badge, opens most recent new order in right panel
+
+Files: web/src/App.svelte (lines 82-84, 394-487, 908-922, CSS 1790-1831)
+
+Build + tests pass.
