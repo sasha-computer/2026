@@ -25,3 +25,23 @@ Changes:
 Files: web/src/App.svelte
 
 Reasoning: Button was disabled when checking for new orders, preventing user from clicking even when badge showed new orders available. Separated loading states so user can still click button during background check.
+
+---
+
+## 2026-01-15: Supabase module creation
+
+PRD item: "Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerData() (saves to both), migrateLocalStorageToSupabase() for one-time migration"
+
+Changes:
+- Created web/src/lib/supabase.ts with all specified functionality
+- Exports TrackedRequest, TrackedRequestor, TrackerData types
+- Supabase client singleton via getSupabaseClient()
+- isSupabaseConfigured() helper for UI conditional logic
+- loadTrackerData(): async, tries Supabase first, falls back to localStorage
+- saveTrackerData(): async, saves to both localStorage and Supabase
+- migrateLocalStorageToSupabase(): one-time migration helper
+- Uses VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY env vars
+
+Files: web/src/lib/supabase.ts (new)
+
+Notes: Module ready for App.svelte integration (next PRD task). Table schema assumed: tracker_data(id text primary key, data jsonb, updated_at timestamp)
