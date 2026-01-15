@@ -163,6 +163,10 @@
           // Update metadata
           requestor.requests[reqIndex].createdAt = requestData.created_at_iso;
           requestor.requests[reqIndex].status = requestData.request_status;
+          // Auto-flag expired orders as problematic
+          if (requestData.request_status === 'expired') {
+            requestor.requests[reqIndex].problematic = true;
+          }
           trackerData.requestors = [...trackerData.requestors];
           saveTrackerData();
 

@@ -4,3 +4,11 @@
 - Applied formatting to all 3 timestamp displays: order list, Request Debugger, Tracker View
 - Files: web/src/App.svelte (lines 433-440, 686, 929)
 - Build passes
+
+## Auto-flag expired orders
+- PRD item: "have it be automatically flagged as ! when the order is 'Expired'"
+- Added auto-flag logic in addTrackedRequest() after API fetch
+- When request_status === 'expired', sets problematic = true automatically
+- Manual toggle still works for other statuses
+- Files: web/src/App.svelte (line 167-169)
+- Build passes
