@@ -8,33 +8,19 @@
   } from './lib/config';
   import { BASE_URL } from './lib/api/client';
   import type { MarketRequest } from './lib/types';
+  import {
+    loadTrackerData as loadTrackerDataAsync,
+    saveTrackerData as saveTrackerDataAsync,
+    migrateLocalStorageToSupabase,
+    isSupabaseConfigured,
+    type TrackedRequest,
+    type TrackedRequestor,
+    type TrackerData,
+  } from './lib/supabase';
 
   // Tab state
   type Tab = 'browser' | 'debugger' | 'tracker';
   let activeTab = $state<Tab>('browser');
-
-  // Requestor Tracker types
-  interface TrackedRequest {
-    id: string;
-    nickname: string;
-    problematic: boolean;
-    note: string;
-    addedAt: number;
-    // Auto-fetched metadata
-    createdAt?: string; // ISO format from API
-    status?: string;
-  }
-
-  interface TrackedRequestor {
-    address: string;
-    nickname: string;
-    requests: TrackedRequest[];
-    addedAt: number;
-  }
-
-  interface TrackerData {
-    requestors: TrackedRequestor[];
-  }
 
   // Endpoint Browser state
   let selected = $state<EndpointConfig>(ENDPOINTS[0]);
@@ -50,8 +36,8 @@
   let requestData = $state<MarketRequest | null>(null);
 
   // Requestor Tracker state
-  const TRACKER_STORAGE_KEY = 'boundless-requestor-tracker';
-  let trackerData = $state<TrackerData>(loadTrackerData());
+  let trackerData = $state<TrackerData>({ requestors: [] });
+  let trackerLoading = $state(true);
   let selectedRequestorIndex = $state<number | null>(null);
   let newRequestorAddress = $state('');
   let newRequestorNickname = $state('');
@@ -86,21 +72,25 @@
   let requestorNewOrderCounts = $state<Record<number, number>>({});
   let loadingRequestorBadge = $state<number | null>(null);
 
-  function loadTrackerData(): TrackerData {
-    if (typeof localStorage === 'undefined') return { requestors: [] };
-    const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
-    if (!stored) return { requestors: [] };
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return { requestors: [] };
-    }
-  }
-
-  function saveTrackerData() {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(trackerData));
-  }
+  // Initialize tracker data from Supabase (with localStorage fallback)
+  $effect(() => {
+    (async () => {
+      trackerLoading = true;
+      try {
+        // Attempt migration from localStorage to Supabase (one-time)
+        if (isSupabaseConfigured()) {
+          await migrateLocalStorageToSupabase();
+        }
+        // Load data (Supabase-first, localStorage fallback)
+        trackerData = await loadTrackerDataAsync();
+      } catch (e) {
+        console.error('Failed to load tracker data:', e);
+        trackerData = { requestors: [] };
+      } finally {
+        trackerLoading = false;
+      }
+    })();
+  });
 
   async function addRequestor() {
     if (!newRequestorAddress.trim()) return;
@@ -112,7 +102,7 @@
       requests: [],
       addedAt: Date.now()
     }];
-    saveTrackerData();
+    saveTrackerDataAsync(trackerData);
     newRequestorAddress = '';
     newRequestorNickname = '';
     selectedRequestorIndex = trackerData.requestors.length - 1;
@@ -131,7 +121,7 @@
 
   function removeRequestor(index: number) {
     trackerData.requestors = trackerData.requestors.filter((_, i) => i !== index);
-    saveTrackerData();
+    saveTrackerDataAsync(trackerData);
     if (selectedRequestorIndex === index) {
       selectedRequestorIndex = null;
     } else if (selectedRequestorIndex !== null && selectedRequestorIndex > index) {
@@ -162,7 +152,7 @@
 
     requestor.requests = [...requestor.requests, newRequest];
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    saveTrackerDataAsync(trackerData);
     newRequestId = '';
 
     // Auto-fetch API data and auto-open view panel
@@ -182,7 +172,7 @@
             requestor.requests[reqIndex].problematic = true;
           }
           trackerData.requestors = [...trackerData.requestors];
-          saveTrackerData();
+          saveTrackerDataAsync(trackerData);
 
           // Auto-open the view panel with this data
           trackerViewRequestId = reqId;
@@ -211,7 +201,7 @@
     const requestor = trackerData.requestors[selectedRequestorIndex];
     requestor.requests = requestor.requests.filter((_, i) => i !== reqIndex);
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    saveTrackerDataAsync(trackerData);
     if (editingRequestIndex === reqIndex) {
       editingRequestIndex = null;
     }
@@ -236,7 +226,7 @@
     const requestor = trackerData.requestors[selectedRequestorIndex];
     requestor.requests[reqIndex].problematic = !requestor.requests[reqIndex].problematic;
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    saveTrackerDataAsync(trackerData);
   }
 
   function startEditingNote(reqIndex: number) {
@@ -249,7 +239,7 @@
     if (selectedRequestorIndex === null || editingRequestIndex === null) return;
     trackerData.requestors[selectedRequestorIndex].requests[editingRequestIndex].note = editNote;
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    saveTrackerDataAsync(trackerData);
     editingRequestIndex = null;
     editNote = '';
   }
@@ -347,7 +337,7 @@
 
       if (addedCount > 0) {
         trackerData.requestors = [...trackerData.requestors];
-        saveTrackerData();
+        saveTrackerDataAsync(trackerData);
 
         // Auto-select the first added order in view panel
         const firstNewReq = requestor.requests[requestor.requests.length - addedCount];
@@ -481,7 +471,7 @@
 
       if (addedCount > 0) {
         trackerData.requestors = [...trackerData.requestors];
-        saveTrackerData();
+        saveTrackerDataAsync(trackerData);
       }
 
       // Clear badge count for this requestor
@@ -1009,6 +999,12 @@
   </section>
   {:else if activeTab === 'tracker'}
   <section class="tracker">
+    {#if trackerLoading}
+      <div class="tracker-loading">
+        <div class="loading-spinner"></div>
+        <p>Loading tracker data...</p>
+      </div>
+    {:else}
     <div class="tracker-layout has-detail">
       <div class="tracker-sidebar">
         <h3>Tracked Requestors</h3>
@@ -1435,6 +1431,7 @@
           </div>
         </div>
       </div>
+    {/if}
     {/if}
   </section>
   {/if}
@@ -2610,5 +2607,26 @@
 
   .modal-btn.option:hover {
     background: #2a2a4e;
+  }
+
+  /* Tracker loading state */
+  .tracker-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 300px;
+    color: #666;
+    gap: 1rem;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e0e0e0;
+    border-top-color: #88f;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
   }
 </style>

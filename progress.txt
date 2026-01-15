@@ -45,3 +45,23 @@ Changes:
 Files: web/src/lib/supabase.ts (new)
 
 Notes: Module ready for App.svelte integration (next PRD task). Table schema assumed: tracker_data(id text primary key, data jsonb, updated_at timestamp)
+
+---
+
+## 2026-01-15: App.svelte Supabase integration
+
+PRD item: "Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace 8 saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab"
+
+Changes:
+- Imported types (TrackedRequest, TrackedRequestor, TrackerData) and functions from ./lib/supabase
+- Removed inline type definitions
+- Added trackerLoading state, initialized trackerData as empty
+- Added $effect for async init: attempts localStorage->Supabase migration, then loads data
+- Deleted old loadTrackerData() and saveTrackerData() functions
+- Replaced 9 saveTrackerData() calls with saveTrackerDataAsync(trackerData)
+- Added loading UI (spinner + message) to tracker tab when trackerLoading is true
+- Added CSS for .tracker-loading and .loading-spinner
+
+Files: web/src/App.svelte
+
+Notes: Migration only runs when Supabase env vars are configured. Falls back to localStorage-only if not. Loading state prevents flickering/race conditions during async init.
