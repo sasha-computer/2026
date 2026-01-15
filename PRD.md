@@ -10,6 +10,7 @@
 
 ## In Review
 
+- Fix Fetch Recent Orders button disabled state: no longer disabled during check, shows "..." badge while checking; requestor badge repositioned to top-right corner with hover scale effect
 - Add notification badge to each requestor in Tracked Requestors column showing new order count; clicking badge shows spinner while fetching, then opens requestor view with most recent order in viewing panel
 - Add "Request Debugger" tab to web app that takes a Request Order ID and displays the request information from the API in a nicely formatted UI
 - Add "Requestor Tracker" tab to web app - allows tracking requestor addresses with nicknames, saving specific request IDs for quick access, marking orders as problematic, and adding notes (uses localStorage for persistence)
@@ -35,7 +36,6 @@
 
 ## Planned
 
-- Not a big fan of the fetch recent orders button being disabled all the time tbh. Like I can't do it, even though one requestor has the red 10 next to their name in the left most column. Also can you work on making the red badge in the tracked requestor column requestor box a bit nicer? It doesn't really fit and it'd be real nice if it was on the top right corner as originally requested.
 - add a button to each request next to copy that takes you to the request ID i.e. https://explorer.boundless.network/orders/0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e83572afa?from=requestors/0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e
 - Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerData() (saves to both), migrateLocalStorageToSupabase() for one-time migration
 - Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace 8 saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab

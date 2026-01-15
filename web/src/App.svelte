@@ -1032,6 +1032,15 @@
         <ul class="requestor-list">
           {#each trackerData.requestors as requestor, i}
             <li class="requestor-item" class:selected={selectedRequestorIndex === i}>
+              <button
+                class="requestor-select-btn"
+                onclick={() => selectedRequestorIndex = i}
+              >
+                <span class="requestor-nickname">{requestor.nickname}</span>
+                <code class="requestor-address" title={requestor.address}>
+                  {shortenAddress(requestor.address)}
+                </code>
+              </button>
               {#if requestorNewOrderCounts[i]}
                 <button
                   class="requestor-badge"
@@ -1046,15 +1055,6 @@
                   {/if}
                 </button>
               {/if}
-              <button
-                class="requestor-select-btn"
-                onclick={() => selectedRequestorIndex = i}
-              >
-                <span class="requestor-nickname">{requestor.nickname}</span>
-                <code class="requestor-address" title={requestor.address}>
-                  {shortenAddress(requestor.address)}
-                </code>
-              </button>
               <button
                 class="remove-btn"
                 onclick={() => confirmRemoveRequestor(i)}
@@ -1100,10 +1100,12 @@
             <button
               class="auto-populate-btn"
               onclick={handleFetchRecentOrders}
-              disabled={autoPopulateLoading || checkingNewOrders}
+              disabled={autoPopulateLoading}
             >
               {autoPopulateLoading ? 'Loading...' : 'Fetch Recent Orders'}
-              {#if newOrderCount > 0}
+              {#if checkingNewOrders}
+                <span class="notification-badge checking">...</span>
+              {:else if newOrderCount > 0}
                 <span class="notification-badge">{newOrderCount}</span>
               {/if}
             </button>
@@ -1936,6 +1938,7 @@
     margin-bottom: 0.25rem;
     background: white;
     border: 1px solid #e0e0e0;
+    position: relative;
   }
 
   .requestor-item:hover {
@@ -1953,25 +1956,30 @@
   }
 
   .requestor-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
     background: #f44336;
     color: white;
     border: none;
-    border-radius: 11px;
-    font-size: 0.6875rem;
+    border-radius: 10px;
+    font-size: 0.625rem;
     font-weight: 600;
     cursor: pointer;
-    flex-shrink: 0;
-    transition: background 0.15s;
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background 0.15s, transform 0.15s;
   }
 
   .requestor-badge:hover {
     background: #d32f2f;
+    transform: scale(1.1);
   }
 
   .requestor-badge.loading {
@@ -2144,6 +2152,16 @@
     justify-content: center;
     padding: 0 4px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .notification-badge.checking {
+    background: #ff9800;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
   }
 
   .orders-heading {

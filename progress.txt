@@ -1,43 +1,13 @@
-## Auto-fetch orders on new requestor add
+## 2026-01-15: Fetch button + badge positioning fix
 
-PRD: "when you add a new requestor, the 10 most recent orders are added and populated"
-
-Changed addRequestor() to async, calls autoPopulateOrders(10) after setting selectedRequestorIndex.
-Reuses existing autoPopulateOrders() logic - no code duplication.
-
-Files: web/src/App.svelte (lines 101-117)
-
-Build + tests pass.
-
-## Order row UI improvements
-
-PRD: "problematic button furthest left, close button nicer with icon, copy button next to short ID"
+PRD item: "Not a big fan of the fetch recent orders button being disabled all the time..." + badge positioning
 
 Changes:
-- Added `.request-actions-left` div containing problematic (!) button at leftmost position
-- Moved copy button inline next to short order ID in header line
-- Replaced "x" text in remove button with X icon (SVG)
-- Changed `.request-row` from `<button>` to `<div>` with role="button" to allow nested copy button
-- Added focus state for keyboard accessibility
+- Fetch Recent Orders btn no longer disabled during `checkingNewOrders`, only during `autoPopulateLoading`
+- Shows "..." badge with pulse animation while checking for new orders
+- Requestor badge repositioned to top-right corner (absolute pos, -6px offset)
+- Badge has hover scale effect, shadow for depth
 
-Files: web/src/App.svelte (lines 993-1047, CSS ~2086-2161)
+Files: web/src/App.svelte
 
-Build + tests pass.
-
-## Per-requestor notification badges
-
-PRD: "add notification badge from Fetch Recent Orders to Tracked Requestors column on each requestor. Clicking badge shows spinner, fetches orders, opens requestor view with most recent order."
-
-Changes:
-- Added `requestorNewOrderCounts` state (Record<number, number>) to track per-requestor counts
-- Added `loadingRequestorBadge` state to track which requestor badge is loading
-- Added `checkForNewOrdersForRequestor(index)` to check single requestor
-- Added `checkAllRequestorsForNewOrders()` to check all on load via $effect
-- Added `handleRequestorBadgeClick()` to fetch orders, show spinner, select requestor, open most recent order in view
-- Badge UI in requestor list sidebar with red badge showing count
-- Spinner animation on badge while loading (orange background)
-- After fetch: selects requestor, clears badge, opens most recent new order in right panel
-
-Files: web/src/App.svelte (lines 82-84, 394-487, 908-922, CSS 1790-1831)
-
-Build + tests pass.
+Reasoning: Button was disabled when checking for new orders, preventing user from clicking even when badge showed new orders available. Separated loading states so user can still click button during background check.
