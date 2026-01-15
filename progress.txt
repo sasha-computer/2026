@@ -12,3 +12,15 @@
 - Manual toggle still works for other statuses
 - Files: web/src/App.svelte (line 167-169)
 - Build passes
+
+## Always show third column, remove View button
+- PRD item: "get rid of the view button and just always have the third column open"
+- Third column now always visible in Requestor Tracker (3-column layout always)
+- Removed "view" button from order actions
+- Clicking order row now selects and loads details in third column
+- Added selected state styling for orders (.selected class)
+- Removed closeTrackerView() and close button since panel always open
+- Shows placeholder "Select an order to view its details" when nothing selected
+- Cleaned up unused CSS (.close-btn, .view-btn.active)
+- Files: web/src/App.svelte
+- Build passes

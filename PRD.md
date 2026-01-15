@@ -19,11 +19,11 @@
 - Show "Order already added" modal when trying to add duplicate order
 - Simplify timestamp format: replace +00:00 with UTC suffix
 - Auto-flag orders as problematic (!) when status is "Expired"
+- Remove view button, always show third column with request details
 
 ---
 
 ## Planned
-- I think we should get rid of the view button and just alwyays have the third column open.
 - can we have a button at the top under the nickname and their requestor ID, that can auto-populate the last X number of orders from that address, give an option of 3, 5 or 10 to add for now.
 - add an explorer link for their requestor ID thats under the nickname i.e. https://explorer.boundless.network/requestors/0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e?from=requestors on hte part that shows the requestor address rn
 
