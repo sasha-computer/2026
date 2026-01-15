@@ -24,3 +24,12 @@
 - Cleaned up unused CSS (.close-btn, .view-btn.active)
 - Files: web/src/App.svelte
 - Build passes
+
+## Explorer link for requestor address
+- PRD item: "add an explorer link for their requestor ID thats under the nickname"
+- Wrapped requestor address in link to https://explorer.boundless.network/requestors/{address}?from=requestors
+- Added ↗ icon to indicate external link
+- Hover state changes color to blue (#4a9eff)
+- Opens in new tab with proper security attrs
+- Files: web/src/App.svelte (lines 755-766, 1531-1549)
+- Build passes

@@ -754,7 +754,15 @@
           {@const requestor = trackerData.requestors[selectedRequestorIndex]}
           <div class="requestor-header">
             <h3>{requestor.nickname}</h3>
-            <code class="full-address">{requestor.address}</code>
+            <a
+              href="https://explorer.boundless.network/requestors/{requestor.address}?from=requestors"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="explorer-link"
+            >
+              <code class="full-address">{requestor.address}</code>
+              <span class="link-icon">↗</span>
+            </a>
           </div>
 
           <h4 class="orders-heading">Orders</h4>
@@ -1519,6 +1527,28 @@
     font-size: 0.8125rem;
     color: #666;
     word-break: break-all;
+  }
+
+  .explorer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .explorer-link:hover .full-address {
+    color: #4a9eff;
+  }
+
+  .explorer-link .link-icon {
+    font-size: 0.75rem;
+    color: #666;
+    transition: color 0.15s;
+  }
+
+  .explorer-link:hover .link-icon {
+    color: #4a9eff;
   }
 
   .orders-heading {
