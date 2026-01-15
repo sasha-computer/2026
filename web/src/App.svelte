@@ -10,8 +10,28 @@
   import type { MarketRequest } from './lib/types';
 
   // Tab state
-  type Tab = 'browser' | 'debugger';
+  type Tab = 'browser' | 'debugger' | 'tracker';
   let activeTab = $state<Tab>('browser');
+
+  // Requestor Tracker types
+  interface TrackedRequest {
+    id: string;
+    nickname: string;
+    problematic: boolean;
+    note: string;
+    addedAt: number;
+  }
+
+  interface TrackedRequestor {
+    address: string;
+    nickname: string;
+    requests: TrackedRequest[];
+    addedAt: number;
+  }
+
+  interface TrackerData {
+    requestors: TrackedRequestor[];
+  }
 
   // Endpoint Browser state
   let selected = $state<EndpointConfig>(ENDPOINTS[0]);
@@ -25,6 +45,122 @@
   let debuggerLoading = $state(false);
   let debuggerError = $state<string | null>(null);
   let requestData = $state<MarketRequest | null>(null);
+
+  // Requestor Tracker state
+  const TRACKER_STORAGE_KEY = 'boundless-requestor-tracker';
+  let trackerData = $state<TrackerData>(loadTrackerData());
+  let selectedRequestorIndex = $state<number | null>(null);
+  let newRequestorAddress = $state('');
+  let newRequestorNickname = $state('');
+  let newRequestId = $state('');
+  let newRequestNickname = $state('');
+  let editingRequestIndex = $state<number | null>(null);
+  let editNote = $state('');
+
+  function loadTrackerData(): TrackerData {
+    if (typeof localStorage === 'undefined') return { requestors: [] };
+    const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
+    if (!stored) return { requestors: [] };
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return { requestors: [] };
+    }
+  }
+
+  function saveTrackerData() {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(trackerData));
+  }
+
+  function addRequestor() {
+    if (!newRequestorAddress.trim()) return;
+    const addr = newRequestorAddress.trim().toLowerCase();
+    if (trackerData.requestors.some(r => r.address === addr)) return;
+    trackerData.requestors = [...trackerData.requestors, {
+      address: addr,
+      nickname: newRequestorNickname.trim() || addr.slice(0, 10),
+      requests: [],
+      addedAt: Date.now()
+    }];
+    saveTrackerData();
+    newRequestorAddress = '';
+    newRequestorNickname = '';
+    selectedRequestorIndex = trackerData.requestors.length - 1;
+  }
+
+  function removeRequestor(index: number) {
+    trackerData.requestors = trackerData.requestors.filter((_, i) => i !== index);
+    saveTrackerData();
+    if (selectedRequestorIndex === index) {
+      selectedRequestorIndex = null;
+    } else if (selectedRequestorIndex !== null && selectedRequestorIndex > index) {
+      selectedRequestorIndex--;
+    }
+  }
+
+  function addTrackedRequest() {
+    if (selectedRequestorIndex === null || !newRequestId.trim()) return;
+    const reqId = newRequestId.trim();
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    if (requestor.requests.some(r => r.id === reqId)) return;
+    requestor.requests = [...requestor.requests, {
+      id: reqId,
+      nickname: newRequestNickname.trim() || reqId.slice(0, 12),
+      problematic: false,
+      note: '',
+      addedAt: Date.now()
+    }];
+    trackerData.requestors = [...trackerData.requestors];
+    saveTrackerData();
+    newRequestId = '';
+    newRequestNickname = '';
+  }
+
+  function removeTrackedRequest(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    requestor.requests = requestor.requests.filter((_, i) => i !== reqIndex);
+    trackerData.requestors = [...trackerData.requestors];
+    saveTrackerData();
+    if (editingRequestIndex === reqIndex) {
+      editingRequestIndex = null;
+    }
+  }
+
+  function toggleProblematic(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    requestor.requests[reqIndex].problematic = !requestor.requests[reqIndex].problematic;
+    trackerData.requestors = [...trackerData.requestors];
+    saveTrackerData();
+  }
+
+  function startEditingNote(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    editingRequestIndex = reqIndex;
+    editNote = trackerData.requestors[selectedRequestorIndex].requests[reqIndex].note;
+  }
+
+  function saveNote() {
+    if (selectedRequestorIndex === null || editingRequestIndex === null) return;
+    trackerData.requestors[selectedRequestorIndex].requests[editingRequestIndex].note = editNote;
+    trackerData.requestors = [...trackerData.requestors];
+    saveTrackerData();
+    editingRequestIndex = null;
+    editNote = '';
+  }
+
+  function cancelEditNote() {
+    editingRequestIndex = null;
+    editNote = '';
+  }
+
+  function viewInDebugger(reqId: string) {
+    requestId = reqId;
+    activeTab = 'debugger';
+    fetchRequest();
+  }
 
   // Derived
   const categories = getCategories();
@@ -167,6 +303,13 @@
       onclick={() => activeTab = 'debugger'}
     >
       Request Debugger
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'tracker'}
+      onclick={() => activeTab = 'tracker'}
+    >
+      Requestor Tracker
     </button>
   </nav>
   <a href="https://d2mdvlnmyov1e1.cloudfront.net/docs/" target="_blank" rel="noopener">
@@ -405,6 +548,151 @@
     {:else if !debuggerError}
       <p class="debugger-placeholder">Enter a Request Order ID to view its details</p>
     {/if}
+  </section>
+  {:else if activeTab === 'tracker'}
+  <section class="tracker">
+    <div class="tracker-layout">
+      <div class="tracker-sidebar">
+        <h3>Tracked Requestors</h3>
+        <div class="add-requestor">
+          <input
+            type="text"
+            placeholder="Requestor address (0x...)"
+            bind:value={newRequestorAddress}
+            onkeydown={(e) => e.key === 'Enter' && addRequestor()}
+          />
+          <input
+            type="text"
+            placeholder="Nickname (optional)"
+            bind:value={newRequestorNickname}
+            onkeydown={(e) => e.key === 'Enter' && addRequestor()}
+          />
+          <button onclick={addRequestor} disabled={!newRequestorAddress.trim()}>
+            Add
+          </button>
+        </div>
+        <ul class="requestor-list">
+          {#each trackerData.requestors as requestor, i}
+            <li class="requestor-item" class:selected={selectedRequestorIndex === i}>
+              <button
+                class="requestor-select-btn"
+                onclick={() => selectedRequestorIndex = i}
+              >
+                <span class="requestor-nickname">{requestor.nickname}</span>
+                <code class="requestor-address" title={requestor.address}>
+                  {shortenAddress(requestor.address)}
+                </code>
+              </button>
+              <button
+                class="remove-btn"
+                onclick={() => removeRequestor(i)}
+                title="Remove requestor"
+              >
+                x
+              </button>
+            </li>
+          {:else}
+            <li class="empty-message">No requestors tracked yet</li>
+          {/each}
+        </ul>
+      </div>
+
+      <div class="tracker-main">
+        {#if selectedRequestorIndex !== null && trackerData.requestors[selectedRequestorIndex]}
+          {@const requestor = trackerData.requestors[selectedRequestorIndex]}
+          <div class="requestor-header">
+            <h3>{requestor.nickname}</h3>
+            <code class="full-address">{requestor.address}</code>
+          </div>
+
+          <div class="add-request">
+            <input
+              type="text"
+              placeholder="Request Order ID"
+              bind:value={newRequestId}
+              onkeydown={(e) => e.key === 'Enter' && addTrackedRequest()}
+            />
+            <input
+              type="text"
+              placeholder="Nickname (optional)"
+              bind:value={newRequestNickname}
+              onkeydown={(e) => e.key === 'Enter' && addTrackedRequest()}
+            />
+            <button onclick={addTrackedRequest} disabled={!newRequestId.trim()}>
+              Add Request
+            </button>
+          </div>
+
+          <ul class="tracked-requests">
+            {#each requestor.requests as req, ri}
+              <li class="tracked-request" class:problematic={req.problematic}>
+                <div class="request-row">
+                  <div class="request-main">
+                    <span class="request-nickname">{req.nickname}</span>
+                    <code class="request-id" title={req.id}>{req.id.slice(0, 20)}...</code>
+                  </div>
+                  <div class="request-actions">
+                    <button
+                      class="action-btn"
+                      class:active={req.problematic}
+                      onclick={() => toggleProblematic(ri)}
+                      title={req.problematic ? 'Mark as OK' : 'Mark as problematic'}
+                    >
+                      {req.problematic ? '!' : 'ok'}
+                    </button>
+                    <button
+                      class="action-btn"
+                      onclick={() => startEditingNote(ri)}
+                      title="Edit note"
+                    >
+                      note
+                    </button>
+                    <button
+                      class="action-btn view-btn"
+                      onclick={() => viewInDebugger(req.id)}
+                      title="View in debugger"
+                    >
+                      view
+                    </button>
+                    <button
+                      class="action-btn remove-btn"
+                      onclick={() => removeTrackedRequest(ri)}
+                      title="Remove"
+                    >
+                      x
+                    </button>
+                  </div>
+                </div>
+                {#if req.note}
+                  <div class="request-note">
+                    <span class="note-label">Note:</span> {req.note}
+                  </div>
+                {/if}
+                {#if editingRequestIndex === ri}
+                  <div class="note-editor">
+                    <textarea
+                      bind:value={editNote}
+                      placeholder="Add a note..."
+                      rows="2"
+                    ></textarea>
+                    <div class="note-actions">
+                      <button onclick={saveNote}>Save</button>
+                      <button onclick={cancelEditNote} class="cancel-btn">Cancel</button>
+                    </div>
+                  </div>
+                {/if}
+              </li>
+            {:else}
+              <li class="empty-message">No requests tracked for this requestor</li>
+            {/each}
+          </ul>
+        {:else}
+          <div class="tracker-placeholder">
+            <p>Select a requestor from the sidebar or add a new one to start tracking requests.</p>
+          </div>
+        {/if}
+      </div>
+    </div>
   </section>
   {/if}
 </main>
@@ -784,5 +1072,319 @@
     font-size: 0.75rem;
     overflow-x: auto;
     max-height: 300px;
+  }
+
+  /* Requestor Tracker styles */
+  .tracker {
+    height: calc(100vh - 200px);
+  }
+
+  .tracker-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1.5rem;
+    height: 100%;
+  }
+
+  .tracker-sidebar {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tracker-sidebar h3 {
+    margin: 0 0 1rem 0;
+    font-size: 0.875rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .add-requestor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .add-requestor input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .add-requestor button {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .requestor-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .requestor-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 0.25rem;
+    background: white;
+    border: 1px solid #e0e0e0;
+  }
+
+  .requestor-item:hover {
+    background: #eee;
+  }
+
+  .requestor-item.selected {
+    background: #1a1a2e;
+    color: white;
+    border-color: #1a1a2e;
+  }
+
+  .requestor-item.selected .requestor-address {
+    color: #aaa;
+  }
+
+  .requestor-select-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    overflow: hidden;
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+  }
+
+  .requestor-nickname {
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  .requestor-address {
+    font-size: 0.75rem;
+    color: #888;
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+
+  .remove-btn {
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    color: #999;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .remove-btn:hover {
+    background: #f44336;
+    color: white;
+  }
+
+  .tracker-main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .requestor-header {
+    margin-bottom: 1rem;
+  }
+
+  .requestor-header h3 {
+    margin: 0 0 0.25rem 0;
+  }
+
+  .full-address {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.8125rem;
+    color: #666;
+    word-break: break-all;
+  }
+
+  .add-request {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .add-request input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .add-request button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .tracked-requests {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .tracked-request {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tracked-request.problematic {
+    border-color: #f44336;
+    background: #fff8f7;
+  }
+
+  .request-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .request-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow: hidden;
+  }
+
+  .request-nickname {
+    font-weight: 500;
+  }
+
+  .request-id {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.75rem;
+    color: #888;
+  }
+
+  .request-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .action-btn {
+    padding: 0.25rem 0.5rem;
+    background: #f0f0f0;
+    color: #666;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+
+  .action-btn:hover {
+    background: #e0e0e0;
+  }
+
+  .action-btn.active {
+    background: #f44336;
+    color: white;
+  }
+
+  .action-btn.view-btn:hover {
+    background: #88f;
+    color: white;
+  }
+
+  .action-btn.remove-btn:hover {
+    background: #f44336;
+    color: white;
+  }
+
+  .request-note {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+    font-size: 0.875rem;
+    color: #666;
+  }
+
+  .note-label {
+    font-weight: 500;
+    color: #888;
+  }
+
+  .note-editor {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+  }
+
+  .note-editor textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.875rem;
+    resize: vertical;
+  }
+
+  .note-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .note-actions button {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .note-actions .cancel-btn {
+    background: #f0f0f0;
+    color: #666;
+  }
+
+  .note-actions .cancel-btn:hover {
+    background: #e0e0e0;
+  }
+
+  .tracker-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .empty-message {
+    color: #888;
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
   }
 </style>

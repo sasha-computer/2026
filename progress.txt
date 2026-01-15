@@ -1,17 +1,24 @@
-## 2026-01-15: Request Debugger Tab
+## 2026-01-15: Requestor Tracker Tab
 
-Task: Add "Request Debugger" tab to web app (PRD Planned item)
+Task: Add "Requestor Tracker" tab to web app (PRD Planned item)
 
-Decisions:
-- Added tab navigation to header (browser/debugger)
-- Debugger takes Request Order ID, displays formatted card with all fields
-- Sections: Identifiers, Addresses, Pricing, Timing
-- Color-coded status badges (fulfilled=green, locked=orange, etc.)
-- Raw JSON collapsible at bottom
+### Decisions
+- Used localStorage for persistence (simple, no backend needed)
+- Split-pane UI: sidebar for requestors, main area for requests
+- "View in debugger" button integrates with existing Request Debugger tab
+- Problematic requests highlighted with red border
 
-Files changed:
-- web/src/App.svelte - tab state, debugger UI, fetch logic, styles
+### Files Changed
+- web/src/App.svelte: Added tracker tab, types, state, UI, and styles
 
-Notes:
-- Pre-existing type errors in endpoints.ts/vite.config.ts (not from this change)
-- Tests pass, build succeeds
+### Features Implemented
+- Add/remove requestors with address + nickname
+- Add/remove requests per requestor with ID + nickname
+- Mark requests as problematic (toggleable)
+- Add/edit notes on requests
+- Quick "view" button to jump to Request Debugger
+- All data persists in localStorage
+
+### Notes
+- Fixed a11y warnings by using button instead of clickable li
+- Build passes, all tests pass
