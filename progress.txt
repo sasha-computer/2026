@@ -8,3 +8,18 @@ Reuses existing autoPopulateOrders() logic - no code duplication.
 Files: web/src/App.svelte (lines 101-117)
 
 Build + tests pass.
+
+## Order row UI improvements
+
+PRD: "problematic button furthest left, close button nicer with icon, copy button next to short ID"
+
+Changes:
+- Added `.request-actions-left` div containing problematic (!) button at leftmost position
+- Moved copy button inline next to short order ID in header line
+- Replaced "x" text in remove button with X icon (SVG)
+- Changed `.request-row` from `<button>` to `<div>` with role="button" to allow nested copy button
+- Added focus state for keyboard accessibility
+
+Files: web/src/App.svelte (lines 993-1047, CSS ~2086-2161)
+
+Build + tests pass.

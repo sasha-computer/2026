@@ -990,10 +990,27 @@
                 class:problematic={req.problematic}
                 class:selected={trackerViewRequestId === req.id}
               >
-                <button class="request-row" onclick={() => viewRequestInTracker(req.id)}>
+                <div class="request-actions-left">
+                  <button
+                    class="action-btn problematic-btn"
+                    class:active={req.problematic}
+                    onclick={(e) => { e.stopPropagation(); toggleProblematic(ri); }}
+                    title={req.problematic ? 'Mark as OK' : 'Mark as problematic'}
+                  >
+                    !
+                  </button>
+                </div>
+                <div class="request-row" role="button" tabindex="0" onclick={() => viewRequestInTracker(req.id)} onkeydown={(e) => e.key === 'Enter' && viewRequestInTracker(req.id)}>
                   <div class="request-main">
                     <div class="request-header-line">
                       <code class="short-order-id" title={req.id}>{getShortOrderId(req.id, requestor.address)}</code>
+                      <button
+                        class="action-btn copy-id-btn inline"
+                        onclick={(e) => { e.stopPropagation(); copyToClipboard(req.id); }}
+                        title="Copy request ID"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
                       {#if req.status}
                         <span class="order-status" style="--status-color: {getStatusColor(req.status as MarketRequest['request_status'])}">{req.status}</span>
                       {/if}
@@ -1004,23 +1021,8 @@
                       <code class="request-id-fallback" title={req.id}>...{getOrderSuffix(req.id, requestor.address)}</code>
                     {/if}
                   </div>
-                </button>
+                </div>
                 <div class="request-actions">
-                  <button
-                    class="action-btn copy-id-btn"
-                    onclick={(e) => { e.stopPropagation(); copyToClipboard(req.id); }}
-                    title="Copy request ID"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  </button>
-                  <button
-                    class="action-btn problematic-btn"
-                    class:active={req.problematic}
-                    onclick={(e) => { e.stopPropagation(); toggleProblematic(ri); }}
-                    title={req.problematic ? 'Mark as OK' : 'Mark as problematic'}
-                  >
-                    !
-                  </button>
                   <button
                     class="action-btn note-btn"
                     class:has-note={req.note}
@@ -1034,7 +1036,7 @@
                     onclick={(e) => { e.stopPropagation(); confirmRemoveRequest(ri); }}
                     title="Remove"
                   >
-                    x
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
                 {#if req.note}
@@ -1691,6 +1693,16 @@
     color: #2196f3;
   }
 
+  .copy-id-btn.inline {
+    padding: 0.125rem;
+    background: transparent;
+    margin-left: -0.125rem;
+  }
+
+  .copy-id-btn.inline:hover {
+    background: rgba(33, 150, 243, 0.1);
+  }
+
   .raw-json {
     border-top: 1px solid #e0e0e0;
   }
@@ -2031,10 +2043,17 @@
     text-align: left;
     color: inherit;
     font-family: inherit;
+    min-width: 0;
   }
 
   .request-row:hover {
     opacity: 0.8;
+  }
+
+  .request-row:focus {
+    outline: 2px solid #88f;
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   .request-main {
@@ -2081,6 +2100,12 @@
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.75rem;
     color: #888;
+  }
+
+  .request-actions-left {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
   }
 
   .request-actions {
@@ -2139,6 +2164,13 @@
   .action-btn.note-btn:hover {
     background: #88f;
     color: white;
+  }
+
+  .action-btn.remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
   }
 
   .action-btn.remove-btn:hover {
