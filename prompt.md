@@ -16,7 +16,7 @@ Otherwise, proceed with ONE task:
 - Any blockers or notes for the next iteration
 - Keep entries concise. Sacrifice grammar for the sake of concision.
 
-5. Make a git commit of that feature.
-6. Update PRD.md: move the completed feature to 'In Review'.
+5. Update PRD.md: move the completed feature to 'In Review'.
+6. Make a git commit of that feature and commit PRD.md as well.
 
 ONLY WORK ON A SINGLE FEATURE, then stop.
