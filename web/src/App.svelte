@@ -498,6 +498,26 @@
       .replace('Z', ' UTC')
       .replace('+00:00', ' UTC');
   }
+
+  // Copy to clipboard
+  let copySuccess = $state(false);
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      copySuccess = true;
+      setTimeout(() => copySuccess = false, 1500);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      copySuccess = true;
+      setTimeout(() => copySuccess = false, 1500);
+    }
+  }
 </script>
 
 <header>
@@ -815,15 +835,29 @@
           {@const requestor = trackerData.requestors[selectedRequestorIndex]}
           <div class="requestor-header">
             <h3>{requestor.nickname}</h3>
-            <a
-              href="https://explorer.boundless.network/requestors/{requestor.address}?from=requestors"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="explorer-link"
-            >
-              <code class="full-address">{requestor.address}</code>
-              <span class="link-icon">↗</span>
-            </a>
+            <div class="address-row">
+              <a
+                href="https://explorer.boundless.network/requestors/{requestor.address}?from=requestors"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="explorer-link"
+              >
+                <code class="full-address">{requestor.address}</code>
+                <span class="link-icon">↗</span>
+              </a>
+              <button
+                class="copy-btn"
+                class:copied={copySuccess}
+                onclick={() => copyToClipboard(requestor.address)}
+                title="Copy address"
+              >
+                {#if copySuccess}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                {:else}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                {/if}
+              </button>
+            </div>
             <button
               class="auto-populate-btn"
               onclick={() => showAutoPopulateModal = true}
@@ -1645,6 +1679,35 @@
 
   .explorer-link:hover .link-icon {
     color: #4a9eff;
+  }
+
+  .address-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem;
+    background: #f0f0f0;
+    color: #666;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover {
+    background: #e0e0e0;
+    color: #333;
+  }
+
+  .copy-btn.copied {
+    background: #4caf50;
+    color: white;
   }
 
   .auto-populate-btn {

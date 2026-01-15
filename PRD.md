@@ -23,11 +23,12 @@
 - Add explorer link for requestor address (links to https://explorer.boundless.network/requestors/{address})
 - Add "Fetch Recent Orders" button to auto-populate last 3/5/10 orders from requestor address
 - Fix "Fetch Recent Orders" button not working (API response parsing bug)
+- Add copy button for requestor address in Requestor Tracker (two overlapping pages icon)
 
 ---
 
 ## Planned
 
-- add a button to copy the requestor ID somewhere, like the classic two pages overlapping
+
 
 ## Completed

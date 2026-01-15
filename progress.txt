@@ -1,3 +1,19 @@
+## 2026-01-15: Add copy button for requestor address
+
+**Task:** PRD item "add a button to copy the requestor ID somewhere, like the classic two pages overlapping"
+
+**Implementation:** Added copy button next to requestor address in Requestor Tracker header with:
+- Classic "two overlapping pages" icon (SVG)
+- Checkmark icon on successful copy
+- 1.5s visual feedback on copy success
+- Clipboard API with fallback for older browsers
+
+**Files:** web/src/App.svelte (added copyToClipboard function, copy button UI, CSS styles)
+
+**Tests:** All pass, build succeeds
+
+---
+
 ## 2026-01-15: Fix Fetch Recent Orders button
 
 **Task:** PRD item "when I click 'Fetch Recent Orders' and choose a number nothing happens"
