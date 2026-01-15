@@ -1,24 +1,16 @@
-## 2026-01-15: Requestor Tracker Tab
+## Requestor Tracker: Third column for request details
 
-Task: Add "Requestor Tracker" tab to web app (PRD Planned item)
+PRD: "Requestor Tracker: Add third column showing request details (same UI as Request Debugger) when View button is clicked"
 
-### Decisions
-- Used localStorage for persistence (simple, no backend needed)
-- Split-pane UI: sidebar for requestors, main area for requests
-- "View in debugger" button integrates with existing Request Debugger tab
-- Problematic requests highlighted with red border
+Changes:
+- Added state vars for tracker detail view (trackerViewRequestId, trackerViewLoading, trackerViewError, trackerViewData)
+- Added viewRequestInTracker() fn to fetch request data for inline display
+- Added closeTrackerView() fn to dismiss detail panel
+- Modified "View" btn to call viewRequestInTracker instead of switching tabs
+- Added third column with request card UI (reuses same layout as Request Debugger)
+- Grid switches from 2-col to 3-col layout when detail panel open
+- Active view button highlighted in blue
 
-### Files Changed
-- web/src/App.svelte: Added tracker tab, types, state, UI, and styles
+Files: web/src/App.svelte
 
-### Features Implemented
-- Add/remove requestors with address + nickname
-- Add/remove requests per requestor with ID + nickname
-- Mark requests as problematic (toggleable)
-- Add/edit notes on requests
-- Quick "view" button to jump to Request Debugger
-- All data persists in localStorage
-
-### Notes
-- Fixed a11y warnings by using button instead of clickable li
-- Build passes, all tests pass
+Build/tests pass.

@@ -56,6 +56,10 @@
   let newRequestNickname = $state('');
   let editingRequestIndex = $state<number | null>(null);
   let editNote = $state('');
+  let trackerViewRequestId = $state<string | null>(null);
+  let trackerViewLoading = $state(false);
+  let trackerViewError = $state<string | null>(null);
+  let trackerViewData = $state<MarketRequest | null>(null);
 
   function loadTrackerData(): TrackerData {
     if (typeof localStorage === 'undefined') return { requestors: [] };
@@ -160,6 +164,41 @@
     requestId = reqId;
     activeTab = 'debugger';
     fetchRequest();
+  }
+
+  async function viewRequestInTracker(reqId: string) {
+    trackerViewRequestId = reqId;
+    trackerViewLoading = true;
+    trackerViewError = null;
+    trackerViewData = null;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requests/${reqId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Request not found');
+        }
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        trackerViewData = data[0];
+      } else if (data && !Array.isArray(data)) {
+        trackerViewData = data;
+      } else {
+        throw new Error('Request not found');
+      }
+    } catch (e) {
+      trackerViewError = e instanceof Error ? e.message : 'Unknown error';
+    } finally {
+      trackerViewLoading = false;
+    }
+  }
+
+  function closeTrackerView() {
+    trackerViewRequestId = null;
+    trackerViewData = null;
+    trackerViewError = null;
   }
 
   // Derived
@@ -551,7 +590,7 @@
   </section>
   {:else if activeTab === 'tracker'}
   <section class="tracker">
-    <div class="tracker-layout">
+    <div class="tracker-layout" class:has-detail={trackerViewRequestId !== null}>
       <div class="tracker-sidebar">
         <h3>Tracked Requestors</h3>
         <div class="add-requestor">
@@ -649,8 +688,9 @@
                     </button>
                     <button
                       class="action-btn view-btn"
-                      onclick={() => viewInDebugger(req.id)}
-                      title="View in debugger"
+                      class:active={trackerViewRequestId === req.id}
+                      onclick={() => viewRequestInTracker(req.id)}
+                      title="View request details"
                     >
                       view
                     </button>
@@ -692,6 +732,99 @@
           </div>
         {/if}
       </div>
+
+      {#if trackerViewRequestId !== null}
+        <div class="tracker-detail">
+          <div class="detail-header">
+            <h3>Request Details</h3>
+            <button class="close-btn" onclick={closeTrackerView} title="Close">&times;</button>
+          </div>
+
+          {#if trackerViewLoading}
+            <div class="detail-loading">Loading...</div>
+          {:else if trackerViewError}
+            <div class="detail-error">{trackerViewError}</div>
+          {:else if trackerViewData}
+            <div class="request-card tracker-request-card">
+              <div class="request-header">
+                <div class="request-status" style="--status-color: {getStatusColor(trackerViewData.request_status)}">
+                  {trackerViewData.request_status.toUpperCase()}
+                </div>
+                <div class="request-source">{trackerViewData.source}</div>
+              </div>
+
+              <div class="request-section">
+                <h3>Identifiers</h3>
+                <div class="request-field">
+                  <span class="field-label">Request ID</span>
+                  <code class="field-value mono">{trackerViewData.request_id}</code>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Request Digest</span>
+                  <code class="field-value mono">{trackerViewData.request_digest}</code>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Chain ID</span>
+                  <span class="field-value">{trackerViewData.chain_id}</span>
+                </div>
+              </div>
+
+              <div class="request-section">
+                <h3>Addresses</h3>
+                <div class="request-field">
+                  <span class="field-label">Client</span>
+                  <code class="field-value mono" title={trackerViewData.client_address}>{trackerViewData.client_address}</code>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Lock Prover</span>
+                  <code class="field-value mono" title={trackerViewData.lock_prover_address ?? ''}>
+                    {trackerViewData.lock_prover_address ?? '—'}
+                  </code>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Fulfill Prover</span>
+                  <code class="field-value mono" title={trackerViewData.fulfill_prover_address ?? ''}>
+                    {trackerViewData.fulfill_prover_address ?? '—'}
+                  </code>
+                </div>
+              </div>
+
+              <div class="request-section">
+                <h3>Pricing</h3>
+                <div class="request-field">
+                  <span class="field-label">Min Price</span>
+                  <span class="field-value">{trackerViewData.min_price_formatted}</span>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Max Price</span>
+                  <span class="field-value">{trackerViewData.max_price_formatted}</span>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Lock Collateral</span>
+                  <span class="field-value">{trackerViewData.lock_collateral_formatted}</span>
+                </div>
+              </div>
+
+              <div class="request-section">
+                <h3>Timing</h3>
+                <div class="request-field">
+                  <span class="field-label">Created At</span>
+                  <span class="field-value">{trackerViewData.created_at_iso}</span>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Unix Timestamp</span>
+                  <span class="field-value mono">{trackerViewData.created_at}</span>
+                </div>
+              </div>
+
+              <details class="raw-json">
+                <summary>Raw JSON</summary>
+                <pre>{JSON.stringify(trackerViewData, null, 2)}</pre>
+              </details>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </div>
   </section>
   {/if}
@@ -1081,9 +1214,13 @@
 
   .tracker-layout {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 280px 1fr;
     gap: 1.5rem;
     height: 100%;
+  }
+
+  .tracker-layout.has-detail {
+    grid-template-columns: 250px 1fr 400px;
   }
 
   .tracker-sidebar {
@@ -1386,5 +1523,75 @@
     font-style: italic;
     padding: 1rem;
     text-align: center;
+  }
+
+  .tracker-detail {
+    background: #f5f5f5;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+  }
+
+  .detail-header h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .close-btn {
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    color: #999;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .close-btn:hover {
+    background: #e0e0e0;
+    color: #666;
+  }
+
+  .detail-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    padding: 2rem;
+  }
+
+  .detail-error {
+    margin: 1rem;
+    padding: 1rem;
+    background: #ffebee;
+    color: #c62828;
+    border-radius: 8px;
+    border: 1px solid #ef9a9a;
+  }
+
+  .tracker-request-card {
+    margin: 1rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .action-btn.view-btn.active {
+    background: #88f;
+    color: white;
   }
 </style>
