@@ -1,0 +1,13 @@
+name = "boundless-explorer"
+main = "worker/index.ts"
+compatibility_date = "2026-01-16"
+workers_dev = true
+
+[assets]
+directory = "./web/dist"
+binding = "ASSETS"
+
+# To bind a custom domain, set a route and disable workers_dev, for example:
+# routes = [{ pattern = "explorer.example.com/*", zone_name = "example.com" }]
+# workers_dev = false
+

@@ -14,6 +14,56 @@ cd web && bun install && bun run dev
 
 Open http://localhost:5173
 
+## Deployment (Cloudflare Workers + Access)
+
+This repo includes a Workers + Access setup:
+
+- Worker config: `wrangler.toml`
+- Worker entry: `worker/index.ts`
+- Access policy automation: `infra/` (Terraform)
+
+### Build & deploy the SPA
+
+Set the build-time env vars for Supabase:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY` (or `SUPABASE_API_KEY`)
+- `VITE_TRACKER_CLIENT_ID` (optional)
+
+Then:
+
+```bash
+npm --prefix web ci
+npm --prefix web run build
+npx wrangler deploy
+```
+
+If you want a custom domain (recommended for Access), update the route in
+`wrangler.toml` to match your hostname.
+
+### Apply Cloudflare Access policy via Terraform
+
+In `infra/`, create a `terraform.tfvars` (see `infra/README.md`), then:
+
+```bash
+terraform init
+terraform apply
+```
+
+Ensure `app_domain` matches the hostname used in `wrangler.toml` so Access
+protects the deployed Worker.
+
+### CI/CD (optional)
+
+Suggested order:
+
+```bash
+npm --prefix web ci
+npm --prefix web run build
+npx wrangler deploy
+cd infra && terraform init && terraform apply
+```
+
 ### Python Client (`explorer_client.py`)
 
 CLI client for testing and scripting.
