@@ -20,6 +20,7 @@ export interface TrackedRequestor {
 
 export interface TrackerData {
   requestors: TrackedRequestor[];
+  updatedAt?: number;
 }
 
 const TRACKER_STORAGE_KEY = 'boundless-requestor-tracker';
@@ -51,6 +52,14 @@ function isTrackerData(value: unknown): value is TrackerData {
   if (!value || typeof value !== 'object') return false;
   const data = value as TrackerData;
   return Array.isArray(data.requestors);
+}
+
+function getTrackerUpdatedAt(data: TrackerData | null | undefined): number | null {
+  return typeof data?.updatedAt === 'number' ? data.updatedAt : null;
+}
+
+function hasTrackerData(data: TrackerData | null | undefined): boolean {
+  return Array.isArray(data?.requestors) && data.requestors.length > 0;
 }
 
 function getLocalTrackerData(): TrackerData {
@@ -85,6 +94,8 @@ function getTrackerClientId(): string | null {
 
 export async function loadTrackerData(): Promise<TrackerData> {
   const localData = getLocalTrackerData();
+  const localUpdatedAt = getTrackerUpdatedAt(localData);
+  const localHasData = hasTrackerData(localData);
   const client = getSupabaseClient();
   const clientId = getTrackerClientId();
   if (!client || !clientId) return localData;
@@ -101,8 +112,46 @@ export async function loadTrackerData(): Promise<TrackerData> {
     }
 
     if (isTrackerData(data?.data)) {
-      setLocalTrackerData(data.data);
-      return data.data;
+      const remoteData = data.data;
+      const remoteUpdatedAt = getTrackerUpdatedAt(remoteData);
+      const remoteHasData = hasTrackerData(remoteData);
+
+      if (!localHasData && remoteHasData) {
+        setLocalTrackerData(remoteData);
+        return remoteData;
+      }
+
+      if (remoteUpdatedAt !== null && localUpdatedAt !== null) {
+        if (remoteUpdatedAt >= localUpdatedAt) {
+          setLocalTrackerData(remoteData);
+          return remoteData;
+        }
+        void saveTrackerDataAsync(localData);
+        return localData;
+      }
+
+      if (remoteUpdatedAt !== null && localUpdatedAt === null) {
+        if (!localHasData) {
+          setLocalTrackerData(remoteData);
+          return remoteData;
+        }
+        void saveTrackerDataAsync(localData);
+        return localData;
+      }
+
+      if (remoteUpdatedAt === null && localUpdatedAt !== null) {
+        if (!localHasData && remoteHasData) {
+          setLocalTrackerData(remoteData);
+          return remoteData;
+        }
+        void saveTrackerDataAsync(localData);
+        return localData;
+      }
+
+      if (!localHasData && remoteHasData) {
+        setLocalTrackerData(remoteData);
+        return remoteData;
+      }
     }
   } catch (error) {
     console.warn('Supabase load failed, falling back to localStorage.', error);
@@ -112,7 +161,8 @@ export async function loadTrackerData(): Promise<TrackerData> {
 }
 
 export async function saveTrackerDataAsync(data: TrackerData): Promise<void> {
-  setLocalTrackerData(data);
+  const dataWithTimestamp: TrackerData = { ...data, updatedAt: Date.now() };
+  setLocalTrackerData(dataWithTimestamp);
   const client = getSupabaseClient();
   const clientId = getTrackerClientId();
   if (!client || !clientId) return;
@@ -120,7 +170,7 @@ export async function saveTrackerDataAsync(data: TrackerData): Promise<void> {
   try {
     const { error } = await client
       .from(TRACKER_TABLE)
-      .upsert({ id: clientId, data }, { onConflict: 'id' });
+      .upsert({ id: clientId, data: dataWithTimestamp }, { onConflict: 'id' });
     if (error) {
       throw error;
     }
@@ -135,8 +185,6 @@ export async function migrateLocalStorageToSupabase(): Promise<void> {
   if (!client || !clientId || typeof localStorage === 'undefined') return;
   if (localStorage.getItem(TRACKER_MIGRATED_KEY) === 'true') return;
 
-  const localData = getLocalTrackerData();
-
   try {
     const { data, error } = await client
       .from(TRACKER_TABLE)
@@ -149,15 +197,41 @@ export async function migrateLocalStorageToSupabase(): Promise<void> {
     }
 
     const remoteHasData = isTrackerData(data?.data) && data.data.requestors.length > 0;
-    if (!remoteHasData && localData.requestors.length > 0) {
-      const { error: upsertError } = await client
-        .from(TRACKER_TABLE)
-        .upsert({ id: clientId, data: localData }, { onConflict: 'id' });
-      if (upsertError) {
-        throw upsertError;
-      }
-    }
+    const latestLocalData = getLocalTrackerData();
+    const latestLocalHasData = latestLocalData.requestors.length > 0;
 
+    if (!remoteHasData && latestLocalHasData) {
+      const { data: freshData, error: freshError } = await client
+        .from(TRACKER_TABLE)
+        .select('data')
+        .eq('id', clientId)
+        .maybeSingle();
+      if (freshError) {
+        throw freshError;
+      }
+
+      const freshRemoteHasData =
+        isTrackerData(freshData?.data) && freshData.data.requestors.length > 0;
+      if (!freshRemoteHasData) {
+        const dataWithTimestamp: TrackerData = {
+          ...latestLocalData,
+          updatedAt: Date.now()
+        };
+        const { error: upsertError } = await client
+          .from(TRACKER_TABLE)
+          .upsert({ id: clientId, data: dataWithTimestamp }, { onConflict: 'id' });
+        if (upsertError) {
+          throw upsertError;
+        }
+        setLocalTrackerData(dataWithTimestamp);
+      }
+    } else if (latestLocalHasData) {
+      const dataWithTimestamp: TrackerData = {
+        ...latestLocalData,
+        updatedAt: Date.now()
+      };
+      setLocalTrackerData(dataWithTimestamp);
+    }
     localStorage.setItem(TRACKER_MIGRATED_KEY, 'true');
   } catch (error) {
     console.warn('Supabase migration failed.', error);
