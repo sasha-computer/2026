@@ -32,12 +32,15 @@
 - Add notification badge to "Fetch Recent Orders" button showing count of new orders not in localStorage; clicking when badge visible auto-fetches those orders without modal
 - Auto-fetch 10 most recent orders when adding a new requestor
 - Order row UI improvements: problematic button moved to leftmost, close button replaced with X icon, copy button added next to short ID
-- Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerData() (saves to both), migrateLocalStorageToSupabase() for one-time migration
+- Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerDataAsync() (saves to both), migrateLocalStorageToSupabase() for one-time migration
 - Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab
-- Supabase integration tests: 14 unit tests for supabase.ts covering isSupabaseConfigured, loadTrackerData (localStorage fallback, error handling), saveTrackerData (dual save, graceful failure), migrateLocalStorageToSupabase (skip conditions, successful migration)
+- Supabase integration tests: 14 unit tests for supabase.ts covering isSupabaseConfigured, loadTrackerData (localStorage fallback, error handling), saveTrackerDataAsync (localStorage + Supabase), migrateLocalStorageToSupabase (skip conditions, successful migration)
+- Test Supabase integration: add requestor (verify in Supabase), add orders, reload page (data persists), test offline fallback, test localStorage migration
+- Normalize Supabase env vars to `SUPABASE_URL`/`SUPABASE_API_KEY` for client config
 
 ---
 
 ## Planned
-
+- Not a big fan of the fetch recent orders button being disabled all the time tbh. Like I can't do it, even though one requestor has the red 10 next to their name in the left most column. Also can you work on making the red badge in the tracked requestor column requestor box a bit nicer? It doesn't really fit and it'd be real nice if it was on the top right corner as originally requested.
+- add a button to each request next to copy that takes you to the request ID i.e. https://explorer.boundless.network/orders/0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e83572afa?from=requestors/0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e
 ## Completed

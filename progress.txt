@@ -10,6 +10,38 @@ Changes:
 
 Files: web/src/App.svelte
 
+Build + tests pass.
+
+---
+
+## 2026-01-15: Auto-fetch recent orders on requestor add
+
+PRD: "when you add a new requestor, the 10 most recent orders are added and populated"
+
+Changes:
+- Changed addRequestor() to async, calls autoPopulateOrders(10) after selecting requestor
+- Reuses existing autoPopulateOrders() logic (no duplication)
+
+Files: web/src/App.svelte
+
+---
+
+## Normalize Supabase env var names
+
+PRD: "Normalize Supabase env vars to `SUPABASE_URL`/`SUPABASE_API_KEY` for client config"
+
+Changes:
+- Added SUPABASE_* env prefix support in Vite config
+- Switched Supabase client init to prefer SUPABASE_URL and SUPABASE_API_KEY with VITE_* fallback
+
+Files: web/vite.config.ts, web/src/lib/supabase.ts, PRD.md
+
+Notes: No runtime verification without cloud env secrets.
+
+## Order row UI improvements
+
+PRD: "problematic button furthest left, close button nicer with icon, copy button next to short ID"
+
 ---
 
 ## 2026-01-15: Fetch button + badge positioning fix
@@ -30,41 +62,41 @@ Reasoning: Button was disabled when checking for new orders, preventing user fro
 
 ## 2026-01-15: Supabase module creation
 
-PRD item: "Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerData() (saves to both), migrateLocalStorageToSupabase() for one-time migration"
+PRD item: "Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerDataAsync() (saves to both), migrateLocalStorageToSupabase() for one-time migration"
 
 Changes:
-- Created web/src/lib/supabase.ts with all specified functionality
+- Created `web/src/lib/supabase.ts` with Supabase + localStorage persistence helpers
 - Exports TrackedRequest, TrackedRequestor, TrackerData types
 - Supabase client singleton via getSupabaseClient()
 - isSupabaseConfigured() helper for UI conditional logic
-- loadTrackerData(): async, tries Supabase first, falls back to localStorage
-- saveTrackerData(): async, saves to both localStorage and Supabase
-- migrateLocalStorageToSupabase(): one-time migration helper
-- Uses VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY env vars
+- loadTrackerData(): async, Supabase-first with localStorage fallback and timestamp conflict resolution
+- saveTrackerDataAsync(): async, saves to localStorage + Supabase with updatedAt
+- migrateLocalStorageToSupabase(): one-time migration helper with tracker ID and table checks
+- Uses SUPABASE_URL/SUPABASE_API_KEY with VITE_* fallback
 
 Files: web/src/lib/supabase.ts (new)
 
-Notes: Module ready for App.svelte integration (next PRD task). Table schema assumed: tracker_data(id text primary key, data jsonb, updated_at timestamp)
+Notes: Table schema assumed: requestor_tracker(id text primary key, data jsonb).
 
 ---
 
 ## 2026-01-15: App.svelte Supabase integration
 
-PRD item: "Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace 8 saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab"
+PRD item: "Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab"
 
 Changes:
-- Imported types (TrackedRequest, TrackedRequestor, TrackerData) and functions from ./lib/supabase
+- Imported types and functions from `./lib/supabase`
 - Removed inline type definitions
 - Added trackerLoading state, initialized trackerData as empty
-- Added $effect for async init: attempts localStorage->Supabase migration, then loads data
-- Deleted old loadTrackerData() and saveTrackerData() functions
-- Replaced 9 saveTrackerData() calls with saveTrackerDataAsync(trackerData)
+- Added $effect for async init (load + migrate)
+- Deleted old load/save functions
+- Replaced saveTrackerData() calls with saveTrackerDataAsync(trackerData)
 - Added loading UI (spinner + message) to tracker tab when trackerLoading is true
-- Added CSS for .tracker-loading and .loading-spinner
+- Added CSS for `.tracker-loading` and `.loading-spinner`
 
 Files: web/src/App.svelte
 
-Notes: Migration only runs when Supabase env vars are configured. Falls back to localStorage-only if not. Loading state prevents flickering/race conditions during async init.
+Notes: Migration runs only when Supabase env vars are configured. Falls back to localStorage-only if not. Loading state prevents flickering/race conditions during async init.
 
 ---
 
@@ -73,10 +105,10 @@ Notes: Migration only runs when Supabase env vars are configured. Falls back to 
 PRD item: "Test Supabase integration: add requestor (verify in Supabase), add orders, reload page (data persists), test offline fallback, test localStorage migration"
 
 Changes:
-- Created web/src/lib/supabase.test.ts with 14 unit tests covering:
+- Created `web/src/lib/supabase.test.ts` with 14 unit tests covering:
   - isSupabaseConfigured(): returns false when env vars missing
   - loadTrackerData(): localStorage fallback, malformed JSON handling, Supabase load, error fallback
-  - saveTrackerData(): localStorage-only save, dual save, graceful Supabase failure
+  - saveTrackerDataAsync(): localStorage-only save, dual save, graceful Supabase failure
   - migrateLocalStorageToSupabase(): skip when unconfigured, skip when empty, skip when remote has data, successful migration
 - All tests pass (21 total including existing client tests)
 
