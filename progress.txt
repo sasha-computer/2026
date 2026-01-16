@@ -8,6 +8,18 @@ Reuses existing autoPopulateOrders() logic - no code duplication.
 Files: web/src/App.svelte (lines 101-117)
 
 Build + tests pass.
+
+## Normalize Supabase env var names
+
+PRD: "Normalize Supabase env vars to `SUPABASE_URL`/`SUPABASE_API_KEY` for client config"
+
+Changes:
+- Added SUPABASE_* env prefix support in Vite config
+- Switched Supabase client init to prefer SUPABASE_URL and SUPABASE_API_KEY with VITE_* fallback
+
+Files: web/vite.config.ts, web/src/lib/supabase.ts, PRD.md
+
+Notes: No runtime verification without cloud env secrets.
 ## Order row UI improvements
 
 PRD: "problematic button furthest left, close button nicer with icon, copy button next to short ID"

@@ -27,15 +27,22 @@ const TRACKER_ID_KEY = 'boundless-requestor-tracker-id';
 const TRACKER_MIGRATED_KEY = 'boundless-requestor-tracker-migrated';
 const TRACKER_TABLE = 'requestor_tracker';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+const SUPABASE_URL =
+  import.meta.env.SUPABASE_URL ??
+  import.meta.env.VITE_SUPABASE_URL ??
+  '';
+const SUPABASE_API_KEY =
+  import.meta.env.SUPABASE_API_KEY ??
+  import.meta.env.VITE_SUPABASE_ANON_KEY ??
+  import.meta.env.VITE_SUPABASE_API_KEY ??
+  '';
 
 let supabaseClient: SupabaseClient | null = null;
 
 function getSupabaseClient(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  if (!SUPABASE_URL || !SUPABASE_API_KEY) return null;
   if (!supabaseClient) {
-    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = createClient(SUPABASE_URL, SUPABASE_API_KEY);
   }
   return supabaseClient;
 }

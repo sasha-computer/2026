@@ -33,6 +33,7 @@
 - Create `web/src/lib/supabase.ts` module with: Supabase client init, TrackerData/TrackedRequestor/TrackedRequest types, async loadTrackerData() (Supabase-first with localStorage fallback), async saveTrackerData() (saves to both), migrateLocalStorageToSupabase() for one-time migration
 - Update App.svelte for Supabase: import from ./lib/supabase, remove inline type defs, add trackerLoading state, add $effect for async init with migration, delete old load/save functions, replace 8 saveTrackerData() calls with saveTrackerDataAsync(trackerData), add loading UI to tracker tab
 - Test Supabase integration: add requestor (verify in Supabase), add orders, reload page (data persists), test offline fallback, test localStorage migration
+- Normalize Supabase env vars to `SUPABASE_URL`/`SUPABASE_API_KEY` for client config
 
 ---
 
