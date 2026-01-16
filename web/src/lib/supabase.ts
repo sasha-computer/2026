@@ -22,9 +22,6 @@ export interface TrackerData {
   updatedAt?: number;
 }
 
-const TRACKER_STORAGE_KEY = 'boundless-requestor-tracker';
-const TRACKER_ID_KEY = 'boundless-requestor-tracker-id';
-const TRACKER_MIGRATED_KEY = 'boundless-requestor-tracker-migrated';
 const TRACKER_CLIENTS_TABLE = 'tracker_clients';
 const REQUESTORS_TABLE = 'requestors';
 const REQUESTS_TABLE = 'requests';
@@ -60,6 +57,10 @@ const SUPABASE_API_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ??
   import.meta.env.VITE_SUPABASE_API_KEY ??
   '';
+const TRACKER_CLIENT_ID =
+  import.meta.env.VITE_TRACKER_CLIENT_ID ??
+  import.meta.env.TRACKER_CLIENT_ID ??
+  '';
 
 let supabaseClient: SupabaseClient | null = null;
 
@@ -75,52 +76,8 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(SUPABASE_URL && SUPABASE_API_KEY);
 }
 
-function isTrackerData(value: unknown): value is TrackerData {
-  if (!value || typeof value !== 'object') return false;
-  const data = value as TrackerData;
-  return Array.isArray(data.requestors);
-}
-
-function getTrackerUpdatedAt(data: TrackerData | null | undefined): number | null {
-  return typeof data?.updatedAt === 'number' ? data.updatedAt : null;
-}
-
-function hasTrackerData(data: TrackerData | null | undefined): boolean {
-  return Array.isArray(data?.requestors) && data.requestors.length > 0;
-}
-
-function getLocalTrackerData(): TrackerData {
-  if (typeof localStorage === 'undefined') return { requestors: [] };
-  const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
-  if (!stored) return { requestors: [] };
-  try {
-    const parsed = JSON.parse(stored);
-    return isTrackerData(parsed) ? parsed : { requestors: [] };
-  } catch {
-    return { requestors: [] };
-  }
-}
-
-function setLocalTrackerData(data: TrackerData): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(data));
-}
-
-function generateTrackerId(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `tracker-${Date.now()}-${Math.random().toString(16).slice(2)}`
-  );
-}
-
-function getTrackerClientId(): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  let id = localStorage.getItem(TRACKER_ID_KEY);
-  if (!id) {
-    id = generateTrackerId();
-    localStorage.setItem(TRACKER_ID_KEY, id);
-  }
-  return id;
+function getTrackerClientId(): string {
+  return TRACKER_CLIENT_ID.trim() || 'default';
 }
 
 function parseNumber(value: unknown): number | null {
@@ -247,86 +204,25 @@ async function updateTrackerClientTimestamp(
   }
 }
 
-async function hasRemoteTrackerData(
-  client: SupabaseClient,
-  clientId: string
-): Promise<boolean> {
-  const { data, error } = await client
-    .from(REQUESTORS_TABLE)
-    .select('id')
-    .eq('client_id', clientId);
-
-  if (error) {
-    throw error;
-  }
-
-  return Array.isArray(data) && data.length > 0;
-}
-
 export async function loadTrackerData(): Promise<TrackerData> {
-  const localData = getLocalTrackerData();
-  const localUpdatedAt = getTrackerUpdatedAt(localData);
-  const localHasData = hasTrackerData(localData);
   const client = getSupabaseClient();
+  if (!client) return { requestors: [] };
   const clientId = getTrackerClientId();
-  if (!client || !clientId) return localData;
 
   try {
-    const { data: remoteData, updatedAt: remoteUpdatedAt } = await fetchRemoteTrackerData(
-      client,
-      clientId
-    );
-    const remoteHasData = hasTrackerData(remoteData);
-
-    if (!localHasData && remoteHasData) {
-      setLocalTrackerData(remoteData);
-      return remoteData;
-    }
-
-    if (remoteUpdatedAt !== null && localUpdatedAt !== null) {
-      if (remoteUpdatedAt >= localUpdatedAt) {
-        setLocalTrackerData(remoteData);
-        return remoteData;
-      }
-      void saveTrackerDataAsync(localData);
-      return localData;
-    }
-
-    if (remoteUpdatedAt !== null && localUpdatedAt === null) {
-      if (!localHasData) {
-        setLocalTrackerData(remoteData);
-        return remoteData;
-      }
-      void saveTrackerDataAsync(localData);
-      return localData;
-    }
-
-    if (remoteUpdatedAt === null && localUpdatedAt !== null) {
-      if (!localHasData && remoteHasData) {
-        setLocalTrackerData(remoteData);
-        return remoteData;
-      }
-      void saveTrackerDataAsync(localData);
-      return localData;
-    }
-
-    if (!localHasData && remoteHasData) {
-      setLocalTrackerData(remoteData);
-      return remoteData;
-    }
+    const { data: remoteData } = await fetchRemoteTrackerData(client, clientId);
+    return remoteData;
   } catch (error) {
-    console.warn('Supabase load failed, falling back to localStorage.', error);
+    console.warn('Supabase load failed.', error);
+    return { requestors: [] };
   }
-
-  return localData;
 }
 
 export async function saveTrackerDataAsync(data: TrackerData): Promise<void> {
-  const dataWithTimestamp: TrackerData = { ...data, updatedAt: Date.now() };
-  setLocalTrackerData(dataWithTimestamp);
   const client = getSupabaseClient();
+  if (!client) return;
   const clientId = getTrackerClientId();
-  if (!client || !clientId) return;
+  const dataWithTimestamp: TrackerData = { ...data, updatedAt: Date.now() };
 
   try {
     await ensureTrackerClient(client, clientId);
@@ -417,35 +313,6 @@ export async function saveTrackerDataAsync(data: TrackerData): Promise<void> {
 
     await updateTrackerClientTimestamp(client, clientId, dataWithTimestamp.updatedAt ?? Date.now());
   } catch (error) {
-    console.warn('Supabase save failed, data kept in localStorage.', error);
-  }
-}
-
-export async function migrateLocalStorageToSupabase(): Promise<void> {
-  const client = getSupabaseClient();
-  const clientId = getTrackerClientId();
-  if (!client || !clientId || typeof localStorage === 'undefined') return;
-  if (localStorage.getItem(TRACKER_MIGRATED_KEY) === 'true') return;
-
-  try {
-    const remoteHasData = await hasRemoteTrackerData(client, clientId);
-    const latestLocalData = getLocalTrackerData();
-    const latestLocalHasData = latestLocalData.requestors.length > 0;
-
-    if (!remoteHasData && latestLocalHasData) {
-      const freshRemoteHasData = await hasRemoteTrackerData(client, clientId);
-      if (!freshRemoteHasData) {
-        await saveTrackerDataAsync(latestLocalData);
-      }
-    } else if (latestLocalHasData) {
-      const dataWithTimestamp: TrackerData = {
-        ...latestLocalData,
-        updatedAt: Date.now()
-      };
-      setLocalTrackerData(dataWithTimestamp);
-    }
-    localStorage.setItem(TRACKER_MIGRATED_KEY, 'true');
-  } catch (error) {
-    console.warn('Supabase migration failed.', error);
+    console.warn('Supabase save failed.', error);
   }
 }

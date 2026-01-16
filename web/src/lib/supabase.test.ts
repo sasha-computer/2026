@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock Supabase client before importing the module
 const mockTrackerClientsSelect = vi.fn();
 const mockTrackerClientsEq = vi.fn();
 const mockTrackerClientsMaybeSingle = vi.fn();
@@ -48,16 +47,6 @@ const mockFrom = vi.fn((table: string) => {
   };
 });
 
-mockTrackerClientsSelect.mockReturnValue({ eq: mockTrackerClientsEq });
-mockTrackerClientsEq.mockReturnValue({ maybeSingle: mockTrackerClientsMaybeSingle });
-mockTrackerClientsUpdate.mockReturnValue({ eq: mockTrackerClientsUpdateEq });
-
-mockRequestorsSelect.mockReturnValue({ eq: mockRequestorsEq });
-mockRequestorsDelete.mockReturnValue({ in: mockRequestorsDeleteIn });
-
-mockRequestsSelect.mockReturnValue({ in: mockRequestsIn });
-mockRequestsDelete.mockReturnValue({ in: mockRequestsDeleteIn });
-
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: mockFrom
@@ -65,20 +54,8 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 describe('supabase module', () => {
-  let storage: Record<string, string> = {};
-
   beforeEach(() => {
     vi.clearAllMocks();
-    storage = {};
-
-    vi.stubGlobal('localStorage', {
-      getItem: vi.fn((key: string) => storage[key] || null),
-      setItem: vi.fn((key: string, value: string) => { storage[key] = value; }),
-      removeItem: vi.fn((key: string) => { delete storage[key]; }),
-      clear: vi.fn(() => { storage = {}; })
-    });
-
-    vi.stubGlobal('crypto', { randomUUID: () => 'test-id' });
 
     mockTrackerClientsSelect.mockReturnValue({ eq: mockTrackerClientsEq });
     mockTrackerClientsEq.mockReturnValue({ maybeSingle: mockTrackerClientsMaybeSingle });
@@ -92,7 +69,7 @@ describe('supabase module', () => {
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   describe('isSupabaseConfigured', () => {
@@ -109,7 +86,7 @@ describe('supabase module', () => {
   });
 
   describe('loadTrackerData', () => {
-    it('returns empty requestors when localStorage is empty and Supabase not configured', async () => {
+    it('returns empty requestors when Supabase not configured', async () => {
       vi.resetModules();
       vi.stubEnv('SUPABASE_URL', '');
       vi.stubEnv('SUPABASE_API_KEY', '');
@@ -120,44 +97,7 @@ describe('supabase module', () => {
       const result = await loadTrackerData();
 
       expect(result).toEqual({ requestors: [] });
-    });
-
-    it('loads from localStorage when no Supabase config', async () => {
-      const testData = {
-        requestors: [{
-          address: '0x123',
-          nickname: 'Test',
-          requests: [],
-          addedAt: Date.now()
-        }]
-      };
-      storage['boundless-requestor-tracker'] = JSON.stringify(testData);
-
-      vi.resetModules();
-      vi.stubEnv('SUPABASE_URL', '');
-      vi.stubEnv('SUPABASE_API_KEY', '');
-      vi.stubEnv('VITE_SUPABASE_URL', '');
-      vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
-
-      const { loadTrackerData } = await import('./supabase');
-      const result = await loadTrackerData();
-
-      expect(result).toEqual(testData);
-    });
-
-    it('handles malformed localStorage JSON gracefully', async () => {
-      storage['boundless-requestor-tracker'] = 'not valid json {{{';
-
-      vi.resetModules();
-      vi.stubEnv('SUPABASE_URL', '');
-      vi.stubEnv('SUPABASE_API_KEY', '');
-      vi.stubEnv('VITE_SUPABASE_URL', '');
-      vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
-
-      const { loadTrackerData } = await import('./supabase');
-      const result = await loadTrackerData();
-
-      expect(result).toEqual({ requestors: [] });
+      expect(mockFrom).not.toHaveBeenCalled();
     });
 
     it('loads from Supabase when configured and has data', async () => {
@@ -206,28 +146,18 @@ describe('supabase module', () => {
       vi.stubEnv('SUPABASE_API_KEY', 'test-key');
       vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
+      vi.stubEnv('VITE_TRACKER_CLIENT_ID', 'shared-id');
 
       const { loadTrackerData } = await import('./supabase');
       const result = await loadTrackerData();
 
       expect(result).toEqual(supabaseData);
-      expect(localStorage.setItem).toHaveBeenCalledWith(
-        'boundless-requestor-tracker',
-        JSON.stringify(supabaseData)
-      );
+      expect(mockTrackerClientsEq).toHaveBeenCalledWith('id', 'shared-id');
+      expect(mockRequestorsEq).toHaveBeenCalledWith('client_id', 'shared-id');
     });
 
-    it('falls back to localStorage when Supabase returns error', async () => {
-      const localData = {
-        requestors: [{
-          address: '0xlocal',
-          nickname: 'Local',
-          requests: [],
-          addedAt: Date.now()
-        }]
-      };
-      storage['boundless-requestor-tracker'] = JSON.stringify(localData);
-
+    it('returns empty when Supabase fetch fails', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       mockTrackerClientsMaybeSingle.mockResolvedValueOnce({
         data: null,
         error: { message: 'Not found' }
@@ -238,16 +168,18 @@ describe('supabase module', () => {
       vi.stubEnv('SUPABASE_API_KEY', 'test-key');
       vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
+      vi.stubEnv('VITE_TRACKER_CLIENT_ID', 'shared-id');
 
       const { loadTrackerData } = await import('./supabase');
       const result = await loadTrackerData();
 
-      expect(result).toEqual(localData);
+      expect(result).toEqual({ requestors: [] });
+      expect(warnSpy).toHaveBeenCalled();
     });
   });
 
   describe('saveTrackerDataAsync', () => {
-    it('saves to localStorage only when Supabase not configured', async () => {
+    it('no-ops when Supabase not configured', async () => {
       const testData = {
         requestors: [{
           address: '0x456',
@@ -266,17 +198,14 @@ describe('supabase module', () => {
       const { saveTrackerDataAsync } = await import('./supabase');
       await saveTrackerDataAsync(testData);
 
-      const savedValue = storage['boundless-requestor-tracker'];
-      const parsed = savedValue ? JSON.parse(savedValue) : null;
-      expect(parsed?.requestors).toEqual(testData.requestors);
-      expect(typeof parsed?.updatedAt).toBe('number');
+      expect(mockFrom).not.toHaveBeenCalled();
     });
 
-    it('saves to both localStorage and Supabase when configured', async () => {
+    it('saves to Supabase with shared client ID', async () => {
       const testData = {
         requestors: [{
           address: '0x789',
-          nickname: 'Dual Save',
+          nickname: 'Supabase Save',
           requests: [{
             id: '0xreq',
             nickname: 'Req',
@@ -305,6 +234,7 @@ describe('supabase module', () => {
       vi.stubEnv('SUPABASE_API_KEY', 'test-key');
       vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
+      vi.stubEnv('VITE_TRACKER_CLIENT_ID', 'shared-id');
 
       const { saveTrackerDataAsync } = await import('./supabase');
       await saveTrackerDataAsync(testData);
@@ -313,14 +243,14 @@ describe('supabase module', () => {
       expect(mockFrom).toHaveBeenCalledWith('requestors');
       expect(mockFrom).toHaveBeenCalledWith('requests');
       expect(mockTrackerClientsUpsert).toHaveBeenCalledWith(
-        { id: 'test-id' },
+        { id: 'shared-id' },
         { onConflict: 'id' }
       );
       expect(mockRequestorsUpsert).toHaveBeenCalledWith(
         [{
-          client_id: 'test-id',
+          client_id: 'shared-id',
           address: '0x789',
-          nickname: 'Dual Save',
+          nickname: 'Supabase Save',
           added_at: testData.requestors[0].addedAt
         }],
         { onConflict: 'client_id,address' }
@@ -344,115 +274,7 @@ describe('supabase module', () => {
       expect(mockTrackerClientsUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ updated_at: expect.any(Number) })
       );
-      expect(mockTrackerClientsUpdateEq).toHaveBeenCalledWith('id', 'test-id');
-    });
-
-    it('continues saving to localStorage even when Supabase fails', async () => {
-      const testData = { requestors: [] };
-
-      mockTrackerClientsUpsert.mockResolvedValueOnce({ error: { message: 'Network error' } });
-
-      vi.resetModules();
-      vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('SUPABASE_API_KEY', 'test-key');
-      vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
-
-      const { saveTrackerDataAsync } = await import('./supabase');
-      await expect(saveTrackerDataAsync(testData)).resolves.not.toThrow();
-      expect(localStorage.setItem).toHaveBeenCalled();
-    });
-  });
-
-  describe('migrateLocalStorageToSupabase', () => {
-    it('no-ops when Supabase not configured', async () => {
-      vi.resetModules();
-      vi.stubEnv('SUPABASE_URL', '');
-      vi.stubEnv('SUPABASE_API_KEY', '');
-      vi.stubEnv('VITE_SUPABASE_URL', '');
-      vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
-
-      const { migrateLocalStorageToSupabase } = await import('./supabase');
-      await migrateLocalStorageToSupabase();
-
-      expect(mockFrom).not.toHaveBeenCalled();
-    });
-
-    it('marks migrated when localStorage is empty', async () => {
-      mockRequestorsEq.mockResolvedValueOnce({
-        data: [],
-        error: null
-      });
-
-      vi.resetModules();
-      vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('SUPABASE_API_KEY', 'test-key');
-      vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
-
-      const { migrateLocalStorageToSupabase } = await import('./supabase');
-      await migrateLocalStorageToSupabase();
-
-      expect(storage['boundless-requestor-tracker-migrated']).toBe('true');
-    });
-
-    it('migrates localStorage data when Supabase is empty', async () => {
-      const localData = {
-        requestors: [{ address: '0x333', nickname: 'Migrate Me', requests: [], addedAt: 3 }]
-      };
-      storage['boundless-requestor-tracker'] = JSON.stringify(localData);
-
-      mockRequestorsEq
-        .mockResolvedValueOnce({ data: [], error: null })
-        .mockResolvedValueOnce({ data: [], error: null })
-        .mockResolvedValueOnce({
-          data: [{ id: 'req-1', address: '0x333' }],
-          error: null
-        });
-      mockTrackerClientsUpsert.mockResolvedValueOnce({ error: null });
-      mockRequestorsUpsert.mockResolvedValueOnce({ error: null });
-      mockRequestsDeleteIn.mockResolvedValueOnce({ error: null });
-      mockTrackerClientsUpdateEq.mockResolvedValueOnce({ error: null });
-
-      vi.resetModules();
-      vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('SUPABASE_API_KEY', 'test-key');
-      vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
-
-      const { migrateLocalStorageToSupabase } = await import('./supabase');
-      await migrateLocalStorageToSupabase();
-
-      expect(mockTrackerClientsUpsert).toHaveBeenCalledWith(
-        { id: 'test-id' },
-        { onConflict: 'id' }
-      );
-      expect(mockRequestorsUpsert).toHaveBeenCalled();
-      expect(storage['boundless-requestor-tracker-migrated']).toBe('true');
-    });
-
-    it('skips migration when Supabase already has data', async () => {
-      storage['boundless-requestor-tracker'] = JSON.stringify({
-        requestors: [{ address: '0x111', nickname: 'Local', requests: [], addedAt: 1 }]
-      });
-
-      mockRequestorsEq.mockResolvedValueOnce({
-        data: [{ id: 'req-2', address: '0x222' }],
-        error: null
-      });
-
-      vi.resetModules();
-      vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('SUPABASE_API_KEY', 'test-key');
-      vi.stubEnv('VITE_SUPABASE_URL', 'https://test.supabase.co');
-      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
-
-      const { migrateLocalStorageToSupabase } = await import('./supabase');
-      await migrateLocalStorageToSupabase();
-
-      expect(mockTrackerClientsUpsert).not.toHaveBeenCalled();
-      expect(mockRequestorsUpsert).not.toHaveBeenCalled();
-      expect(storage['boundless-requestor-tracker-migrated']).toBe('true');
+      expect(mockTrackerClientsUpdateEq).toHaveBeenCalledWith('id', 'shared-id');
     });
   });
 

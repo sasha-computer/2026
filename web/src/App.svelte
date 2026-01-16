@@ -10,7 +10,6 @@
   import type { MarketRequest } from './lib/types';
   import {
     loadTrackerData,
-    migrateLocalStorageToSupabase,
     saveTrackerDataAsync,
     type TrackerData,
     type TrackedRequest,
@@ -21,7 +20,6 @@
   let activeTab = $state<Tab>('browser');
 
   // Theme state
-  const THEME_STORAGE_KEY = 'boundless-explorer-theme';
   let isDarkMode = $state(false);
   let themeInitialized = false;
 
@@ -84,7 +82,6 @@
         const data = await loadTrackerData();
         if (cancelled) return;
         trackerData = data;
-        void migrateLocalStorageToSupabase();
       } catch (e) {
         console.error('Failed to load tracker data:', e);
         if (!cancelled) {
@@ -108,13 +105,6 @@
     if (themeInitialized) return;
     themeInitialized = true;
     if (typeof window === 'undefined') return;
-    const stored = typeof localStorage !== 'undefined'
-      ? localStorage.getItem(THEME_STORAGE_KEY)
-      : null;
-    if (stored === 'dark' || stored === 'light') {
-      isDarkMode = stored === 'dark';
-      return;
-    }
     if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
       isDarkMode = true;
     }
@@ -124,9 +114,6 @@
     if (typeof document === 'undefined') return;
     document.body.dataset.theme = isDarkMode ? 'dark' : 'light';
     document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light');
-    }
   });
 
   function toggleTheme() {
@@ -296,7 +283,7 @@
     fetchRequest();
   }
 
-  // Check for new orders that aren't in localStorage
+  // Check for new orders that aren't in the tracker list
   async function checkForNewOrders() {
     if (trackerLoading || selectedRequestorIndex === null || checkingNewOrders) return;
     const requestor = trackerData.requestors[selectedRequestorIndex];
@@ -312,7 +299,7 @@
       const data = await response.json();
       const requests = Array.isArray(data) ? data : data.data || [];
 
-      // Count how many are not in localStorage
+      // Count how many are not already tracked
       let count = 0;
       for (const req of requests) {
         const reqId = req.request_id;
