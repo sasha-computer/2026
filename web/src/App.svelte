@@ -20,6 +20,11 @@
   type Tab = 'browser' | 'debugger' | 'tracker';
   let activeTab = $state<Tab>('browser');
 
+  // Theme state
+  const THEME_STORAGE_KEY = 'boundless-explorer-theme';
+  let isDarkMode = $state(false);
+  let themeInitialized = false;
+
   // Endpoint Browser state
   let selected = $state<EndpointConfig>(ENDPOINTS[0]);
   let params = $state<Record<string, string | number>>({});
@@ -98,6 +103,35 @@
       cancelled = true;
     };
   });
+
+  $effect(() => {
+    if (themeInitialized) return;
+    themeInitialized = true;
+    if (typeof window === 'undefined') return;
+    const stored = typeof localStorage !== 'undefined'
+      ? localStorage.getItem(THEME_STORAGE_KEY)
+      : null;
+    if (stored === 'dark' || stored === 'light') {
+      isDarkMode = stored === 'dark';
+      return;
+    }
+    if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+      isDarkMode = true;
+    }
+  });
+
+  $effect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.dataset.theme = isDarkMode ? 'dark' : 'light';
+    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light');
+    }
+  });
+
+  function toggleTheme() {
+    isDarkMode = !isDarkMode;
+  }
 
   async function addRequestor() {
     if (!newRequestorAddress.trim()) return;
@@ -769,9 +803,19 @@
       Requestor Tracker
     </button>
   </nav>
-  <a href="https://d2mdvlnmyov1e1.cloudfront.net/docs/" target="_blank" rel="noopener">
-    API Docs
-  </a>
+  <div class="header-actions">
+    <button
+      class="theme-toggle"
+      type="button"
+      aria-pressed={isDarkMode}
+      onclick={toggleTheme}
+    >
+      {isDarkMode ? 'Light mode' : 'Dark mode'}
+    </button>
+    <a href="https://d2mdvlnmyov1e1.cloudfront.net/docs/" target="_blank" rel="noopener">
+      API Docs
+    </a>
+  </div>
 </header>
 
 <main>
@@ -1456,8 +1500,8 @@
 
 <style>
   header {
-    background: #1a1a2e;
-    color: white;
+    background: var(--surface-accent);
+    color: var(--text-inverse);
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
@@ -1471,7 +1515,13 @@
   }
 
   header a {
-    color: #88f;
+    color: var(--link);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .tabs {
@@ -1482,7 +1532,7 @@
   .tab {
     padding: 0.5rem 1rem;
     background: transparent;
-    color: #888;
+    color: var(--text-subtle);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -1491,13 +1541,29 @@
   }
 
   .tab:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--tab-hover-bg);
+    color: var(--text-inverse);
   }
 
   .tab.active {
-    background: rgba(136, 136, 255, 0.2);
-    color: #88f;
+    background: var(--tab-active-bg);
+    color: var(--link);
+  }
+
+  .theme-toggle {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+    background: transparent;
+    color: var(--text-inverse);
+    border: 1px solid var(--link);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    align-self: center;
+  }
+
+  .theme-toggle:hover {
+    background: var(--tab-hover-bg);
   }
 
   main {
@@ -1529,7 +1595,7 @@
   }
 
   .param-group {
-    background: #f5f5f5;
+    background: var(--surface-1);
     padding: 1rem;
     border-radius: 8px;
   }
@@ -1537,7 +1603,7 @@
   .param-group h3 {
     margin: 0 0 0.75rem 0;
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -1553,28 +1619,30 @@
   select,
   input {
     padding: 0.5rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
     font-size: 1rem;
     font-family: inherit;
+    background: var(--surface-card);
+    color: var(--app-text);
   }
 
   option:disabled {
-    color: #999;
+    color: var(--text-faint);
     font-style: italic;
   }
 
   select:focus,
   input:focus {
     outline: none;
-    border-color: #88f;
-    box-shadow: 0 0 0 2px rgba(136, 136, 255, 0.2);
+    border-color: var(--link);
+    box-shadow: 0 0 0 2px var(--focus-ring);
   }
 
   button {
     padding: 0.75rem 1.5rem;
-    background: #1a1a2e;
-    color: white;
+    background: var(--surface-accent);
+    color: var(--text-inverse);
     border: none;
     border-radius: 4px;
     font-size: 1rem;
@@ -1583,7 +1651,7 @@
   }
 
   button:hover:not(:disabled) {
-    background: #2a2a4e;
+    background: var(--surface-accent-hover);
   }
 
   button:disabled {
@@ -1592,7 +1660,7 @@
   }
 
   .url-preview {
-    background: #f0f0f0;
+    background: var(--surface-2);
     padding: 0.75rem 1rem;
     border-radius: 4px;
     overflow-x: auto;
@@ -1606,7 +1674,7 @@
   }
 
   .results {
-    background: #1a1a2e;
+    background: var(--surface-accent);
     border-radius: 8px;
     min-height: 200px;
   }
@@ -1614,7 +1682,7 @@
   .results pre {
     margin: 0;
     padding: 1rem;
-    color: #0f0;
+    color: var(--code-text);
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.875rem;
     overflow: auto;
@@ -1622,19 +1690,19 @@
   }
 
   .results .error {
-    color: #f66;
+    color: var(--error-text);
     padding: 1rem;
   }
 
   .results .placeholder {
-    color: #888;
+    color: var(--text-subtle);
     padding: 1rem;
     text-align: center;
   }
 
   footer {
-    background: #1a1a2e;
-    color: #888;
+    background: var(--surface-accent);
+    color: var(--text-subtle);
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
@@ -1644,7 +1712,7 @@
   }
 
   footer a {
-    color: #88f;
+    color: var(--link);
   }
 
   /* Request Debugger styles */
@@ -1673,22 +1741,24 @@
   .input-row input {
     flex: 1;
     padding: 0.75rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
     font-size: 1rem;
     font-family: 'SF Mono', Monaco, monospace;
+    background: var(--surface-card);
+    color: var(--app-text);
   }
 
   .input-row input:focus {
     outline: none;
-    border-color: #88f;
-    box-shadow: 0 0 0 2px rgba(136, 136, 255, 0.2);
+    border-color: var(--link);
+    box-shadow: 0 0 0 2px var(--focus-ring);
   }
 
   .input-row button {
     padding: 0.75rem 1.5rem;
-    background: #1a1a2e;
-    color: white;
+    background: var(--surface-accent);
+    color: var(--text-inverse);
     border: none;
     border-radius: 4px;
     font-size: 1rem;
@@ -1696,7 +1766,7 @@
   }
 
   .input-row button:hover:not(:disabled) {
-    background: #2a2a4e;
+    background: var(--surface-accent-hover);
   }
 
   .input-row button:disabled {
@@ -1705,24 +1775,24 @@
   }
 
   .debugger-error {
-    background: #ffebee;
-    color: #c62828;
+    background: var(--error-bg);
+    color: var(--error-text);
     padding: 1rem;
     border-radius: 8px;
-    border: 1px solid #ef9a9a;
+    border: 1px solid var(--error-border);
   }
 
   .debugger-placeholder {
-    color: #888;
+    color: var(--text-subtle);
     text-align: center;
     padding: 3rem;
-    background: #f5f5f5;
+    background: var(--surface-1);
     border-radius: 8px;
   }
 
   .request-card {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
     border-radius: 12px;
     overflow: hidden;
   }
@@ -1732,8 +1802,8 @@
     gap: 1rem;
     align-items: center;
     padding: 1rem 1.5rem;
-    background: #f5f5f5;
-    border-bottom: 1px solid #e0e0e0;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-light);
   }
 
   .request-status {
@@ -1748,8 +1818,8 @@
 
   .request-source {
     padding: 0.25rem 0.75rem;
-    background: #e0e0e0;
-    color: #666;
+    background: var(--surface-3);
+    color: var(--text-muted);
     border-radius: 4px;
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -1757,7 +1827,7 @@
 
   .request-section {
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .request-section:last-of-type {
@@ -1767,7 +1837,7 @@
   .request-section h3 {
     margin: 0 0 0.75rem 0;
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-subtle);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -1781,7 +1851,7 @@
   }
 
   .field-label {
-    color: #666;
+    color: var(--text-muted);
     font-size: 0.875rem;
     flex-shrink: 0;
   }
@@ -1798,7 +1868,7 @@
   }
 
   .field-value.muted {
-    color: #999;
+    color: var(--text-faint);
     font-style: italic;
   }
 
@@ -1815,7 +1885,7 @@
   }
 
   .request-field.highlight {
-    background: #e3f2fd;
+    background: var(--highlight-bg);
     margin: 0 -1.5rem;
     padding: 0.5rem 1.5rem;
   }
@@ -1843,7 +1913,7 @@
   }
 
   .copy-id-btn {
-    color: #666;
+    color: var(--text-muted);
   }
 
   .copy-id-btn:hover {
@@ -1861,7 +1931,7 @@
   }
 
   .explorer-order-link {
-    color: #666;
+    color: var(--text-muted);
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -1882,25 +1952,25 @@
   }
 
   .raw-json {
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid var(--border-light);
   }
 
   .raw-json summary {
     padding: 1rem 1.5rem;
     cursor: pointer;
-    color: #666;
+    color: var(--text-muted);
     font-size: 0.875rem;
   }
 
   .raw-json summary:hover {
-    background: #f5f5f5;
+    background: var(--surface-1);
   }
 
   .raw-json pre {
     margin: 0;
     padding: 1rem 1.5rem;
-    background: #1a1a2e;
-    color: #0f0;
+    background: var(--surface-accent);
+    color: var(--code-text);
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.75rem;
     overflow-x: auto;
@@ -1918,9 +1988,9 @@
     justify-content: center;
     height: 100%;
     padding: 2rem;
-    background: #f5f5f5;
+    background: var(--surface-1);
     border-radius: 8px;
-    color: #666;
+    color: var(--text-muted);
     text-align: center;
   }
 
@@ -1932,7 +2002,7 @@
   }
 
   .tracker-sidebar {
-    background: #f5f5f5;
+    background: var(--surface-1);
     border-radius: 8px;
     padding: 1rem;
     display: flex;
@@ -1943,7 +2013,7 @@
   .tracker-sidebar h3 {
     margin: 0 0 1rem 0;
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -1954,14 +2024,16 @@
     gap: 0.5rem;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .add-requestor input {
     padding: 0.5rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
     font-size: 0.875rem;
+    background: var(--surface-card);
+    color: var(--app-text);
   }
 
   .add-requestor button {
@@ -1985,23 +2057,23 @@
     border-radius: 4px;
     cursor: pointer;
     margin-bottom: 0.25rem;
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
     position: relative;
   }
 
   .requestor-item:hover {
-    background: #eee;
+    background: var(--surface-2);
   }
 
   .requestor-item.selected {
-    background: #1a1a2e;
-    color: white;
-    border-color: #1a1a2e;
+    background: var(--surface-accent);
+    color: var(--text-inverse);
+    border-color: var(--surface-accent);
   }
 
   .requestor-item.selected .requestor-address {
-    color: #aaa;
+    color: var(--text-soft);
   }
 
   .requestor-badge {
@@ -2073,14 +2145,14 @@
 
   .requestor-address {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-subtle);
     font-family: 'SF Mono', Monaco, monospace;
   }
 
   .remove-btn {
     padding: 0.25rem 0.5rem;
     background: transparent;
-    color: #999;
+    color: var(--text-faint);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -2109,7 +2181,7 @@
   .full-address {
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.8125rem;
-    color: #666;
+    color: var(--text-muted);
     word-break: break-all;
   }
 
@@ -2122,17 +2194,17 @@
   }
 
   .explorer-link:hover .full-address {
-    color: #4a9eff;
+    color: var(--link-bright);
   }
 
   .explorer-link .link-icon {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-muted);
     transition: color 0.15s;
   }
 
   .explorer-link:hover .link-icon {
-    color: #4a9eff;
+    color: var(--link-bright);
   }
 
   .address-row {
@@ -2146,8 +2218,8 @@
     align-items: center;
     justify-content: center;
     padding: 0.375rem;
-    background: #f0f0f0;
-    color: #666;
+    background: var(--surface-2);
+    color: var(--text-muted);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -2155,8 +2227,8 @@
   }
 
   .copy-btn:hover {
-    background: #e0e0e0;
-    color: #333;
+    background: var(--surface-3);
+    color: var(--app-text);
   }
 
   .copy-btn.copied {
@@ -2167,8 +2239,8 @@
   .auto-populate-btn {
     margin-top: 0.75rem;
     padding: 0.5rem 1rem;
-    background: #2a2a4e;
-    color: white;
+    background: var(--surface-accent-hover);
+    color: var(--text-inverse);
     border: none;
     border-radius: 4px;
     font-size: 0.8125rem;
@@ -2177,7 +2249,7 @@
   }
 
   .auto-populate-btn:hover:not(:disabled) {
-    background: #3a3a6e;
+    background: var(--surface-accent-strong);
   }
 
   .auto-populate-btn:disabled {
@@ -2216,7 +2288,7 @@
   .orders-heading {
     margin: 0 0 0.75rem 0;
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 500;
@@ -2231,9 +2303,11 @@
   .add-request input {
     flex: 1;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
     font-size: 0.875rem;
+    background: var(--surface-card);
+    color: var(--app-text);
   }
 
   .add-request button {
@@ -2251,8 +2325,8 @@
   }
 
   .tracked-request {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
     border-radius: 8px;
     padding: 0.75rem 1rem;
     margin-bottom: 0.5rem;
@@ -2260,17 +2334,17 @@
 
   .tracked-request.problematic {
     border-color: #f44336;
-    background: #fff8f7;
+    background: var(--problematic-bg);
   }
 
   .tracked-request.selected {
-    border-color: #88f;
-    background: #f5f5ff;
+    border-color: var(--link);
+    background: var(--selected-bg);
   }
 
   .tracked-request.selected.problematic {
     border-color: #f44336;
-    background: linear-gradient(135deg, #fff8f7 0%, #f5f5ff 100%);
+    background: var(--selected-problematic-bg);
   }
 
   .tracked-request {
@@ -2299,7 +2373,7 @@
   }
 
   .request-row:focus {
-    outline: 2px solid #88f;
+    outline: 2px solid var(--link);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -2321,8 +2395,8 @@
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.9375rem;
     font-weight: 600;
-    color: #1a1a2e;
-    background: #e8e8f0;
+    color: var(--short-id-text);
+    background: var(--short-id-bg);
     padding: 0.125rem 0.375rem;
     border-radius: 3px;
   }
@@ -2340,14 +2414,14 @@
 
   .order-time {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-muted);
     font-family: 'SF Mono', Monaco, monospace;
   }
 
   .request-id-fallback {
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-subtle);
   }
 
   .request-actions-left {
@@ -2364,8 +2438,8 @@
 
   .action-btn {
     padding: 0.25rem 0.5rem;
-    background: #f0f0f0;
-    color: #666;
+    background: var(--surface-2);
+    color: var(--text-muted);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -2373,7 +2447,7 @@
   }
 
   .action-btn:hover {
-    background: #e0e0e0;
+    background: var(--surface-3);
   }
 
   .action-btn.active {
@@ -2405,13 +2479,13 @@
   }
 
   .action-btn.note-btn.has-note {
-    background: #88f;
-    color: white;
+    background: var(--link);
+    color: var(--text-inverse);
   }
 
   .action-btn.note-btn:hover {
-    background: #88f;
-    color: white;
+    background: var(--link);
+    color: var(--text-inverse);
   }
 
   .action-btn.remove-btn {
@@ -2429,30 +2503,32 @@
   .request-note {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-subtle);
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-muted);
   }
 
   .note-label {
     font-weight: 500;
-    color: #888;
+    color: var(--text-subtle);
   }
 
   .note-editor {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-subtle);
   }
 
   .note-editor textarea {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 4px;
     font-family: inherit;
     font-size: 0.875rem;
     resize: vertical;
+    background: var(--surface-card);
+    color: var(--app-text);
   }
 
   .note-actions {
@@ -2467,12 +2543,12 @@
   }
 
   .note-actions .cancel-btn {
-    background: #f0f0f0;
-    color: #666;
+    background: var(--surface-2);
+    color: var(--text-muted);
   }
 
   .note-actions .cancel-btn:hover {
-    background: #e0e0e0;
+    background: var(--surface-3);
   }
 
   .tracker-placeholder {
@@ -2480,22 +2556,22 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #888;
-    background: #f5f5f5;
+    color: var(--text-subtle);
+    background: var(--surface-1);
     border-radius: 8px;
     padding: 2rem;
     text-align: center;
   }
 
   .empty-message {
-    color: #888;
+    color: var(--text-subtle);
     font-style: italic;
     padding: 1rem;
     text-align: center;
   }
 
   .tracker-detail {
-    background: #f5f5f5;
+    background: var(--surface-1);
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -2507,14 +2583,14 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
   }
 
   .detail-header h3 {
     margin: 0;
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -2524,17 +2600,17 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #888;
+    color: var(--text-subtle);
     padding: 2rem;
   }
 
   .detail-error {
     margin: 1rem;
     padding: 1rem;
-    background: #ffebee;
-    color: #c62828;
+    background: var(--error-bg);
+    color: var(--error-text);
     border-radius: 8px;
-    border: 1px solid #ef9a9a;
+    border: 1px solid var(--error-border);
   }
 
   .tracker-request-card {
@@ -2548,7 +2624,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #888;
+    color: var(--text-subtle);
     padding: 2rem;
     text-align: center;
   }
@@ -2557,7 +2633,7 @@
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--modal-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2565,7 +2641,7 @@
   }
 
   .modal {
-    background: white;
+    background: var(--surface-card);
     border-radius: 12px;
     padding: 1.5rem;
     max-width: 400px;
@@ -2580,7 +2656,7 @@
 
   .modal p {
     margin: 0 0 1.5rem 0;
-    color: #666;
+    color: var(--text-muted);
   }
 
   .modal-actions {
@@ -2598,12 +2674,12 @@
   }
 
   .modal-btn.cancel {
-    background: #f0f0f0;
-    color: #666;
+    background: var(--surface-2);
+    color: var(--text-muted);
   }
 
   .modal-btn.cancel:hover {
-    background: #e0e0e0;
+    background: var(--surface-3);
   }
 
   .modal-btn.confirm {
@@ -2621,13 +2697,13 @@
   }
 
   .modal-btn.option {
-    background: #1a1a2e;
-    color: white;
+    background: var(--surface-accent);
+    color: var(--text-inverse);
     min-width: 60px;
   }
 
   .modal-btn.option:hover {
-    background: #2a2a4e;
+    background: var(--surface-accent-hover);
   }
 
   /* Tracker loading state */
@@ -2638,15 +2714,15 @@
     justify-content: center;
     height: 100%;
     min-height: 300px;
-    color: #666;
+    color: var(--text-muted);
     gap: 1rem;
   }
 
   .loading-spinner {
     width: 32px;
     height: 32px;
-    border: 3px solid #e0e0e0;
-    border-top-color: #88f;
+    border: 3px solid var(--surface-3);
+    border-top-color: var(--link);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }

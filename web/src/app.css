@@ -1,3 +1,77 @@
+:root {
+  color-scheme: light;
+  --app-bg: #fafafa;
+  --app-text: #1a1a2e;
+  --text-inverse: #ffffff;
+  --text-muted: #666666;
+  --text-subtle: #888888;
+  --text-faint: #999999;
+  --text-soft: #aaaaaa;
+  --link: #8888ff;
+  --link-bright: #4a9eff;
+  --surface-accent: #1a1a2e;
+  --surface-accent-hover: #2a2a4e;
+  --surface-accent-strong: #3a3a6e;
+  --surface-1: #f5f5f5;
+  --surface-2: #f0f0f0;
+  --surface-3: #e0e0e0;
+  --surface-card: #ffffff;
+  --border: #cccccc;
+  --border-subtle: #dddddd;
+  --border-light: #e0e0e0;
+  --focus-ring: rgba(136, 136, 255, 0.2);
+  --highlight-bg: #e3f2fd;
+  --short-id-bg: #e8e8f0;
+  --short-id-text: #1a1a2e;
+  --problematic-bg: #fff8f7;
+  --selected-bg: #f5f5ff;
+  --selected-problematic-bg: linear-gradient(135deg, #fff8f7 0%, #f5f5ff 100%);
+  --error-bg: #ffebee;
+  --error-text: #c62828;
+  --error-border: #ef9a9a;
+  --code-text: #00ff00;
+  --modal-overlay: rgba(0, 0, 0, 0.5);
+  --tab-hover-bg: rgba(255, 255, 255, 0.1);
+  --tab-active-bg: rgba(136, 136, 255, 0.2);
+}
+
+body[data-theme='dark'] {
+  color-scheme: dark;
+  --app-bg: #0f1116;
+  --app-text: #e5e7eb;
+  --text-inverse: #f9fafb;
+  --text-muted: #9aa4b2;
+  --text-subtle: #8b93a1;
+  --text-faint: #778193;
+  --text-soft: #6b7280;
+  --link: #9bb7ff;
+  --link-bright: #7fb7ff;
+  --surface-accent: #0b0d14;
+  --surface-accent-hover: #151b28;
+  --surface-accent-strong: #1c2433;
+  --surface-1: #141a24;
+  --surface-2: #1a2231;
+  --surface-3: #243044;
+  --surface-card: #111826;
+  --border: #2c3445;
+  --border-subtle: #2a3344;
+  --border-light: #2c3445;
+  --focus-ring: rgba(155, 183, 255, 0.25);
+  --highlight-bg: #12324d;
+  --short-id-bg: #2a3447;
+  --short-id-text: #e5e7eb;
+  --problematic-bg: #3b1515;
+  --selected-bg: #1f2a44;
+  --selected-problematic-bg: linear-gradient(135deg, #3b1515 0%, #1f2a44 100%);
+  --error-bg: #3b1515;
+  --error-text: #fca5a5;
+  --error-border: #7f1d1d;
+  --code-text: #4ade80;
+  --modal-overlay: rgba(0, 0, 0, 0.65);
+  --tab-hover-bg: rgba(255, 255, 255, 0.08);
+  --tab-active-bg: rgba(155, 183, 255, 0.2);
+}
+
 *,
 *::before,
 *::after {
@@ -7,7 +81,8 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background: #fafafa;
+  background: var(--app-bg);
+  color: var(--app-text);
   min-height: 100vh;
 }
 
