@@ -5,7 +5,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Clients for the Boundless Explorer/Indexer API:
-- **Python client** (`explorer_client.py`) - CLI testing
 - **Web app** (`web/`) - Svelte 5 + TypeScript UI for exploring API endpoints
 
 ## Commands
@@ -13,9 +12,6 @@ Clients for the Boundless Explorer/Indexer API:
 ```bash
 # Enter dev shell (auto-starts web app)
 nix-shell
-
-# Python client
-python explorer_client.py
 
 # Web app (manual)
 cd web && bun run dev      # Dev server at http://localhost:5173
@@ -31,12 +27,9 @@ cd web && bun run build    # Production build
 
 ## Architecture
 
-### Python Client
-Single-file client (`explorer_client.py`) with `BoundlessExplorerClient` class.
-
 ### Web App (`web/`)
 Svelte 5 + Bun + TypeScript SPA:
-- `src/lib/types.ts` - API response types
+- `src/types/types.ts` - API response types
 - `src/lib/api/client.ts` - Fetch wrapper with error handling
 - `src/lib/api/endpoints.ts` - All 26 endpoint functions
 - `src/lib/config.ts` - Data-driven endpoint definitions for UI

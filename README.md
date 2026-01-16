@@ -64,23 +64,6 @@ npx wrangler deploy
 cd infra && terraform init && terraform apply
 ```
 
-### Python Client (`explorer_client.py`)
-
-CLI client for testing and scripting.
-
-```bash
-pip install -r requirements.txt
-python explorer_client.py
-```
-
-```python
-from explorer_client import BoundlessExplorerClient
-
-client = BoundlessExplorerClient()
-status = client.get_market_status()
-requests = client.get_prover_requests("0x...")
-```
-
 ## API Endpoints
 
 **Base URL:** `https://d2mdvlnmyov1e1.cloudfront.net`

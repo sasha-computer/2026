@@ -2,10 +2,6 @@
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    # Python (for explorer_client.py)
-    python3
-    python3Packages.requests
-
     # Web app
     bun
     nodejs_22
@@ -14,7 +10,6 @@ pkgs.mkShell {
   shellHook = ''
     echo "Boundless Explorer Development Environment"
     echo ""
-    echo "Python client: python explorer_client.py"
     echo "Web app:"
     echo "  cd web && bun install && bun run dev"
     echo ""
