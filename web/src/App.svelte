@@ -7,7 +7,7 @@
     type ParamDef,
   } from './lib/config';
   import { BASE_URL } from './lib/api/client';
-  import type { MarketRequest } from './lib/types';
+  import type { MarketRequest } from './types/types';
   import {
     loadTrackerData,
     saveTrackerDataAsync,

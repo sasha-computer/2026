@@ -18,7 +18,7 @@ import type {
   StakingEpoch,
   PoVWEpoch,
   DelegationEntry,
-} from '../types';
+} from '../../types/types';
 
 // Health
 export const health = {

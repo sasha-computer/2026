@@ -6,6 +6,6 @@ export default defineConfig({
   envPrefix: ['VITE_', 'SUPABASE_'],
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
   },
 });

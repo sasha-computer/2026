@@ -1,4 +1,4 @@
-import { ApiError } from '../types';
+import { ApiError } from '../../types/types';
 
 export const BASE_URL = 'https://d2mdvlnmyov1e1.cloudfront.net';
 

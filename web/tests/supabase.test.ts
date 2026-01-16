@@ -80,7 +80,7 @@ describe('supabase module', () => {
       vi.stubEnv('VITE_SUPABASE_URL', '');
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
 
-      const { isSupabaseConfigured } = await import('./supabase');
+      const { isSupabaseConfigured } = await import('../src/lib/supabase');
       expect(isSupabaseConfigured()).toBe(false);
     });
   });
@@ -93,7 +93,7 @@ describe('supabase module', () => {
       vi.stubEnv('VITE_SUPABASE_URL', '');
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
 
-      const { loadTrackerData } = await import('./supabase');
+      const { loadTrackerData } = await import('../src/lib/supabase');
       const result = await loadTrackerData();
 
       expect(result).toEqual({ requestors: [] });
@@ -148,7 +148,7 @@ describe('supabase module', () => {
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
       vi.stubEnv('VITE_TRACKER_CLIENT_ID', 'shared-id');
 
-      const { loadTrackerData } = await import('./supabase');
+      const { loadTrackerData } = await import('../src/lib/supabase');
       const result = await loadTrackerData();
 
       expect(result).toEqual(supabaseData);
@@ -170,7 +170,7 @@ describe('supabase module', () => {
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
       vi.stubEnv('VITE_TRACKER_CLIENT_ID', 'shared-id');
 
-      const { loadTrackerData } = await import('./supabase');
+      const { loadTrackerData } = await import('../src/lib/supabase');
       const result = await loadTrackerData();
 
       expect(result).toEqual({ requestors: [] });
@@ -195,7 +195,7 @@ describe('supabase module', () => {
       vi.stubEnv('VITE_SUPABASE_URL', '');
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
 
-      const { saveTrackerDataAsync } = await import('./supabase');
+      const { saveTrackerDataAsync } = await import('../src/lib/supabase');
       await saveTrackerDataAsync(testData);
 
       expect(mockFrom).not.toHaveBeenCalled();
@@ -236,7 +236,7 @@ describe('supabase module', () => {
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key');
       vi.stubEnv('VITE_TRACKER_CLIENT_ID', 'shared-id');
 
-      const { saveTrackerDataAsync } = await import('./supabase');
+      const { saveTrackerDataAsync } = await import('../src/lib/supabase');
       await saveTrackerDataAsync(testData);
 
       expect(mockFrom).toHaveBeenCalledWith('tracker_clients');
@@ -281,7 +281,7 @@ describe('supabase module', () => {
   describe('TrackerData types', () => {
     it('exports correct type shapes', async () => {
       vi.resetModules();
-      const { isSupabaseConfigured } = await import('./supabase');
+      const { isSupabaseConfigured } = await import('../src/lib/supabase');
 
       expect(typeof isSupabaseConfigured).toBe('function');
     });

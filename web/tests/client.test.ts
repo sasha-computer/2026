@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchApi, BASE_URL } from './client';
-import { ApiError } from '../types';
+import { fetchApi, BASE_URL } from '../src/lib/api/client';
+import { ApiError } from '../src/types/types';
 
 describe('fetchApi', () => {
   beforeEach(() => {
