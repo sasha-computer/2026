@@ -9,6 +9,21 @@ Files: web/src/App.svelte (lines 101-117)
 
 Build + tests pass.
 
+## Supabase persistence for Requestor Tracker
+
+PRD: "Create web/src/lib/supabase.ts module... update App.svelte for Supabase... test Supabase integration"
+
+Changes:
+- Added supabase client helper + TrackerData types + load/save/migrate helpers with localStorage fallback
+- Swapped Requestor Tracker persistence to async Supabase-backed save/load with migration on init
+- Added tracker loading UI to avoid interactions before data loads
+
+Decisions:
+- Use Supabase table `requestor_tracker` keyed by a local tracker ID; saves always update localStorage first for offline fallback
+
+Files: web/src/lib/supabase.ts, web/src/App.svelte, PRD.md
+
+Notes: Supabase test steps pending (manual verification in UI + Supabase table).
 ## Order row UI improvements
 
 PRD: "problematic button furthest left, close button nicer with icon, copy button next to short ID"

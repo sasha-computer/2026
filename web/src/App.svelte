@@ -8,33 +8,17 @@
   } from './lib/config';
   import { BASE_URL } from './lib/api/client';
   import type { MarketRequest } from './lib/types';
+  import {
+    loadTrackerData,
+    migrateLocalStorageToSupabase,
+    saveTrackerDataAsync,
+    type TrackerData,
+    type TrackedRequest,
+  } from './lib/supabase';
 
   // Tab state
   type Tab = 'browser' | 'debugger' | 'tracker';
   let activeTab = $state<Tab>('browser');
-
-  // Requestor Tracker types
-  interface TrackedRequest {
-    id: string;
-    nickname: string;
-    problematic: boolean;
-    note: string;
-    addedAt: number;
-    // Auto-fetched metadata
-    createdAt?: string; // ISO format from API
-    status?: string;
-  }
-
-  interface TrackedRequestor {
-    address: string;
-    nickname: string;
-    requests: TrackedRequest[];
-    addedAt: number;
-  }
-
-  interface TrackerData {
-    requestors: TrackedRequestor[];
-  }
 
   // Endpoint Browser state
   let selected = $state<EndpointConfig>(ENDPOINTS[0]);
@@ -50,8 +34,8 @@
   let requestData = $state<MarketRequest | null>(null);
 
   // Requestor Tracker state
-  const TRACKER_STORAGE_KEY = 'boundless-requestor-tracker';
-  let trackerData = $state<TrackerData>(loadTrackerData());
+  let trackerData = $state<TrackerData>({ requestors: [] });
+  let trackerLoading = $state(true);
   let selectedRequestorIndex = $state<number | null>(null);
   let newRequestorAddress = $state('');
   let newRequestorNickname = $state('');
@@ -86,21 +70,29 @@
   let requestorNewOrderCounts = $state<Record<number, number>>({});
   let loadingRequestorBadge = $state<number | null>(null);
 
-  function loadTrackerData(): TrackerData {
-    if (typeof localStorage === 'undefined') return { requestors: [] };
-    const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
-    if (!stored) return { requestors: [] };
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return { requestors: [] };
-    }
-  }
+  $effect(() => {
+    let cancelled = false;
 
-  function saveTrackerData() {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(trackerData));
-  }
+    const initTracker = async () => {
+      trackerLoading = true;
+      try {
+        const data = await loadTrackerData();
+        if (cancelled) return;
+        trackerData = data;
+        void migrateLocalStorageToSupabase();
+      } finally {
+        if (!cancelled) {
+          trackerLoading = false;
+        }
+      }
+    };
+
+    void initTracker();
+
+    return () => {
+      cancelled = true;
+    };
+  });
 
   async function addRequestor() {
     if (!newRequestorAddress.trim()) return;
@@ -112,7 +104,7 @@
       requests: [],
       addedAt: Date.now()
     }];
-    saveTrackerData();
+    void saveTrackerDataAsync(trackerData);
     newRequestorAddress = '';
     newRequestorNickname = '';
     selectedRequestorIndex = trackerData.requestors.length - 1;
@@ -131,7 +123,7 @@
 
   function removeRequestor(index: number) {
     trackerData.requestors = trackerData.requestors.filter((_, i) => i !== index);
-    saveTrackerData();
+    void saveTrackerDataAsync(trackerData);
     if (selectedRequestorIndex === index) {
       selectedRequestorIndex = null;
     } else if (selectedRequestorIndex !== null && selectedRequestorIndex > index) {
@@ -162,7 +154,7 @@
 
     requestor.requests = [...requestor.requests, newRequest];
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    void saveTrackerDataAsync(trackerData);
     newRequestId = '';
 
     // Auto-fetch API data and auto-open view panel
@@ -182,7 +174,7 @@
             requestor.requests[reqIndex].problematic = true;
           }
           trackerData.requestors = [...trackerData.requestors];
-          saveTrackerData();
+          void saveTrackerDataAsync(trackerData);
 
           // Auto-open the view panel with this data
           trackerViewRequestId = reqId;
@@ -211,7 +203,7 @@
     const requestor = trackerData.requestors[selectedRequestorIndex];
     requestor.requests = requestor.requests.filter((_, i) => i !== reqIndex);
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    void saveTrackerDataAsync(trackerData);
     if (editingRequestIndex === reqIndex) {
       editingRequestIndex = null;
     }
@@ -236,7 +228,7 @@
     const requestor = trackerData.requestors[selectedRequestorIndex];
     requestor.requests[reqIndex].problematic = !requestor.requests[reqIndex].problematic;
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    void saveTrackerDataAsync(trackerData);
   }
 
   function startEditingNote(reqIndex: number) {
@@ -249,7 +241,7 @@
     if (selectedRequestorIndex === null || editingRequestIndex === null) return;
     trackerData.requestors[selectedRequestorIndex].requests[editingRequestIndex].note = editNote;
     trackerData.requestors = [...trackerData.requestors];
-    saveTrackerData();
+    void saveTrackerDataAsync(trackerData);
     editingRequestIndex = null;
     editNote = '';
   }
@@ -267,8 +259,9 @@
 
   // Check for new orders that aren't in localStorage
   async function checkForNewOrders() {
-    if (selectedRequestorIndex === null || checkingNewOrders) return;
+    if (trackerLoading || selectedRequestorIndex === null || checkingNewOrders) return;
     const requestor = trackerData.requestors[selectedRequestorIndex];
+    if (!requestor) return;
     checkingNewOrders = true;
 
     try {
@@ -347,7 +340,7 @@
 
       if (addedCount > 0) {
         trackerData.requestors = [...trackerData.requestors];
-        saveTrackerData();
+        void saveTrackerDataAsync(trackerData);
 
         // Auto-select the first added order in view panel
         const firstNewReq = requestor.requests[requestor.requests.length - addedCount];
@@ -424,6 +417,7 @@
 
   // Check all requestors for new orders
   async function checkAllRequestorsForNewOrders() {
+    if (trackerLoading) return;
     const counts: Record<number, number> = {};
     for (let i = 0; i < trackerData.requestors.length; i++) {
       const count = await checkForNewOrdersForRequestor(i);
@@ -481,7 +475,7 @@
 
       if (addedCount > 0) {
         trackerData.requestors = [...trackerData.requestors];
-        saveTrackerData();
+        void saveTrackerDataAsync(trackerData);
       }
 
       // Clear badge count for this requestor
@@ -511,7 +505,7 @@
 
   // Check for new orders when requestor changes
   $effect(() => {
-    if (selectedRequestorIndex !== null) {
+    if (!trackerLoading && selectedRequestorIndex !== null) {
       // Reset count when switching requestors
       newOrderCount = 0;
       // Check for new orders
@@ -521,7 +515,7 @@
 
   // Check all requestors for new orders on initial load
   $effect(() => {
-    if (trackerData.requestors.length > 0) {
+    if (!trackerLoading && trackerData.requestors.length > 0) {
       checkAllRequestorsForNewOrders();
     }
   });
@@ -1009,340 +1003,344 @@
   </section>
   {:else if activeTab === 'tracker'}
   <section class="tracker">
-    <div class="tracker-layout has-detail">
-      <div class="tracker-sidebar">
-        <h3>Tracked Requestors</h3>
-        <div class="add-requestor">
-          <input
-            type="text"
-            placeholder="Requestor address (0x...)"
-            bind:value={newRequestorAddress}
-            onkeydown={(e) => e.key === 'Enter' && addRequestor()}
-          />
-          <input
-            type="text"
-            placeholder="Nickname (optional)"
-            bind:value={newRequestorNickname}
-            onkeydown={(e) => e.key === 'Enter' && addRequestor()}
-          />
-          <button onclick={addRequestor} disabled={!newRequestorAddress.trim()}>
-            Add
-          </button>
-        </div>
-        <ul class="requestor-list">
-          {#each trackerData.requestors as requestor, i}
-            <li class="requestor-item" class:selected={selectedRequestorIndex === i}>
-              {#if requestorNewOrderCounts[i]}
-                <button
-                  class="requestor-badge"
-                  class:loading={loadingRequestorBadge === i}
-                  onclick={(e) => handleRequestorBadgeClick(i, e)}
-                  title="Fetch {requestorNewOrderCounts[i]} new orders"
-                >
-                  {#if loadingRequestorBadge === i}
-                    <span class="spinner"></span>
-                  {:else}
-                    {requestorNewOrderCounts[i]}
-                  {/if}
-                </button>
-              {/if}
-              <button
-                class="requestor-select-btn"
-                onclick={() => selectedRequestorIndex = i}
-              >
-                <span class="requestor-nickname">{requestor.nickname}</span>
-                <code class="requestor-address" title={requestor.address}>
-                  {shortenAddress(requestor.address)}
-                </code>
-              </button>
-              <button
-                class="remove-btn"
-                onclick={() => confirmRemoveRequestor(i)}
-                title="Remove requestor"
-              >
-                x
-              </button>
-            </li>
-          {:else}
-            <li class="empty-message">No requestors tracked yet</li>
-          {/each}
-        </ul>
-      </div>
-
-      <div class="tracker-main">
-        {#if selectedRequestorIndex !== null && trackerData.requestors[selectedRequestorIndex]}
-          {@const requestor = trackerData.requestors[selectedRequestorIndex]}
-          <div class="requestor-header">
-            <h3>{requestor.nickname}</h3>
-            <div class="address-row">
-              <a
-                href="https://explorer.boundless.network/requestors/{requestor.address}?from=requestors"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="explorer-link"
-              >
-                <code class="full-address">{requestor.address}</code>
-                <span class="link-icon">↗</span>
-              </a>
-              <button
-                class="copy-btn"
-                class:copied={copySuccess}
-                onclick={() => copyToClipboard(requestor.address)}
-                title="Copy address"
-              >
-                {#if copySuccess}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                {:else}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                {/if}
-              </button>
-            </div>
-            <button
-              class="auto-populate-btn"
-              onclick={handleFetchRecentOrders}
-              disabled={autoPopulateLoading || checkingNewOrders}
-            >
-              {autoPopulateLoading ? 'Loading...' : 'Fetch Recent Orders'}
-              {#if newOrderCount > 0}
-                <span class="notification-badge">{newOrderCount}</span>
-              {/if}
-            </button>
-          </div>
-
-          <h4 class="orders-heading">Orders</h4>
-          <div class="add-request">
+    {#if trackerLoading}
+      <div class="tracker-loading">Loading tracker data...</div>
+    {:else}
+      <div class="tracker-layout has-detail">
+        <div class="tracker-sidebar">
+          <h3>Tracked Requestors</h3>
+          <div class="add-requestor">
             <input
               type="text"
-              placeholder="Request Order ID"
-              bind:value={newRequestId}
-              onkeydown={(e) => e.key === 'Enter' && addTrackedRequest()}
+              placeholder="Requestor address (0x...)"
+              bind:value={newRequestorAddress}
+              onkeydown={(e) => e.key === 'Enter' && addRequestor()}
             />
-            <button onclick={addTrackedRequest} disabled={!newRequestId.trim()}>
+            <input
+              type="text"
+              placeholder="Nickname (optional)"
+              bind:value={newRequestorNickname}
+              onkeydown={(e) => e.key === 'Enter' && addRequestor()}
+            />
+            <button onclick={addRequestor} disabled={!newRequestorAddress.trim()}>
               Add
             </button>
           </div>
-
-          <ul class="tracked-requests">
-            {#each requestor.requests as req, ri}
-              <li
-                class="tracked-request"
-                class:problematic={req.problematic}
-                class:selected={trackerViewRequestId === req.id}
-              >
-                <div class="request-actions-left">
+          <ul class="requestor-list">
+            {#each trackerData.requestors as requestor, i}
+              <li class="requestor-item" class:selected={selectedRequestorIndex === i}>
+                {#if requestorNewOrderCounts[i]}
                   <button
-                    class="action-btn problematic-btn"
-                    class:active={req.problematic}
-                    onclick={(e) => { e.stopPropagation(); toggleProblematic(ri); }}
-                    title={req.problematic ? 'Mark as OK' : 'Mark as problematic'}
+                    class="requestor-badge"
+                    class:loading={loadingRequestorBadge === i}
+                    onclick={(e) => handleRequestorBadgeClick(i, e)}
+                    title="Fetch {requestorNewOrderCounts[i]} new orders"
                   >
-                    !
-                  </button>
-                </div>
-                <div class="request-row" role="button" tabindex="0" onclick={() => viewRequestInTracker(req.id)} onkeydown={(e) => e.key === 'Enter' && viewRequestInTracker(req.id)}>
-                  <div class="request-main">
-                    <div class="request-header-line">
-                      <code class="short-order-id" title={req.id}>{getShortOrderId(req.id, requestor.address)}</code>
-                      <button
-                        class="action-btn copy-id-btn inline"
-                        onclick={(e) => { e.stopPropagation(); copyToClipboard(req.id); }}
-                        title="Copy request ID"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      </button>
-                      {#if req.status}
-                        <span class="order-status" style="--status-color: {getStatusColor(req.status as MarketRequest['request_status'])}">{req.status}</span>
-                      {/if}
-                    </div>
-                    {#if req.createdAt}
-                      <span class="order-time">{formatOrderTime(req.createdAt)}</span>
+                    {#if loadingRequestorBadge === i}
+                      <span class="spinner"></span>
                     {:else}
-                      <code class="request-id-fallback" title={req.id}>...{getOrderSuffix(req.id, requestor.address)}</code>
+                      {requestorNewOrderCounts[i]}
                     {/if}
-                  </div>
-                </div>
-                <div class="request-actions">
-                  <button
-                    class="action-btn note-btn"
-                    class:has-note={req.note}
-                    onclick={(e) => { e.stopPropagation(); startEditingNote(ri); }}
-                    title={req.note ? 'Edit note' : 'Add note'}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
                   </button>
-                  <button
-                    class="action-btn remove-btn"
-                    onclick={(e) => { e.stopPropagation(); confirmRemoveRequest(ri); }}
-                    title="Remove"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </div>
-                {#if req.note}
-                  <div class="request-note">
-                    <span class="note-label">Note:</span> {req.note}
-                  </div>
                 {/if}
-                {#if editingRequestIndex === ri}
-                  <div class="note-editor">
-                    <textarea
-                      bind:value={editNote}
-                      placeholder="Add a note..."
-                      rows="2"
-                    ></textarea>
-                    <div class="note-actions">
-                      <button onclick={saveNote}>Save</button>
-                      <button onclick={cancelEditNote} class="cancel-btn">Cancel</button>
-                    </div>
-                  </div>
-                {/if}
+                <button
+                  class="requestor-select-btn"
+                  onclick={() => selectedRequestorIndex = i}
+                >
+                  <span class="requestor-nickname">{requestor.nickname}</span>
+                  <code class="requestor-address" title={requestor.address}>
+                    {shortenAddress(requestor.address)}
+                  </code>
+                </button>
+                <button
+                  class="remove-btn"
+                  onclick={() => confirmRemoveRequestor(i)}
+                  title="Remove requestor"
+                >
+                  x
+                </button>
               </li>
             {:else}
-              <li class="empty-message">No requests tracked for this requestor</li>
+              <li class="empty-message">No requestors tracked yet</li>
             {/each}
           </ul>
-        {:else}
-          <div class="tracker-placeholder">
-            <p>Select a requestor from the sidebar or add a new one to start tracking requests.</p>
-          </div>
-        {/if}
-      </div>
-
-      <div class="tracker-detail">
-        <div class="detail-header">
-          <h3>Request Details</h3>
         </div>
 
-        {#if trackerViewLoading}
-          <div class="detail-loading">Loading...</div>
-        {:else if trackerViewError}
-          <div class="detail-error">{trackerViewError}</div>
-        {:else if trackerViewData}
-          <div class="request-card tracker-request-card">
-            <div class="request-header">
-              <div class="request-status" style="--status-color: {getStatusColor(trackerViewData.request_status)}">
-                {trackerViewData.request_status.toUpperCase()}
-              </div>
-              <div class="request-source">{trackerViewData.source}</div>
-            </div>
-
-            <div class="request-section">
-              <h3>Request ID</h3>
-              <div class="request-field id-field">
-                <code class="field-value mono" title={trackerViewData.request_id}>{trackerViewData.request_id}</code>
+        <div class="tracker-main">
+          {#if selectedRequestorIndex !== null && trackerData.requestors[selectedRequestorIndex]}
+            {@const requestor = trackerData.requestors[selectedRequestorIndex]}
+            <div class="requestor-header">
+              <h3>{requestor.nickname}</h3>
+              <div class="address-row">
+                <a
+                  href="https://explorer.boundless.network/requestors/{requestor.address}?from=requestors"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="explorer-link"
+                >
+                  <code class="full-address">{requestor.address}</code>
+                  <span class="link-icon">↗</span>
+                </a>
                 <button
-                  class="copy-btn small"
+                  class="copy-btn"
                   class:copied={copySuccess}
-                  onclick={() => copyToClipboard(trackerViewData.request_id)}
-                  title="Copy request ID"
+                  onclick={() => copyToClipboard(requestor.address)}
+                  title="Copy address"
                 >
                   {#if copySuccess}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   {:else}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   {/if}
                 </button>
               </div>
+              <button
+                class="auto-populate-btn"
+                onclick={handleFetchRecentOrders}
+                disabled={autoPopulateLoading || checkingNewOrders}
+              >
+                {autoPopulateLoading ? 'Loading...' : 'Fetch Recent Orders'}
+                {#if newOrderCount > 0}
+                  <span class="notification-badge">{newOrderCount}</span>
+                {/if}
+              </button>
             </div>
 
-            <div class="request-section">
-              <h3>Prover</h3>
-              {#if trackerViewData.lock_prover_address}
-                <div class="request-field">
-                  <a
-                    href="https://explorer.boundless.network/provers/{trackerViewData.lock_prover_address}?from=provers"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="explorer-link prover-link"
-                    title="View prover on explorer"
-                  >
-                    <code class="field-value mono">{trackerViewData.lock_prover_address}</code>
-                    <span class="link-icon">↗</span>
-                  </a>
-                </div>
+            <h4 class="orders-heading">Orders</h4>
+            <div class="add-request">
+              <input
+                type="text"
+                placeholder="Request Order ID"
+                bind:value={newRequestId}
+                onkeydown={(e) => e.key === 'Enter' && addTrackedRequest()}
+              />
+              <button onclick={addTrackedRequest} disabled={!newRequestId.trim()}>
+                Add
+              </button>
+            </div>
+
+            <ul class="tracked-requests">
+              {#each requestor.requests as req, ri}
+                <li
+                  class="tracked-request"
+                  class:problematic={req.problematic}
+                  class:selected={trackerViewRequestId === req.id}
+                >
+                  <div class="request-actions-left">
+                    <button
+                      class="action-btn problematic-btn"
+                      class:active={req.problematic}
+                      onclick={(e) => { e.stopPropagation(); toggleProblematic(ri); }}
+                      title={req.problematic ? 'Mark as OK' : 'Mark as problematic'}
+                    >
+                      !
+                    </button>
+                  </div>
+                  <div class="request-row" role="button" tabindex="0" onclick={() => viewRequestInTracker(req.id)} onkeydown={(e) => e.key === 'Enter' && viewRequestInTracker(req.id)}>
+                    <div class="request-main">
+                      <div class="request-header-line">
+                        <code class="short-order-id" title={req.id}>{getShortOrderId(req.id, requestor.address)}</code>
+                        <button
+                          class="action-btn copy-id-btn inline"
+                          onclick={(e) => { e.stopPropagation(); copyToClipboard(req.id); }}
+                          title="Copy request ID"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                        {#if req.status}
+                          <span class="order-status" style="--status-color: {getStatusColor(req.status as MarketRequest['request_status'])}">{req.status}</span>
+                        {/if}
+                      </div>
+                      {#if req.createdAt}
+                        <span class="order-time">{formatOrderTime(req.createdAt)}</span>
+                      {:else}
+                        <code class="request-id-fallback" title={req.id}>...{getOrderSuffix(req.id, requestor.address)}</code>
+                      {/if}
+                    </div>
+                  </div>
+                  <div class="request-actions">
+                    <button
+                      class="action-btn note-btn"
+                      class:has-note={req.note}
+                      onclick={(e) => { e.stopPropagation(); startEditingNote(ri); }}
+                      title={req.note ? 'Edit note' : 'Add note'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                    </button>
+                    <button
+                      class="action-btn remove-btn"
+                      onclick={(e) => { e.stopPropagation(); confirmRemoveRequest(ri); }}
+                      title="Remove"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  {#if req.note}
+                    <div class="request-note">
+                      <span class="note-label">Note:</span> {req.note}
+                    </div>
+                  {/if}
+                  {#if editingRequestIndex === ri}
+                    <div class="note-editor">
+                      <textarea
+                        bind:value={editNote}
+                        placeholder="Add a note..."
+                        rows="2"
+                      ></textarea>
+                      <div class="note-actions">
+                        <button onclick={saveNote}>Save</button>
+                        <button onclick={cancelEditNote} class="cancel-btn">Cancel</button>
+                      </div>
+                    </div>
+                  {/if}
+                </li>
               {:else}
-                <div class="request-field">
-                  <span class="field-value muted">No prover assigned</span>
-                </div>
-              {/if}
+                <li class="empty-message">No requests tracked for this requestor</li>
+              {/each}
+            </ul>
+          {:else}
+            <div class="tracker-placeholder">
+              <p>Select a requestor from the sidebar or add a new one to start tracking requests.</p>
             </div>
+          {/if}
+        </div>
 
-            <div class="request-section">
-              <h3>Timing</h3>
-              <div class="request-field">
-                <span class="field-label">Created</span>
-                <span class="field-value">{formatOrderTime(trackerViewData.created_at_iso)}</span>
+        <div class="tracker-detail">
+          <div class="detail-header">
+            <h3>Request Details</h3>
+          </div>
+
+          {#if trackerViewLoading}
+            <div class="detail-loading">Loading...</div>
+          {:else if trackerViewError}
+            <div class="detail-error">{trackerViewError}</div>
+          {:else if trackerViewData}
+            <div class="request-card tracker-request-card">
+              <div class="request-header">
+                <div class="request-status" style="--status-color: {getStatusColor(trackerViewData.request_status)}">
+                  {trackerViewData.request_status.toUpperCase()}
+                </div>
+                <div class="request-source">{trackerViewData.source}</div>
               </div>
-              {#if trackerViewData.locked_at_iso}
-                <div class="request-field">
-                  <span class="field-label">Locked</span>
-                  <span class="field-value">{formatOrderTime(trackerViewData.locked_at_iso)}</span>
+
+              <div class="request-section">
+                <h3>Request ID</h3>
+                <div class="request-field id-field">
+                  <code class="field-value mono" title={trackerViewData.request_id}>{trackerViewData.request_id}</code>
+                  <button
+                    class="copy-btn small"
+                    class:copied={copySuccess}
+                    onclick={() => copyToClipboard(trackerViewData.request_id)}
+                    title="Copy request ID"
+                  >
+                    {#if copySuccess}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    {:else}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    {/if}
+                  </button>
                 </div>
-              {/if}
-              {#if trackerViewData.expires_at_iso}
-                <div class="request-field">
-                  <span class="field-label">Expires</span>
-                  <span class="field-value">{formatOrderTime(trackerViewData.expires_at_iso)}</span>
-                </div>
-              {/if}
-              {#if trackerViewData.fulfilled_at_iso}
-                <div class="request-field">
-                  <span class="field-label">Fulfilled</span>
-                  <span class="field-value">{formatOrderTime(trackerViewData.fulfilled_at_iso)}</span>
-                </div>
-                {#if calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}
-                  <div class="request-field highlight">
-                    <span class="field-label">Proof Latency</span>
-                    <span class="field-value">{calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}</span>
+              </div>
+
+              <div class="request-section">
+                <h3>Prover</h3>
+                {#if trackerViewData.lock_prover_address}
+                  <div class="request-field">
+                    <a
+                      href="https://explorer.boundless.network/provers/{trackerViewData.lock_prover_address}?from=provers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="explorer-link prover-link"
+                      title="View prover on explorer"
+                    >
+                      <code class="field-value mono">{trackerViewData.lock_prover_address}</code>
+                      <span class="link-icon">↗</span>
+                    </a>
+                  </div>
+                {:else}
+                  <div class="request-field">
+                    <span class="field-value muted">No prover assigned</span>
                   </div>
                 {/if}
-              {/if}
-            </div>
+              </div>
 
-            <div class="request-section">
-              <h3>Pricing</h3>
-              <div class="request-field">
-                <span class="field-label">Min Price</span>
-                <span class="field-value">{formatPrice3sf(trackerViewData.min_price_formatted)}</span>
-              </div>
-              <div class="request-field">
-                <span class="field-label">Max Price</span>
-                <span class="field-value">{formatPrice3sf(trackerViewData.max_price_formatted)}</span>
-              </div>
-              <div class="request-field">
-                <span class="field-label">Lock Collateral</span>
-                <span class="field-value">{formatPrice3sf(trackerViewData.lock_collateral_formatted)}</span>
-              </div>
-              {#if trackerViewData.lock_price_formatted}
-                <div class="request-field">
-                  <span class="field-label">Lock Price</span>
-                  <span class="field-value">{formatPrice3sf(trackerViewData.lock_price_formatted)}</span>
-                </div>
-              {/if}
-            </div>
-
-            {#if trackerViewData.total_cycles != null}
               <div class="request-section">
-                <h3>Cycles</h3>
+                <h3>Timing</h3>
                 <div class="request-field">
-                  <span class="field-label">Total Cycles</span>
-                  <span class="field-value">{formatCycles(trackerViewData.total_cycles)}</span>
+                  <span class="field-label">Created</span>
+                  <span class="field-value">{formatOrderTime(trackerViewData.created_at_iso)}</span>
                 </div>
+                {#if trackerViewData.locked_at_iso}
+                  <div class="request-field">
+                    <span class="field-label">Locked</span>
+                    <span class="field-value">{formatOrderTime(trackerViewData.locked_at_iso)}</span>
+                  </div>
+                {/if}
+                {#if trackerViewData.expires_at_iso}
+                  <div class="request-field">
+                    <span class="field-label">Expires</span>
+                    <span class="field-value">{formatOrderTime(trackerViewData.expires_at_iso)}</span>
+                  </div>
+                {/if}
+                {#if trackerViewData.fulfilled_at_iso}
+                  <div class="request-field">
+                    <span class="field-label">Fulfilled</span>
+                    <span class="field-value">{formatOrderTime(trackerViewData.fulfilled_at_iso)}</span>
+                  </div>
+                  {#if calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}
+                    <div class="request-field highlight">
+                      <span class="field-label">Proof Latency</span>
+                      <span class="field-value">{calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}</span>
+                    </div>
+                  {/if}
+                {/if}
               </div>
-            {/if}
 
-            <details class="raw-json">
-              <summary>Raw JSON</summary>
-              <pre>{JSON.stringify(trackerViewData, null, 2)}</pre>
-            </details>
-          </div>
-        {:else}
-          <div class="detail-placeholder">
-            <p>Select an order to view its details</p>
-          </div>
-        {/if}
+              <div class="request-section">
+                <h3>Pricing</h3>
+                <div class="request-field">
+                  <span class="field-label">Min Price</span>
+                  <span class="field-value">{formatPrice3sf(trackerViewData.min_price_formatted)}</span>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Max Price</span>
+                  <span class="field-value">{formatPrice3sf(trackerViewData.max_price_formatted)}</span>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Lock Collateral</span>
+                  <span class="field-value">{formatPrice3sf(trackerViewData.lock_collateral_formatted)}</span>
+                </div>
+                {#if trackerViewData.lock_price_formatted}
+                  <div class="request-field">
+                    <span class="field-label">Lock Price</span>
+                    <span class="field-value">{formatPrice3sf(trackerViewData.lock_price_formatted)}</span>
+                  </div>
+                {/if}
+              </div>
+
+              {#if trackerViewData.total_cycles != null}
+                <div class="request-section">
+                  <h3>Cycles</h3>
+                  <div class="request-field">
+                    <span class="field-label">Total Cycles</span>
+                    <span class="field-value">{formatCycles(trackerViewData.total_cycles)}</span>
+                  </div>
+                </div>
+              {/if}
+
+              <details class="raw-json">
+                <summary>Raw JSON</summary>
+                <pre>{JSON.stringify(trackerViewData, null, 2)}</pre>
+              </details>
+            </div>
+          {:else}
+            <div class="detail-placeholder">
+              <p>Select an order to view its details</p>
+            </div>
+          {/if}
+        </div>
       </div>
-    </div>
+    {/if}
 
     {#if removeConfirmation}
       <div
@@ -1871,6 +1869,18 @@
   /* Requestor Tracker styles */
   .tracker {
     height: calc(100vh - 200px);
+  }
+
+  .tracker-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+    color: #666;
+    text-align: center;
   }
 
   .tracker-layout {
