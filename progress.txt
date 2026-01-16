@@ -9,6 +9,17 @@ Files: web/src/App.svelte (lines 101-117)
 
 Build + tests pass.
 
+## Normalize Supabase env var names
+
+PRD: "Normalize Supabase env vars to `SUPABASE_URL`/`SUPABASE_API_KEY` for client config"
+
+Changes:
+- Added SUPABASE_* env prefix support in Vite config
+- Switched Supabase client init to prefer SUPABASE_URL and SUPABASE_API_KEY with VITE_* fallback
+
+Files: web/vite.config.ts, web/src/lib/supabase.ts, PRD.md
+
+Notes: No runtime verification without cloud env secrets.
 ## Order row UI improvements
 
 PRD: "problematic button furthest left, close button nicer with icon, copy button next to short ID"
@@ -41,3 +52,19 @@ Changes:
 Files: web/src/App.svelte (lines 82-84, 394-487, 908-922, CSS 1790-1831)
 
 Build + tests pass.
+
+## Supabase persistence for Requestor Tracker
+
+PRD: "Create web/src/lib/supabase.ts module... update App.svelte for Supabase... test Supabase integration"
+
+Changes:
+- Added supabase client helper + TrackerData types + load/save/migrate helpers with localStorage fallback
+- Swapped Requestor Tracker persistence to async Supabase-backed save/load with migration on init
+- Added tracker loading UI to avoid interactions before data loads
+
+Decisions:
+- Use Supabase table `requestor_tracker` keyed by a local tracker ID; saves always update localStorage first for offline fallback
+
+Files: web/src/lib/supabase.ts, web/src/App.svelte, PRD.md
+
+Notes: Supabase test steps pending (manual verification in UI + Supabase table).
