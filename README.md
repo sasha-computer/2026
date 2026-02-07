@@ -3,8 +3,19 @@
 </p>
 
 <p align="center">
-  My personal Claude assistant that runs securely in containers. Lightweight and built to be understood and customized for your own needs.
+  A personal Claude assistant on Discord. No containers, no trigger words — just talk in any channel.
 </p>
+
+## Fork Changes
+
+This is a fork of [gavrielc/nanoclaw](https://github.com/gavrielc/nanoclaw) with the following changes:
+
+- **Discord-only** — WhatsApp/Baileys replaced with Discord.js
+- **No containerization** — Agents run as native Node.js subprocesses instead of Apple Container/Docker VMs. Simpler, faster, no startup latency.
+- **No trigger required** — Responds to all messages in all channels by default (configurable per-channel via `requiresTrigger`)
+- **Auto-registration** — Channels are automatically registered on first message, no manual setup needed
+- **Session-based context** — Per-channel conversation context via Claude session IDs stored in SQLite (no filesystem isolation)
+- **Slash commands** — `/new`, `/clear`, `/status` as native Discord slash commands
 
 ## Why I Built This
 
