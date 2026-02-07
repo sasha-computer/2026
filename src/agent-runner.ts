@@ -1,6 +1,6 @@
 /**
  * NanoClaw Agent Runner
- * Runs inside a container, receives config via stdin, outputs result to stdout
+ * Runs as a native subprocess, receives config via stdin, outputs result to stdout
  */
 
 import fs from 'fs';
@@ -8,13 +8,18 @@ import path from 'path';
 import { query, HookCallback, PreCompactHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { createIpcMcp } from './ipc-mcp.js';
 
-interface ContainerInput {
+interface AgentInput {
   prompt: string;
   sessionId?: string;
   groupFolder: string;
   chatJid: string;
   isMain: boolean;
   isScheduledTask?: boolean;
+  paths: {
+    groupDir: string;
+    globalDir?: string;
+    ipcDir: string;
+  };
 }
 
 interface AgentResponse {
@@ -43,7 +48,7 @@ const AGENT_RESPONSE_SCHEMA = {
   required: ['outputType'],
 } as const;
 
-interface ContainerOutput {
+interface AgentOutput {
   status: 'success' | 'error';
   result: AgentResponse | null;
   newSessionId?: string;
@@ -74,7 +79,7 @@ async function readStdin(): Promise<string> {
 const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
 const OUTPUT_END_MARKER = '---NANOCLAW_OUTPUT_END---';
 
-function writeOutput(output: ContainerOutput): void {
+function writeOutput(output: AgentOutput): void {
   console.log(OUTPUT_START_MARKER);
   console.log(JSON.stringify(output));
   console.log(OUTPUT_END_MARKER);
@@ -85,7 +90,6 @@ function log(message: string): void {
 }
 
 function getSessionSummary(sessionId: string, transcriptPath: string): string | null {
-  // sessions-index.json is in the same directory as the transcript
   const projectDir = path.dirname(transcriptPath);
   const indexPath = path.join(projectDir, 'sessions-index.json');
 
@@ -107,10 +111,7 @@ function getSessionSummary(sessionId: string, transcriptPath: string): string | 
   return null;
 }
 
-/**
- * Archive the full transcript to conversations/ before compaction.
- */
-function createPreCompactHook(): HookCallback {
+function createPreCompactHook(groupDir: string): HookCallback {
   return async (input, _toolUseId, _context) => {
     const preCompact = input as PreCompactHookInput;
     const transcriptPath = preCompact.transcript_path;
@@ -133,7 +134,7 @@ function createPreCompactHook(): HookCallback {
       const summary = getSessionSummary(sessionId, transcriptPath);
       const name = summary ? sanitizeFilename(summary) : generateFallbackName();
 
-      const conversationsDir = '/workspace/group/conversations';
+      const conversationsDir = path.join(groupDir, 'conversations');
       fs.mkdirSync(conversationsDir, { recursive: true });
 
       const date = new Date().toISOString().split('T')[0];
@@ -215,7 +216,7 @@ function formatTranscriptMarkdown(messages: ParsedMessage[], title?: string | nu
   lines.push('');
 
   for (const msg of messages) {
-    const sender = msg.role === 'user' ? 'User' : 'Andy';
+    const sender = msg.role === 'user' ? 'User' : 'Assistant';
     const content = msg.content.length > 2000
       ? msg.content.slice(0, 2000) + '...'
       : msg.content;
@@ -227,7 +228,7 @@ function formatTranscriptMarkdown(messages: ParsedMessage[], title?: string | nu
 }
 
 async function main(): Promise<void> {
-  let input: ContainerInput;
+  let input: AgentInput;
 
   try {
     const stdinData = await readStdin();
@@ -245,7 +246,8 @@ async function main(): Promise<void> {
   const ipcMcp = createIpcMcp({
     chatJid: input.chatJid,
     groupFolder: input.groupFolder,
-    isMain: input.isMain
+    isMain: input.isMain,
+    ipcDir: input.paths.ipcDir,
   });
 
   let result: AgentResponse | null = null;
@@ -258,10 +260,12 @@ async function main(): Promise<void> {
   }
 
   // Load global CLAUDE.md as additional system context (shared across all groups)
-  const globalClaudeMdPath = '/workspace/global/CLAUDE.md';
   let globalClaudeMd: string | undefined;
-  if (!input.isMain && fs.existsSync(globalClaudeMdPath)) {
-    globalClaudeMd = fs.readFileSync(globalClaudeMdPath, 'utf-8');
+  if (!input.isMain && input.paths.globalDir) {
+    const globalClaudeMdPath = path.join(input.paths.globalDir, 'CLAUDE.md');
+    if (fs.existsSync(globalClaudeMdPath)) {
+      globalClaudeMd = fs.readFileSync(globalClaudeMdPath, 'utf-8');
+    }
   }
 
   try {
@@ -270,7 +274,7 @@ async function main(): Promise<void> {
     for await (const message of query({
       prompt,
       options: {
-        cwd: '/workspace/group',
+        cwd: input.paths.groupDir,
         resume: input.sessionId,
         systemPrompt: globalClaudeMd
           ? { type: 'preset' as const, preset: 'claude_code' as const, append: globalClaudeMd }
@@ -288,7 +292,7 @@ async function main(): Promise<void> {
           nanoclaw: ipcMcp
         },
         hooks: {
-          PreCompact: [{ hooks: [createPreCompactHook()] }]
+          PreCompact: [{ hooks: [createPreCompactHook(input.paths.groupDir)] }]
         },
         outputFormat: {
           type: 'json_schema',
@@ -310,7 +314,7 @@ async function main(): Promise<void> {
           }
           log(`Agent result: outputType=${result.outputType}${result.internalLog ? `, log=${result.internalLog}` : ''}`);
         } else if (message.subtype === 'success' || message.subtype === 'error_max_structured_output_retries') {
-          // Structured output missing or agent couldn't produce valid structured output — fall back to text
+          // Structured output missing or agent couldn't produce valid structured output -- fall back to text
           log(`Structured output unavailable (subtype=${message.subtype}), falling back to text`);
           const textResult = 'result' in message ? (message as { result?: string }).result : null;
           if (textResult) {

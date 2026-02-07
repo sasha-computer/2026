@@ -1,34 +1,44 @@
-import { exec, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-import makeWASocket, {
-  DisconnectReason,
-  WASocket,
-  makeCacheableSignalKeyStore,
-  useMultiFileAuthState,
-} from '@whiskeysockets/baileys';
+import {
+  Client,
+  ChatInputCommandInteraction,
+  GatewayIntentBits,
+  Message,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  TextChannel,
+  ThreadChannel,
+  Partials,
+} from 'discord.js';
 import { CronExpressionParser } from 'cron-parser';
 
 import {
   ASSISTANT_NAME,
   DATA_DIR,
+  DISCORD_BOT_TOKEN,
+  DISCORD_GUILD_ID,
+  DISCORD_IGNORE_CHANNEL_IDS,
+  DISCORD_MAIN_CHANNEL_ID,
+  DISCORD_MAX_MESSAGE_LENGTH,
   IPC_POLL_INTERVAL,
   MAIN_GROUP_FOLDER,
-  POLL_INTERVAL,
-  STORE_DIR,
+  MAX_CONCURRENT_AGENTS,
   TIMEZONE,
   TRIGGER_PATTERN,
 } from './config.js';
 import {
   AgentResponse,
   AvailableGroup,
-  runContainerAgent,
+  runAgent,
   writeGroupsSnapshot,
   writeTasksSnapshot,
-} from './container-runner.js';
+} from './process-runner.js';
 import {
   createTask,
+  deleteSession,
   deleteTask,
   getAllChats,
   getAllRegisteredGroups,
@@ -36,7 +46,6 @@ import {
   getAllTasks,
   getLastGroupSync,
   getMessagesSince,
-  getNewMessages,
   getRouterState,
   getTaskById,
   initDatabase,
@@ -56,40 +65,29 @@ import { logger } from './logger.js';
 
 const GROUP_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-let sock: WASocket;
+let client: Client;
 let lastTimestamp = '';
-let sessions: Record<string, string> = {};
+let sessions: Record<string, Record<string, string>> = {};
+const startTime = Date.now();
 let registeredGroups: Record<string, RegisteredGroup> = {};
 let lastAgentTimestamp: Record<string, string> = {};
-// LID to phone number mapping (WhatsApp now sends LID JIDs for self-chats)
-let lidToPhoneMap: Record<string, string> = {};
-// Guards to prevent duplicate loops on WhatsApp reconnect
-let messageLoopRunning = false;
+// Cache thread ID -> parent channel ID for thread/forum support
+const threadParentCache = new Map<string, string>();
+// Guards to prevent duplicate loops on reconnect
 let ipcWatcherRunning = false;
 let groupSyncTimerStarted = false;
 
 const queue = new GroupQueue();
 
-/**
- * Translate a JID from LID format to phone format if we have a mapping.
- * Returns the original JID if no mapping exists.
- */
-function translateJid(jid: string): string {
-  if (!jid.endsWith('@lid')) return jid;
-  const lidUser = jid.split('@')[0].split(':')[0];
-  const phoneJid = lidToPhoneMap[lidUser];
-  if (phoneJid) {
-    logger.debug({ lidJid: jid, phoneJid }, 'Translated LID to phone JID');
-    return phoneJid;
-  }
-  return jid;
-}
-
-async function setTyping(jid: string, isTyping: boolean): Promise<void> {
+async function setTyping(channelId: string, isTyping: boolean): Promise<void> {
+  if (!isTyping) return; // Discord typing auto-expires; no "stop" needed
   try {
-    await sock.sendPresenceUpdate(isTyping ? 'composing' : 'paused', jid);
+    const channel = await client.channels.fetch(channelId);
+    if (channel?.isTextBased() && 'sendTyping' in channel) {
+      await (channel as TextChannel | ThreadChannel).sendTyping();
+    }
   } catch (err) {
-    logger.debug({ jid, err }, 'Failed to update typing status');
+    logger.debug({ channelId, err }, 'Failed to send typing indicator');
   }
 }
 
@@ -134,53 +132,53 @@ function registerGroup(jid: string, group: RegisteredGroup): void {
 }
 
 /**
- * Sync group metadata from WhatsApp.
- * Fetches all participating groups and stores their names in the database.
+ * Sync channel metadata from Discord.
+ * Fetches all guild channels and stores their names in the database.
  * Called on startup, daily, and on-demand via IPC.
  */
-async function syncGroupMetadata(force = false): Promise<void> {
-  // Check if we need to sync (skip if synced recently, unless forced)
+async function syncChannelMetadata(force = false): Promise<void> {
   if (!force) {
     const lastSync = getLastGroupSync();
     if (lastSync) {
       const lastSyncTime = new Date(lastSync).getTime();
       const now = Date.now();
       if (now - lastSyncTime < GROUP_SYNC_INTERVAL_MS) {
-        logger.debug({ lastSync }, 'Skipping group sync - synced recently');
+        logger.debug({ lastSync }, 'Skipping channel sync - synced recently');
         return;
       }
     }
   }
 
   try {
-    logger.info('Syncing group metadata from WhatsApp...');
-    const groups = await sock.groupFetchAllParticipating();
+    logger.info('Syncing channel metadata from Discord...');
+    const guild = await client.guilds.fetch(DISCORD_GUILD_ID);
+    const channels = await guild.channels.fetch();
 
     let count = 0;
-    for (const [jid, metadata] of Object.entries(groups)) {
-      if (metadata.subject) {
-        updateChatName(jid, metadata.subject);
+    for (const [id, channel] of channels) {
+      if (channel && channel.name) {
+        updateChatName(id, channel.name);
         count++;
       }
     }
 
     setLastGroupSync();
-    logger.info({ count }, 'Group metadata synced');
+    logger.info({ count }, 'Channel metadata synced');
   } catch (err) {
-    logger.error({ err }, 'Failed to sync group metadata');
+    logger.error({ err }, 'Failed to sync channel metadata');
   }
 }
 
 /**
- * Get available groups list for the agent.
- * Returns groups ordered by most recent activity.
+ * Get available channels list for the agent.
+ * Returns channels ordered by most recent activity.
  */
 function getAvailableGroups(): AvailableGroup[] {
   const chats = getAllChats();
   const registeredJids = new Set(Object.keys(registeredGroups));
 
   return chats
-    .filter((c) => c.jid !== '__group_sync__' && c.jid.endsWith('@g.us'))
+    .filter((c) => c.jid !== '__group_sync__')
     .map((c) => ({
       jid: c.jid,
       name: c.name,
@@ -190,12 +188,78 @@ function getAvailableGroups(): AvailableGroup[] {
 }
 
 /**
- * Process all pending messages for a group.
- * Called by the GroupQueue when it's this group's turn.
+ * Look up the registration for a channel, supporting threads and forum posts.
+ * Threads/forum posts inherit their parent channel's registration.
+ * Unregistered channels are auto-registered on first access.
+ */
+function getRegistrationForChannel(
+  channelId: string,
+  channelMeta?: { name?: string; isThread?: boolean; parentId?: string },
+): RegisteredGroup {
+  // Direct registration
+  if (registeredGroups[channelId]) {
+    return registeredGroups[channelId];
+  }
+
+  // Check thread parent cache
+  const parentId = channelMeta?.parentId || threadParentCache.get(channelId);
+  if (parentId && registeredGroups[parentId]) {
+    return registeredGroups[parentId];
+  }
+
+  // Auto-register this channel
+  return autoRegisterChannel(channelId, channelMeta);
+}
+
+/**
+ * Auto-register a channel that received its first message.
+ * Creates a RegisteredGroup on the fly with a human-readable folder name.
+ */
+function autoRegisterChannel(
+  channelId: string,
+  meta?: { name?: string; isThread?: boolean; parentId?: string },
+): RegisteredGroup {
+  const idSuffix = channelId.slice(-6);
+  const rawName = meta?.name || 'unknown';
+  const sanitized = rawName
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 30);
+
+  let folder = `chan-${sanitized}-${idSuffix}`;
+
+  // Check for folder name collision
+  const existingFolders = new Set(
+    Object.values(registeredGroups).map((g) => g.folder),
+  );
+  if (existingFolders.has(folder)) {
+    folder = `chan-${channelId}`;
+  }
+
+  const group: RegisteredGroup = {
+    name: rawName,
+    folder,
+    trigger: `@${ASSISTANT_NAME}`,
+    added_at: new Date().toISOString(),
+    requiresTrigger: false,
+  };
+
+  registerGroup(channelId, group);
+  logger.info(
+    { channelId, folder, name: rawName },
+    'Auto-registered channel',
+  );
+  return group;
+}
+
+/**
+ * Process all pending messages for a channel.
+ * Called by the GroupQueue when it's this channel's turn.
  */
 async function processGroupMessages(chatJid: string): Promise<boolean> {
-  const group = registeredGroups[chatJid];
-  if (!group) return true;
+  const group = getRegistrationForChannel(chatJid);
 
   const isMainGroup = group.folder === MAIN_GROUP_FOLDER;
 
@@ -209,8 +273,8 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
 
   if (missedMessages.length === 0) return true;
 
-  // For non-main groups, check if trigger is required and present
-  if (!isMainGroup && group.requiresTrigger !== false) {
+  // Only require trigger if explicitly set to true
+  if (group.requiresTrigger === true) {
     const hasTrigger = missedMessages.some((m) =>
       TRIGGER_PATTERN.test(m.content.trim()),
     );
@@ -234,11 +298,11 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   );
 
   await setTyping(chatJid, true);
-  const response = await runAgent(group, prompt, chatJid);
+  const response = await runAgentForGroup(group, prompt, chatJid);
   await setTyping(chatJid, false);
 
   if (response === 'error') {
-    // Container or agent error — signal failure so queue can retry with backoff
+    // Agent error — signal failure so queue can retry with backoff
     return false;
   }
 
@@ -248,7 +312,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   saveState();
 
   if (response.outputType === 'message' && response.userMessage) {
-    await sendMessage(chatJid, `${ASSISTANT_NAME}: ${response.userMessage}`);
+    await sendMessage(chatJid, response.userMessage);
   }
 
   if (response.internalLog) {
@@ -261,15 +325,15 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   return true;
 }
 
-async function runAgent(
+async function runAgentForGroup(
   group: RegisteredGroup,
   prompt: string,
   chatJid: string,
 ): Promise<AgentResponse | 'error'> {
   const isMain = group.folder === MAIN_GROUP_FOLDER;
-  const sessionId = sessions[group.folder];
+  const sessionId = sessions[group.folder]?.[chatJid];
 
-  // Update tasks snapshot for container to read (filtered by group)
+  // Update tasks snapshot for agent to read (filtered by group)
   const tasks = getAllTasks();
   writeTasksSnapshot(
     group.folder,
@@ -295,7 +359,7 @@ async function runAgent(
   );
 
   try {
-    const output = await runContainerAgent(
+    const output = await runAgent(
       group,
       {
         prompt,
@@ -304,18 +368,21 @@ async function runAgent(
         chatJid,
         isMain,
       },
-      (proc, containerName) => queue.registerProcess(chatJid, proc, containerName),
+      (proc) => queue.registerProcess(chatJid, proc),
     );
 
     if (output.newSessionId) {
-      sessions[group.folder] = output.newSessionId;
-      setSession(group.folder, output.newSessionId);
+      if (!sessions[group.folder]) {
+        sessions[group.folder] = {};
+      }
+      sessions[group.folder][chatJid] = output.newSessionId;
+      setSession(group.folder, chatJid, output.newSessionId);
     }
 
     if (output.status === 'error') {
       logger.error(
         { group: group.name, error: output.error },
-        'Container agent error',
+        'Agent error',
       );
       return 'error';
     }
@@ -327,12 +394,60 @@ async function runAgent(
   }
 }
 
-async function sendMessage(jid: string, text: string): Promise<void> {
+/**
+ * Split a long message into chunks that fit Discord's 2000-char limit.
+ * Prefers splitting at newlines, then spaces, then hard-splits.
+ */
+function splitMessage(text: string, maxLength: number): string[] {
+  const chunks: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= maxLength) {
+      chunks.push(remaining);
+      break;
+    }
+
+    // Try to split at a newline within the limit
+    let splitIndex = remaining.lastIndexOf('\n', maxLength);
+    if (splitIndex <= 0 || splitIndex < maxLength * 0.5) {
+      // No good newline; try space
+      splitIndex = remaining.lastIndexOf(' ', maxLength);
+    }
+    if (splitIndex <= 0 || splitIndex < maxLength * 0.5) {
+      // Hard split
+      splitIndex = maxLength;
+    }
+
+    chunks.push(remaining.slice(0, splitIndex));
+    remaining = remaining.slice(splitIndex).trimStart();
+  }
+
+  return chunks;
+}
+
+async function sendMessage(channelId: string, text: string): Promise<void> {
   try {
-    await sock.sendMessage(jid, { text });
-    logger.info({ jid, length: text.length }, 'Message sent');
+    const channel = await client.channels.fetch(channelId);
+    if (!channel?.isTextBased() || !('send' in channel)) {
+      logger.error({ channelId }, 'Channel not found or not text-based');
+      return;
+    }
+
+    const textChannel = channel as TextChannel | ThreadChannel;
+
+    if (text.length <= DISCORD_MAX_MESSAGE_LENGTH) {
+      await textChannel.send(text);
+    } else {
+      const chunks = splitMessage(text, DISCORD_MAX_MESSAGE_LENGTH);
+      for (const chunk of chunks) {
+        await textChannel.send(chunk);
+      }
+    }
+
+    logger.info({ channelId, length: text.length }, 'Message sent');
   } catch (err) {
-    logger.error({ jid, err }, 'Failed to send message');
+    logger.error({ channelId, err }, 'Failed to send message');
   }
 }
 
@@ -377,15 +492,12 @@ function startIpcWatcher(): void {
               const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
               if (data.type === 'message' && data.chatJid && data.text) {
                 // Authorization: verify this group can send to this chatJid
-                const targetGroup = registeredGroups[data.chatJid];
+                const targetGroup = getRegistrationForChannel(data.chatJid);
                 if (
                   isMain ||
                   (targetGroup && targetGroup.folder === sourceGroup)
                 ) {
-                  await sendMessage(
-                    data.chatJid,
-                    `${ASSISTANT_NAME}: ${data.text}`,
-                  );
+                  await sendMessage(data.chatJid, data.text);
                   logger.info(
                     { chatJid: data.chatJid, sourceGroup },
                     'IPC message sent',
@@ -474,7 +586,6 @@ async function processTaskIpc(
     name?: string;
     folder?: string;
     trigger?: string;
-    containerConfig?: RegisteredGroup['containerConfig'];
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -487,14 +598,14 @@ async function processTaskIpc(
         data.schedule_value &&
         data.targetJid
       ) {
-        // Resolve the target group from JID
+        // Resolve the target group from channel ID
         const targetJid = data.targetJid as string;
         const targetGroupEntry = registeredGroups[targetJid];
 
         if (!targetGroupEntry) {
           logger.warn(
             { targetJid },
-            'Cannot schedule task: target group not registered',
+            'Cannot schedule task: target channel not registered',
           );
           break;
         }
@@ -631,9 +742,9 @@ async function processTaskIpc(
       if (isMain) {
         logger.info(
           { sourceGroup },
-          'Group metadata refresh requested via IPC',
+          'Channel metadata refresh requested via IPC',
         );
-        await syncGroupMetadata(true);
+        await syncChannelMetadata(true);
         // Write updated snapshot immediately
         const availableGroups = getAvailableGroups();
         writeGroupsSnapshot(
@@ -665,7 +776,6 @@ async function processTaskIpc(
           folder: data.folder,
           trigger: data.trigger,
           added_at: new Date().toISOString(),
-          containerConfig: data.containerConfig,
         });
       } else {
         logger.warn(
@@ -680,162 +790,321 @@ async function processTaskIpc(
   }
 }
 
-async function connectWhatsApp(): Promise<void> {
-  const authDir = path.join(STORE_DIR, 'auth');
-  fs.mkdirSync(authDir, { recursive: true });
-
-  const { state, saveCreds } = await useMultiFileAuthState(authDir);
-
-  sock = makeWASocket({
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger),
-    },
-    printQRInTerminal: false,
-    logger,
-    browser: ['NanoClaw', 'Chrome', '1.0.0'],
-  });
-
-  sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect, qr } = update;
-
-    if (qr) {
-      const msg =
-        'WhatsApp authentication required. Run /setup in Claude Code.';
-      logger.error(msg);
-      exec(
-        `osascript -e 'display notification "${msg}" with title "NanoClaw" sound name "Basso"'`,
-      );
-      setTimeout(() => process.exit(1), 1000);
+/**
+ * Execute a bot command. Returns the response string, or null if unknown command.
+ */
+function executeBotCommand(
+  command: string,
+  channelId: string,
+  registration: RegisteredGroup,
+  userId?: string,
+): string | null {
+  if (command === 'new') {
+    const folder = registration.folder;
+    if (sessions[folder]?.[channelId]) {
+      delete sessions[folder][channelId];
+      deleteSession(folder, channelId);
     }
+    delete lastAgentTimestamp[channelId];
+    saveState();
 
-    if (connection === 'close') {
-      const reason = (lastDisconnect?.error as any)?.output?.statusCode;
-      const shouldReconnect = reason !== DisconnectReason.loggedOut;
-      logger.info({ reason, shouldReconnect }, 'Connection closed');
+    logger.info({ channelId, folder }, 'Session reset via /new command');
+    return 'Session reset. Next message starts a fresh conversation.';
+  }
 
-      if (shouldReconnect) {
-        logger.info('Reconnecting...');
-        connectWhatsApp();
-      } else {
-        logger.info('Logged out. Run /setup to re-authenticate.');
-        process.exit(0);
-      }
-    } else if (connection === 'open') {
-      logger.info('Connected to WhatsApp');
+  if (command === 'clear') {
+    storeMessage(
+      `clear-${Date.now()}`,
+      channelId,
+      userId || 'unknown',
+      'System',
+      'Please summarize the key context from our conversation so far in a few bullet points, then continue from this summary.',
+      new Date().toISOString(),
+      false,
+    );
+    delete lastAgentTimestamp[channelId];
+    saveState();
+    queue.enqueueMessageCheck(channelId);
 
-      // Build LID to phone mapping from auth state for self-chat translation
-      if (sock.user) {
-        const phoneUser = sock.user.id.split(':')[0];
-        const lidUser = sock.user.lid?.split(':')[0];
-        if (lidUser && phoneUser) {
-          lidToPhoneMap[lidUser] = `${phoneUser}@s.whatsapp.net`;
-          logger.debug({ lidUser, phoneUser }, 'LID to phone mapping set');
-        }
-      }
+    logger.info({ channelId }, 'Context compaction via /clear command');
+    return 'Context compaction requested. Summarizing conversation...';
+  }
 
-      // Sync group metadata on startup (respects 24h cache)
-      syncGroupMetadata().catch((err) =>
-        logger.error({ err }, 'Initial group sync failed'),
-      );
-      // Set up daily sync timer (only once)
-      if (!groupSyncTimerStarted) {
-        groupSyncTimerStarted = true;
-        setInterval(() => {
-          syncGroupMetadata().catch((err) =>
-            logger.error({ err }, 'Periodic group sync failed'),
-          );
-        }, GROUP_SYNC_INTERVAL_MS);
-      }
-      startSchedulerLoop({
-        sendMessage,
-        registeredGroups: () => registeredGroups,
-        getSessions: () => sessions,
-        queue,
-        onProcess: (groupJid, proc, containerName) => queue.registerProcess(groupJid, proc, containerName),
-      });
-      startIpcWatcher();
-      queue.setProcessMessagesFn(processGroupMessages);
-      recoverPendingMessages();
-      startMessageLoop();
-    }
-  });
+  if (command === 'status') {
+    const folder = registration.folder;
+    const sessionId = sessions[folder]?.[channelId];
+    const uptimeMs = Date.now() - startTime;
+    const uptimeH = Math.floor(uptimeMs / 3600000);
+    const uptimeM = Math.floor((uptimeMs % 3600000) / 60000);
 
-  sock.ev.on('creds.update', saveCreds);
+    const activeAgents = queue.getActiveCount();
+    const channelCount = Object.keys(registeredGroups).length;
 
-  sock.ev.on('messages.upsert', ({ messages }) => {
-    for (const msg of messages) {
-      if (!msg.message) continue;
-      const rawJid = msg.key.remoteJid;
-      if (!rawJid || rawJid === 'status@broadcast') continue;
+    return [
+      `**NanoClaw Status**`,
+      `Uptime: ${uptimeH}h ${uptimeM}m`,
+      `Agents: ${activeAgents} active / ${MAX_CONCURRENT_AGENTS} max`,
+      `Registered channels: ${channelCount}`,
+      ``,
+      `**This Channel**`,
+      `Folder: \`${folder}\``,
+      `Session: \`${sessionId ? sessionId.slice(0, 12) + '...' : 'none'}\``,
+      `Trigger: ${registration.requiresTrigger ? 'required' : 'responds to all messages'}`,
+    ].join('\n');
+  }
 
-      // Translate LID JID to phone JID if applicable
-      const chatJid = translateJid(rawJid);
-
-      const timestamp = new Date(
-        Number(msg.messageTimestamp) * 1000,
-      ).toISOString();
-
-      // Always store chat metadata for group discovery
-      storeChatMetadata(chatJid, timestamp);
-
-      // Only store full message content for registered groups
-      if (registeredGroups[chatJid]) {
-        storeMessage(
-          msg,
-          chatJid,
-          msg.key.fromMe || false,
-          msg.pushName || undefined,
-        );
-      }
-    }
-  });
+  return null;
 }
 
-async function startMessageLoop(): Promise<void> {
-  if (messageLoopRunning) {
-    logger.debug('Message loop already running, skipping duplicate start');
-    return;
+/**
+ * Handle bot commands from text messages (/new, /clear, /status).
+ * Returns true if the message was a command (and should not be stored/queued).
+ */
+async function handleBotCommand(
+  message: Message,
+  channelId: string,
+  registration: RegisteredGroup,
+): Promise<boolean> {
+  const content = message.content.trim().toLowerCase();
+  if (!content.startsWith('/')) return false;
+
+  const command = content.split(/\s+/)[0].slice(1); // strip leading /
+  const response = executeBotCommand(command, channelId, registration, message.author.id);
+  if (response) {
+    await sendMessage(channelId, response);
+    return true;
   }
-  messageLoopRunning = true;
+  return false;
+}
 
-  logger.info(`NanoClaw running (trigger: @${ASSISTANT_NAME})`);
+/**
+ * Handle Discord slash command interactions.
+ */
+async function handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  if (interaction.guildId !== DISCORD_GUILD_ID) return;
 
-  while (true) {
-    try {
-      const jids = Object.keys(registeredGroups);
-      const { messages, newTimestamp } = getNewMessages(
-        jids,
-        lastTimestamp,
-        ASSISTANT_NAME,
-      );
+  const channelId = interaction.channelId;
+  const isThread = interaction.channel?.isThread() ?? false;
+  const parentId = isThread
+    ? (interaction.channel as ThreadChannel).parentId || undefined
+    : undefined;
+  const channelName = interaction.channel && 'name' in interaction.channel
+    ? (interaction.channel as TextChannel).name
+    : undefined;
 
-      if (messages.length > 0) {
-        logger.info({ count: messages.length }, 'New messages');
+  const registration = getRegistrationForChannel(channelId, {
+    name: channelName,
+    isThread,
+    parentId,
+  });
 
-        // Advance the "seen" cursor for all messages immediately
-        lastTimestamp = newTimestamp;
-        saveState();
+  const response = executeBotCommand(
+    interaction.commandName,
+    channelId,
+    registration,
+    interaction.user.id,
+  );
 
-        // Deduplicate by group and enqueue
-        const groupsWithMessages = new Set<string>();
-        for (const msg of messages) {
-          groupsWithMessages.add(msg.chat_jid);
-        }
+  await interaction.reply(response || 'Unknown command.');
+}
 
-        for (const chatJid of groupsWithMessages) {
-          queue.enqueueMessageCheck(chatJid);
-        }
-      }
-    } catch (err) {
-      logger.error({ err }, 'Error in message loop');
-    }
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+/** Slash command definitions. */
+const slashCommands = [
+  new SlashCommandBuilder()
+    .setName('new')
+    .setDescription('Reset the conversation session in this channel'),
+  new SlashCommandBuilder()
+    .setName('clear')
+    .setDescription('Compact the conversation context (summarize and continue)'),
+  new SlashCommandBuilder()
+    .setName('status')
+    .setDescription('Show NanoClaw status and channel info'),
+];
+
+/**
+ * Register slash commands for the guild (replaces any stale commands).
+ */
+async function registerSlashCommands(): Promise<void> {
+  const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN);
+  const appId = client.user!.id;
+
+  try {
+    // Clear global commands (leftover from openclaw or previous setups)
+    await rest.put(Routes.applicationCommands(appId), { body: [] });
+
+    // Register guild commands (instant update, replaces all previous)
+    await rest.put(Routes.applicationGuildCommands(appId, DISCORD_GUILD_ID), {
+      body: slashCommands.map((c) => c.toJSON()),
+    });
+
+    logger.info('Registered Discord slash commands: /new, /clear, /status');
+  } catch (err) {
+    logger.error({ err }, 'Failed to register slash commands');
   }
 }
 
 /**
- * Startup recovery: check for unprocessed messages in registered groups.
+ * Handle incoming Discord messages.
+ */
+async function handleDiscordMessage(message: Message): Promise<void> {
+  // Ignore bot's own messages
+  if (message.author.id === client.user?.id) return;
+
+  // Ignore all bot messages (prevents bot-to-bot loops)
+  if (message.author.bot) return;
+
+  // Only process messages from the configured guild
+  if (message.guildId !== DISCORD_GUILD_ID) return;
+
+  // Ignore DMs (server-only bot)
+  if (!message.guild) return;
+
+  // Ignore channels in the ignore list
+  if (DISCORD_IGNORE_CHANNEL_IDS.has(message.channelId)) return;
+
+  // Determine channel context
+  const channelId = message.channelId;
+  const timestamp = message.createdAt.toISOString();
+  const senderName =
+    message.member?.displayName ||
+    message.author.globalName ||
+    message.author.username;
+
+  // Cache thread parent mapping for thread/forum support
+  if (message.channel.isThread()) {
+    const parentId = (message.channel as ThreadChannel).parentId;
+    if (parentId) {
+      threadParentCache.set(channelId, parentId);
+    }
+  }
+
+  // Get channel name for metadata
+  const channelName = message.channel.isThread()
+    ? (message.channel as ThreadChannel).name || undefined
+    : 'name' in message.channel
+      ? (message.channel as TextChannel).name
+      : undefined;
+
+  // Always store chat metadata for channel discovery
+  storeChatMetadata(channelId, timestamp, channelName);
+
+  // Get registration (auto-registers if needed)
+  const isThread = message.channel.isThread();
+  const parentId = isThread
+    ? (message.channel as ThreadChannel).parentId || undefined
+    : undefined;
+  const registration = getRegistrationForChannel(channelId, {
+    name: channelName,
+    isThread,
+    parentId,
+  });
+
+  // Handle bot commands before storing message
+  if (await handleBotCommand(message, channelId, registration)) return;
+
+  // Store message
+  storeMessage(
+    message.id,
+    channelId,
+    message.author.id,
+    senderName,
+    message.content,
+    timestamp,
+    false,
+  );
+
+  // Advance the "seen" cursor and enqueue immediately (event-driven)
+  if (timestamp > lastTimestamp) {
+    lastTimestamp = timestamp;
+    saveState();
+  }
+
+  queue.enqueueMessageCheck(channelId);
+}
+
+async function connectDiscord(): Promise<void> {
+  if (!DISCORD_BOT_TOKEN) {
+    logger.error('DISCORD_BOT_TOKEN not set. Add it to .env');
+    process.exit(1);
+  }
+  if (!DISCORD_GUILD_ID) {
+    logger.error('DISCORD_GUILD_ID not set. Add it to .env');
+    process.exit(1);
+  }
+  if (!DISCORD_MAIN_CHANNEL_ID) {
+    logger.error('DISCORD_MAIN_CHANNEL_ID not set. Add it to .env');
+    process.exit(1);
+  }
+
+  client = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+    ],
+    partials: [Partials.Channel, Partials.Message],
+  });
+
+  client.once('ready', async () => {
+    logger.info({ user: client.user?.tag }, 'Connected to Discord');
+
+    // Auto-register main channel if not already registered
+    if (!registeredGroups[DISCORD_MAIN_CHANNEL_ID]) {
+      registerGroup(DISCORD_MAIN_CHANNEL_ID, {
+        name: 'main',
+        folder: MAIN_GROUP_FOLDER,
+        trigger: `@${ASSISTANT_NAME}`,
+        added_at: new Date().toISOString(),
+        requiresTrigger: false,
+      });
+    }
+
+    // Sync channel metadata on startup (respects 24h cache)
+    await syncChannelMetadata().catch((err) =>
+      logger.error({ err }, 'Initial channel sync failed'),
+    );
+
+    // Set up daily sync timer (only once)
+    if (!groupSyncTimerStarted) {
+      groupSyncTimerStarted = true;
+      setInterval(() => {
+        syncChannelMetadata().catch((err) =>
+          logger.error({ err }, 'Periodic channel sync failed'),
+        );
+      }, GROUP_SYNC_INTERVAL_MS);
+    }
+
+    startSchedulerLoop({
+      sendMessage,
+      registeredGroups: () => registeredGroups,
+      getSessions: () => sessions,
+      queue,
+      onProcess: (groupJid, proc) =>
+        queue.registerProcess(groupJid, proc),
+    });
+
+    startIpcWatcher();
+    queue.setProcessMessagesFn(processGroupMessages);
+    recoverPendingMessages();
+
+    // Register slash commands (clears stale global commands too)
+    await registerSlashCommands();
+
+    logger.info(`NanoClaw running on Discord (trigger: @${ASSISTANT_NAME})`);
+  });
+
+  client.on('messageCreate', handleDiscordMessage);
+
+  client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    await handleSlashCommand(interaction);
+  });
+
+  await client.login(DISCORD_BOT_TOKEN);
+}
+
+/**
+ * Startup recovery: check for unprocessed messages in registered channels.
  * Handles crash between advancing lastTimestamp and processing messages.
  */
 function recoverPendingMessages(): void {
@@ -852,66 +1121,7 @@ function recoverPendingMessages(): void {
   }
 }
 
-function ensureContainerSystemRunning(): void {
-  try {
-    execSync('container system status', { stdio: 'pipe' });
-    logger.debug('Apple Container system already running');
-  } catch {
-    logger.info('Starting Apple Container system...');
-    try {
-      execSync('container system start', { stdio: 'pipe', timeout: 30000 });
-      logger.info('Apple Container system started');
-    } catch (err) {
-      logger.error({ err }, 'Failed to start Apple Container system');
-      console.error(
-        '\n╔════════════════════════════════════════════════════════════════╗',
-      );
-      console.error(
-        '║  FATAL: Apple Container system failed to start                 ║',
-      );
-      console.error(
-        '║                                                                ║',
-      );
-      console.error(
-        '║  Agents cannot run without Apple Container. To fix:           ║',
-      );
-      console.error(
-        '║  1. Install from: https://github.com/apple/container/releases ║',
-      );
-      console.error(
-        '║  2. Run: container system start                               ║',
-      );
-      console.error(
-        '║  3. Restart NanoClaw                                          ║',
-      );
-      console.error(
-        '╚════════════════════════════════════════════════════════════════╝\n',
-      );
-      throw new Error('Apple Container system is required but failed to start');
-    }
-  }
-
-  // Clean up stopped NanoClaw containers from previous runs
-  try {
-    const output = execSync('container ls -a --format {{.Names}}', {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      encoding: 'utf-8',
-    });
-    const stale = output
-      .split('\n')
-      .map((n) => n.trim())
-      .filter((n) => n.startsWith('nanoclaw-'));
-    if (stale.length > 0) {
-      execSync(`container rm ${stale.join(' ')}`, { stdio: 'pipe' });
-      logger.info({ count: stale.length }, 'Cleaned up stopped containers');
-    }
-  } catch {
-    // No stopped containers or ls/rm not supported
-  }
-}
-
 async function main(): Promise<void> {
-  ensureContainerSystemRunning();
   initDatabase();
   logger.info('Database initialized');
   loadState();
@@ -920,12 +1130,13 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutdown signal received');
     await queue.shutdown(10000);
+    client?.destroy();
     process.exit(0);
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  await connectWhatsApp();
+  await connectDiscord();
 }
 
 main().catch((err) => {

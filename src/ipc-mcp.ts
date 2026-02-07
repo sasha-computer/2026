@@ -9,14 +9,11 @@ import fs from 'fs';
 import path from 'path';
 import { CronExpressionParser } from 'cron-parser';
 
-const IPC_DIR = '/workspace/ipc';
-const MESSAGES_DIR = path.join(IPC_DIR, 'messages');
-const TASKS_DIR = path.join(IPC_DIR, 'tasks');
-
 export interface IpcMcpContext {
   chatJid: string;
   groupFolder: string;
   isMain: boolean;
+  ipcDir: string;
 }
 
 function writeIpcFile(dir: string, data: object): string {
@@ -34,7 +31,9 @@ function writeIpcFile(dir: string, data: object): string {
 }
 
 export function createIpcMcp(ctx: IpcMcpContext) {
-  const { chatJid, groupFolder, isMain } = ctx;
+  const { chatJid, groupFolder, isMain, ipcDir } = ctx;
+  const messagesDir = path.join(ipcDir, 'messages');
+  const tasksDir = path.join(ipcDir, 'tasks');
 
   return createSdkMcpServer({
     name: 'nanoclaw',
@@ -55,7 +54,7 @@ export function createIpcMcp(ctx: IpcMcpContext) {
             timestamp: new Date().toISOString()
           };
 
-          writeIpcFile(MESSAGES_DIR, data);
+          writeIpcFile(messagesDir, data);
 
           return {
             content: [{
@@ -71,25 +70,25 @@ export function createIpcMcp(ctx: IpcMcpContext) {
         `Schedule a recurring or one-time task. The task will run as a full agent with access to all tools.
 
 CONTEXT MODE - Choose based on task type:
-• "group": Task runs in the group's conversation context, with access to chat history. Use for tasks that need context about ongoing discussions, user preferences, or recent interactions.
-• "isolated": Task runs in a fresh session with no conversation history. Use for independent tasks that don't need prior context. When using isolated mode, include all necessary context in the prompt itself.
+- "group": Task runs in the group's conversation context, with access to chat history. Use for tasks that need context about ongoing discussions, user preferences, or recent interactions.
+- "isolated": Task runs in a fresh session with no conversation history. Use for independent tasks that don't need prior context. When using isolated mode, include all necessary context in the prompt itself.
 
 If unsure which mode to use, you can ask the user. Examples:
-- "Remind me about our discussion" → group (needs conversation context)
-- "Check the weather every morning" → isolated (self-contained task)
-- "Follow up on my request" → group (needs to know what was requested)
-- "Generate a daily report" → isolated (just needs instructions in prompt)
+- "Remind me about our discussion" -> group (needs conversation context)
+- "Check the weather every morning" -> isolated (self-contained task)
+- "Follow up on my request" -> group (needs to know what was requested)
+- "Generate a daily report" -> isolated (just needs instructions in prompt)
 
 SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
-• cron: Standard cron expression (e.g., "*/5 * * * *" for every 5 minutes, "0 9 * * *" for daily at 9am LOCAL time)
-• interval: Milliseconds between runs (e.g., "300000" for 5 minutes, "3600000" for 1 hour)
-• once: Local time WITHOUT "Z" suffix (e.g., "2026-02-01T15:30:00"). Do NOT use UTC/Z suffix.`,
+- cron: Standard cron expression (e.g., "*/5 * * * *" for every 5 minutes, "0 9 * * *" for daily at 9am LOCAL time)
+- interval: Milliseconds between runs (e.g., "300000" for 5 minutes, "3600000" for 1 hour)
+- once: Local time WITHOUT "Z" suffix (e.g., "2026-02-01T15:30:00"). Do NOT use UTC/Z suffix.`,
         {
           prompt: z.string().describe('What the agent should do when the task runs. For isolated mode, include all necessary context here.'),
           schedule_type: z.enum(['cron', 'interval', 'once']).describe('cron=recurring at specific times, interval=recurring every N ms, once=run once at specific time'),
           schedule_value: z.string().describe('cron: "*/5 * * * *" | interval: milliseconds like "300000" | once: local timestamp like "2026-02-01T15:30:00" (no Z suffix!)'),
           context_mode: z.enum(['group', 'isolated']).default('group').describe('group=runs with chat history and memory, isolated=fresh session (include context in prompt)'),
-          ...(isMain ? { target_group_jid: z.string().optional().describe('JID of the group to schedule the task for. The group must be registered — look up JIDs in /workspace/project/data/registered_groups.json (the keys are JIDs). If the group is not registered, let the user know and ask if they want to activate it. Defaults to the current group.') } : {}),
+          ...(isMain ? { target_group_jid: z.string().optional().describe('JID of the group to schedule the task for. The group must be registered. Defaults to the current group.') } : {}),
         },
         async (args) => {
           // Validate schedule_value before writing IPC
@@ -134,7 +133,7 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
             timestamp: new Date().toISOString()
           };
 
-          const filename = writeIpcFile(TASKS_DIR, data);
+          const filename = writeIpcFile(tasksDir, data);
 
           return {
             content: [{
@@ -151,7 +150,7 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
         'List all scheduled tasks. From main: shows all tasks. From other groups: shows only that group\'s tasks.',
         {},
         async () => {
-          const tasksFile = path.join(IPC_DIR, 'current_tasks.json');
+          const tasksFile = path.join(ipcDir, 'current_tasks.json');
 
           try {
             if (!fs.existsSync(tasksFile)) {
@@ -214,7 +213,7 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
             timestamp: new Date().toISOString()
           };
 
-          writeIpcFile(TASKS_DIR, data);
+          writeIpcFile(tasksDir, data);
 
           return {
             content: [{
@@ -240,7 +239,7 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
             timestamp: new Date().toISOString()
           };
 
-          writeIpcFile(TASKS_DIR, data);
+          writeIpcFile(tasksDir, data);
 
           return {
             content: [{
@@ -266,7 +265,7 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
             timestamp: new Date().toISOString()
           };
 
-          writeIpcFile(TASKS_DIR, data);
+          writeIpcFile(tasksDir, data);
 
           return {
             content: [{
@@ -279,11 +278,11 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
 
       tool(
         'register_group',
-        `Register a new WhatsApp group so the agent can respond to messages there. Main group only.
+        `Register a new Discord channel so the agent can respond to messages there. Main group only.
 
-Use available_groups.json to find the JID for a group. The folder name should be lowercase with hyphens (e.g., "family-chat").`,
+Use available_groups.json to find the channel ID. The folder name should be lowercase with hyphens (e.g., "general-chat").`,
         {
-          jid: z.string().describe('The WhatsApp JID (e.g., "120363336345536173@g.us")'),
+          jid: z.string().describe('The Discord channel ID (e.g., "1234567890123456789")'),
           name: z.string().describe('Display name for the group'),
           folder: z.string().describe('Folder name for group files (lowercase, hyphens, e.g., "family-chat")'),
           trigger: z.string().describe('Trigger word (e.g., "@Andy")')
@@ -305,7 +304,7 @@ Use available_groups.json to find the JID for a group. The folder name should be
             timestamp: new Date().toISOString()
           };
 
-          writeIpcFile(TASKS_DIR, data);
+          writeIpcFile(tasksDir, data);
 
           return {
             content: [{

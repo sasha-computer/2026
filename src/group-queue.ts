@@ -1,6 +1,6 @@
-import { ChildProcess, exec } from 'child_process';
+import { ChildProcess } from 'child_process';
 
-import { MAX_CONCURRENT_CONTAINERS } from './config.js';
+import { MAX_CONCURRENT_AGENTS } from './config.js';
 import { logger } from './logger.js';
 
 interface QueuedTask {
@@ -17,7 +17,6 @@ interface GroupState {
   pendingMessages: boolean;
   pendingTasks: QueuedTask[];
   process: ChildProcess | null;
-  containerName: string | null;
   retryCount: number;
 }
 
@@ -29,6 +28,10 @@ export class GroupQueue {
     null;
   private shuttingDown = false;
 
+  getActiveCount(): number {
+    return this.activeCount;
+  }
+
   private getGroup(groupJid: string): GroupState {
     let state = this.groups.get(groupJid);
     if (!state) {
@@ -37,7 +40,6 @@ export class GroupQueue {
         pendingMessages: false,
         pendingTasks: [],
         process: null,
-        containerName: null,
         retryCount: 0,
       };
       this.groups.set(groupJid, state);
@@ -56,11 +58,11 @@ export class GroupQueue {
 
     if (state.active) {
       state.pendingMessages = true;
-      logger.debug({ groupJid }, 'Container active, message queued');
+      logger.debug({ groupJid }, 'Agent active, message queued');
       return;
     }
 
-    if (this.activeCount >= MAX_CONCURRENT_CONTAINERS) {
+    if (this.activeCount >= MAX_CONCURRENT_AGENTS) {
       state.pendingMessages = true;
       if (!this.waitingGroups.includes(groupJid)) {
         this.waitingGroups.push(groupJid);
@@ -88,11 +90,11 @@ export class GroupQueue {
 
     if (state.active) {
       state.pendingTasks.push({ id: taskId, groupJid, fn });
-      logger.debug({ groupJid, taskId }, 'Container active, task queued');
+      logger.debug({ groupJid, taskId }, 'Agent active, task queued');
       return;
     }
 
-    if (this.activeCount >= MAX_CONCURRENT_CONTAINERS) {
+    if (this.activeCount >= MAX_CONCURRENT_AGENTS) {
       state.pendingTasks.push({ id: taskId, groupJid, fn });
       if (!this.waitingGroups.includes(groupJid)) {
         this.waitingGroups.push(groupJid);
@@ -108,10 +110,9 @@ export class GroupQueue {
     this.runTask(groupJid, { id: taskId, groupJid, fn });
   }
 
-  registerProcess(groupJid: string, proc: ChildProcess, containerName: string): void {
+  registerProcess(groupJid: string, proc: ChildProcess): void {
     const state = this.getGroup(groupJid);
     state.process = proc;
-    state.containerName = containerName;
   }
 
   private async runForGroup(
@@ -125,7 +126,7 @@ export class GroupQueue {
 
     logger.debug(
       { groupJid, reason, activeCount: this.activeCount },
-      'Starting container for group',
+      'Starting agent for group',
     );
 
     try {
@@ -143,7 +144,6 @@ export class GroupQueue {
     } finally {
       state.active = false;
       state.process = null;
-      state.containerName = null;
       this.activeCount--;
       this.drainGroup(groupJid);
     }
@@ -166,7 +166,6 @@ export class GroupQueue {
     } finally {
       state.active = false;
       state.process = null;
-      state.containerName = null;
       this.activeCount--;
       this.drainGroup(groupJid);
     }
@@ -220,7 +219,7 @@ export class GroupQueue {
   private drainWaiting(): void {
     while (
       this.waitingGroups.length > 0 &&
-      this.activeCount < MAX_CONCURRENT_CONTAINERS
+      this.activeCount < MAX_CONCURRENT_AGENTS
     ) {
       const nextJid = this.waitingGroups.shift()!;
       const state = this.getGroup(nextJid);
@@ -244,32 +243,19 @@ export class GroupQueue {
     );
 
     // Collect all active processes
-    const activeProcs: Array<{ jid: string; proc: ChildProcess; containerName: string | null }> = [];
+    const activeProcs: Array<{ jid: string; proc: ChildProcess }> = [];
     for (const [jid, state] of this.groups) {
       if (state.process && !state.process.killed) {
-        activeProcs.push({ jid, proc: state.process, containerName: state.containerName });
+        activeProcs.push({ jid, proc: state.process });
       }
     }
 
     if (activeProcs.length === 0) return;
 
-    // Stop all active containers gracefully
-    for (const { jid, proc, containerName } of activeProcs) {
-      if (containerName) {
-        // Defense-in-depth: re-sanitize before shell interpolation.
-        // Primary sanitization is in container-runner.ts when building the name,
-        // but we sanitize again here since exec() runs through a shell.
-        const safeName = containerName.replace(/[^a-zA-Z0-9-]/g, '');
-        logger.info({ jid, containerName: safeName }, 'Stopping container');
-        exec(`container stop ${safeName}`, (err) => {
-          if (err) {
-            logger.warn({ jid, containerName: safeName, err: err.message }, 'container stop failed');
-          }
-        });
-      } else {
-        logger.info({ jid, pid: proc.pid }, 'Sending SIGTERM to process');
-        proc.kill('SIGTERM');
-      }
+    // Send SIGTERM to all active processes
+    for (const { jid, proc } of activeProcs) {
+      logger.info({ jid, pid: proc.pid }, 'Sending SIGTERM to agent');
+      proc.kill('SIGTERM');
     }
 
     // Wait for grace period
@@ -289,7 +275,7 @@ export class GroupQueue {
         // SIGKILL survivors
         for (const { jid, proc } of activeProcs) {
           if (!proc.killed && proc.exitCode === null) {
-            logger.warn({ jid, pid: proc.pid }, 'Sending SIGKILL to container');
+            logger.warn({ jid, pid: proc.pid }, 'Sending SIGKILL to agent');
             proc.kill('SIGKILL');
           }
         }

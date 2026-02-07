@@ -4,13 +4,12 @@ import fs from 'fs';
 import path from 'path';
 
 import {
-  ASSISTANT_NAME,
   GROUPS_DIR,
   MAIN_GROUP_FOLDER,
   SCHEDULER_POLL_INTERVAL,
   TIMEZONE,
 } from './config.js';
-import { runContainerAgent, writeTasksSnapshot } from './container-runner.js';
+import { runAgent, writeTasksSnapshot } from './process-runner.js';
 import {
   getAllTasks,
   getDueTasks,
@@ -25,9 +24,9 @@ import { RegisteredGroup, ScheduledTask } from './types.js';
 export interface SchedulerDependencies {
   sendMessage: (jid: string, text: string) => Promise<void>;
   registeredGroups: () => Record<string, RegisteredGroup>;
-  getSessions: () => Record<string, string>;
+  getSessions: () => Record<string, Record<string, string>>;
   queue: GroupQueue;
-  onProcess: (groupJid: string, proc: ChildProcess, containerName: string) => void;
+  onProcess: (groupJid: string, proc: ChildProcess) => void;
 }
 
 async function runTask(
@@ -64,7 +63,7 @@ async function runTask(
     return;
   }
 
-  // Update tasks snapshot for container to read (filtered by group)
+  // Update tasks snapshot for agent to read (filtered by group)
   const isMain = task.group_folder === MAIN_GROUP_FOLDER;
   const tasks = getAllTasks();
   writeTasksSnapshot(
@@ -84,13 +83,15 @@ async function runTask(
   let result: string | null = null;
   let error: string | null = null;
 
-  // For group context mode, use the group's current session
+  // For group context mode, use the group+channel's current session
   const sessions = deps.getSessions();
   const sessionId =
-    task.context_mode === 'group' ? sessions[task.group_folder] : undefined;
+    task.context_mode === 'group'
+      ? sessions[task.group_folder]?.[task.chat_jid]
+      : undefined;
 
   try {
-    const output = await runContainerAgent(
+    const output = await runAgent(
       group,
       {
         prompt: task.prompt,
@@ -98,15 +99,16 @@ async function runTask(
         groupFolder: task.group_folder,
         chatJid: task.chat_jid,
         isMain,
+        isScheduledTask: true,
       },
-      (proc, containerName) => deps.onProcess(task.chat_jid, proc, containerName),
+      (proc) => deps.onProcess(task.chat_jid, proc),
     );
 
     if (output.status === 'error') {
       error = output.error || 'Unknown error';
     } else if (output.result) {
       if (output.result.outputType === 'message' && output.result.userMessage) {
-        await deps.sendMessage(task.chat_jid, `${ASSISTANT_NAME}: ${output.result.userMessage}`);
+        await deps.sendMessage(task.chat_jid, output.result.userMessage);
       }
       result = output.result.userMessage || output.result.internalLog || null;
     }

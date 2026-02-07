@@ -2,9 +2,8 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-import { proto } from '@whiskeysockets/baileys';
-
 import { DATA_DIR, STORE_DIR } from './config.js';
+import { logger } from './logger.js';
 import { NewMessage, RegisteredGroup, ScheduledTask, TaskRunLog } from './types.js';
 
 let db: Database.Database;
@@ -94,8 +93,10 @@ export function initDatabase(): void {
       value TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS sessions (
-      group_folder TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL
+      group_folder TEXT NOT NULL,
+      chat_jid TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      PRIMARY KEY (group_folder, chat_jid)
     );
     CREATE TABLE IF NOT EXISTS registered_groups (
       jid TEXT PRIMARY KEY,
@@ -107,6 +108,9 @@ export function initDatabase(): void {
       requires_trigger INTEGER DEFAULT 1
     );
   `);
+
+  // Migrate sessions table from single-key to composite key if needed
+  migrateSessionsTable();
 
   // Migrate from JSON files if they exist
   migrateJsonState();
@@ -204,36 +208,17 @@ export function setLastGroupSync(): void {
  * Only call this for registered groups where message history is needed.
  */
 export function storeMessage(
-  msg: proto.IWebMessageInfo,
+  messageId: string,
   chatJid: string,
+  sender: string,
+  senderName: string,
+  content: string,
+  timestamp: string,
   isFromMe: boolean,
-  pushName?: string,
 ): void {
-  if (!msg.key) return;
-
-  const content =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.imageMessage?.caption ||
-    msg.message?.videoMessage?.caption ||
-    '';
-
-  const timestamp = new Date(Number(msg.messageTimestamp) * 1000).toISOString();
-  const sender = msg.key.participant || msg.key.remoteJid || '';
-  const senderName = pushName || sender.split('@')[0];
-  const msgId = msg.key.id || '';
-
   db.prepare(
     `INSERT OR REPLACE INTO messages (id, chat_jid, sender, sender_name, content, timestamp, is_from_me) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    msgId,
-    chatJid,
-    sender,
-    senderName,
-    content,
-    timestamp,
-    isFromMe ? 1 : 0,
-  );
+  ).run(messageId, chatJid, sender, senderName, content, timestamp, isFromMe ? 1 : 0);
 }
 
 export function getNewMessages(
@@ -431,26 +416,35 @@ export function setRouterState(key: string, value: string): void {
 
 // --- Session accessors ---
 
-export function getSession(groupFolder: string): string | undefined {
+export function getSession(groupFolder: string, chatJid: string): string | undefined {
   const row = db
-    .prepare('SELECT session_id FROM sessions WHERE group_folder = ?')
-    .get(groupFolder) as { session_id: string } | undefined;
+    .prepare('SELECT session_id FROM sessions WHERE group_folder = ? AND chat_jid = ?')
+    .get(groupFolder, chatJid) as { session_id: string } | undefined;
   return row?.session_id;
 }
 
-export function setSession(groupFolder: string, sessionId: string): void {
+export function setSession(groupFolder: string, chatJid: string, sessionId: string): void {
   db.prepare(
-    'INSERT OR REPLACE INTO sessions (group_folder, session_id) VALUES (?, ?)',
-  ).run(groupFolder, sessionId);
+    'INSERT OR REPLACE INTO sessions (group_folder, chat_jid, session_id) VALUES (?, ?, ?)',
+  ).run(groupFolder, chatJid, sessionId);
 }
 
-export function getAllSessions(): Record<string, string> {
+export function deleteSession(groupFolder: string, chatJid: string): void {
+  db.prepare(
+    'DELETE FROM sessions WHERE group_folder = ? AND chat_jid = ?',
+  ).run(groupFolder, chatJid);
+}
+
+export function getAllSessions(): Record<string, Record<string, string>> {
   const rows = db
-    .prepare('SELECT group_folder, session_id FROM sessions')
-    .all() as Array<{ group_folder: string; session_id: string }>;
-  const result: Record<string, string> = {};
+    .prepare('SELECT group_folder, chat_jid, session_id FROM sessions')
+    .all() as Array<{ group_folder: string; chat_jid: string; session_id: string }>;
+  const result: Record<string, Record<string, string>> = {};
   for (const row of rows) {
-    result[row.group_folder] = row.session_id;
+    if (!result[row.group_folder]) {
+      result[row.group_folder] = {};
+    }
+    result[row.group_folder][row.chat_jid] = row.session_id;
   }
   return result;
 }
@@ -474,15 +468,20 @@ export function getRegisteredGroup(
       }
     | undefined;
   if (!row) return undefined;
+  let timeout: number | undefined;
+  if (row.container_config) {
+    try {
+      const config = JSON.parse(row.container_config);
+      timeout = config.timeout;
+    } catch { /* ignore malformed config */ }
+  }
   return {
     jid: row.jid,
     name: row.name,
     folder: row.folder,
     trigger: row.trigger_pattern,
     added_at: row.added_at,
-    containerConfig: row.container_config
-      ? JSON.parse(row.container_config)
-      : undefined,
+    timeout,
     requiresTrigger: row.requires_trigger === null ? undefined : row.requires_trigger === 1,
   };
 }
@@ -500,7 +499,7 @@ export function setRegisteredGroup(
     group.folder,
     group.trigger,
     group.added_at,
-    group.containerConfig ? JSON.stringify(group.containerConfig) : null,
+    group.timeout ? JSON.stringify({ timeout: group.timeout }) : null,
     group.requiresTrigger === undefined ? 1 : group.requiresTrigger ? 1 : 0,
   );
 }
@@ -519,18 +518,82 @@ export function getAllRegisteredGroups(): Record<string, RegisteredGroup> {
   }>;
   const result: Record<string, RegisteredGroup> = {};
   for (const row of rows) {
+    let timeout: number | undefined;
+    if (row.container_config) {
+      try {
+        const config = JSON.parse(row.container_config);
+        timeout = config.timeout;
+      } catch { /* ignore malformed config */ }
+    }
     result[row.jid] = {
       name: row.name,
       folder: row.folder,
       trigger: row.trigger_pattern,
       added_at: row.added_at,
-      containerConfig: row.container_config
-        ? JSON.parse(row.container_config)
-        : undefined,
+      timeout,
       requiresTrigger: row.requires_trigger === null ? undefined : row.requires_trigger === 1,
     };
   }
   return result;
+}
+
+// --- Sessions table migration (single-key -> composite key) ---
+
+function migrateSessionsTable(): void {
+  // Check if old schema exists (single-column PK without chat_jid)
+  const tableInfo = db.prepare("PRAGMA table_info('sessions')").all() as Array<{
+    name: string;
+  }>;
+  const hasChatJid = tableInfo.some((col) => col.name === 'chat_jid');
+  if (hasChatJid) return; // Already migrated
+
+  logger.info('Migrating sessions table to composite key (group_folder, chat_jid)...');
+
+  // Build a folder->jid lookup from registered_groups
+  const groups = db
+    .prepare('SELECT jid, folder FROM registered_groups')
+    .all() as Array<{ jid: string; folder: string }>;
+  const folderToJid: Record<string, string> = {};
+  for (const g of groups) {
+    folderToJid[g.folder] = g.jid;
+  }
+
+  // Read old sessions
+  const oldSessions = db
+    .prepare('SELECT group_folder, session_id FROM sessions')
+    .all() as Array<{ group_folder: string; session_id: string }>;
+
+  // Rename old table, create new one, migrate data
+  db.exec('ALTER TABLE sessions RENAME TO sessions_old');
+  db.exec(`
+    CREATE TABLE sessions (
+      group_folder TEXT NOT NULL,
+      chat_jid TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      PRIMARY KEY (group_folder, chat_jid)
+    )
+  `);
+
+  const insert = db.prepare(
+    'INSERT INTO sessions (group_folder, chat_jid, session_id) VALUES (?, ?, ?)',
+  );
+  for (const row of oldSessions) {
+    const chatJid = folderToJid[row.group_folder];
+    if (chatJid) {
+      insert.run(row.group_folder, chatJid, row.session_id);
+    } else {
+      logger.warn(
+        { folder: row.group_folder },
+        'No registered group found for session during migration, skipping',
+      );
+    }
+  }
+
+  db.exec('DROP TABLE sessions_old');
+  logger.info(
+    { migratedCount: oldSessions.length },
+    'Sessions table migration complete',
+  );
 }
 
 // --- JSON migration ---
@@ -571,8 +634,17 @@ function migrateJsonState(): void {
     string
   > | null;
   if (sessions) {
+    // Build folder->jid lookup from registered_groups for migration
+    const allGroups = getAllRegisteredGroups();
+    const folderToJid: Record<string, string> = {};
+    for (const [jid, group] of Object.entries(allGroups)) {
+      folderToJid[group.folder] = jid;
+    }
     for (const [folder, sessionId] of Object.entries(sessions)) {
-      setSession(folder, sessionId);
+      const chatJid = folderToJid[folder];
+      if (chatJid) {
+        setSession(folder, chatJid, sessionId);
+      }
     }
   }
 

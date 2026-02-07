@@ -18,11 +18,19 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>{{HOME}}/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>/opt/homebrew/bin:{{HOME}}/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
         <string>{{HOME}}</string>
         <key>ASSISTANT_NAME</key>
         <string>Andy</string>
+        <key>DISCORD_BOT_TOKEN</key>
+        <string>{{DISCORD_BOT_TOKEN}}</string>
+        <key>DISCORD_GUILD_ID</key>
+        <string>{{DISCORD_GUILD_ID}}</string>
+        <key>DISCORD_MAIN_CHANNEL_ID</key>
+        <string>{{DISCORD_MAIN_CHANNEL_ID}}</string>
+        <key>CLAUDE_CODE_OAUTH_TOKEN</key>
+        <string>{{CLAUDE_CODE_OAUTH_TOKEN}}</string>
     </dict>
     <key>StandardOutPath</key>
     <string>{{PROJECT_ROOT}}/logs/nanoclaw.log</string>

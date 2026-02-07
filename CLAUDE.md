@@ -4,19 +4,20 @@ Personal Claude assistant. See [README.md](README.md) for philosophy and setup. 
 
 ## Quick Context
 
-Single Node.js process that connects to WhatsApp, routes messages to Claude Agent SDK running in Apple Container (Linux VMs). Each group has isolated filesystem and memory.
+Single Node.js process that connects to Discord, routes messages to Claude Agent SDK running as native subprocesses. Per-channel context is preserved via session IDs stored in the database. Threads and forum posts inherit their parent channel's registration and get their own session context.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/index.ts` | Main app: WhatsApp connection, message routing, IPC |
-| `src/config.ts` | Trigger pattern, paths, intervals |
-| `src/container-runner.ts` | Spawns agent containers with mounts |
+| `src/index.ts` | Main app: Discord connection, message routing, IPC |
+| `src/config.ts` | Discord config, trigger pattern, paths, intervals |
+| `src/process-runner.ts` | Spawns agent subprocesses |
+| `src/agent-runner.ts` | Agent subprocess entry point (uses Claude Agent SDK) |
+| `src/ipc-mcp.ts` | MCP server for agent IPC (messaging, tasks) |
 | `src/task-scheduler.ts` | Runs scheduled tasks |
 | `src/db.ts` | SQLite operations |
 | `groups/{name}/CLAUDE.md` | Per-group memory (isolated) |
-| `container/skills/agent-browser.md` | Browser automation tool (available to all agents via Bash) |
 
 ## Skills
 
@@ -24,16 +25,15 @@ Single Node.js process that connects to WhatsApp, routes messages to Claude Agen
 |-------|-------------|
 | `/setup` | First-time installation, authentication, service configuration |
 | `/customize` | Adding channels, integrations, changing behavior |
-| `/debug` | Container issues, logs, troubleshooting |
+| `/debug` | Agent issues, logs, troubleshooting |
 
 ## Development
 
-Run commands directly—don't tell the user to run them.
+Run commands directly--don't tell the user to run them.
 
 ```bash
 npm run dev          # Run with hot reload
 npm run build        # Compile TypeScript
-./container/build.sh # Rebuild agent container
 ```
 
 Service management:
