@@ -16,6 +16,7 @@ This is a fork of [gavrielc/nanoclaw](https://github.com/gavrielc/nanoclaw) with
 - **Auto-registration** — Channels are automatically registered on first message, no manual setup needed
 - **Session-based context** — Per-channel conversation context via Claude session IDs stored in SQLite (no filesystem isolation)
 - **Slash commands** — `/new`, `/clear`, `/status` as native Discord slash commands
+- **QMD integration** — Local semantic search across conversations and memory via [QMD](https://github.com/tobi/qmd) (BM25 + vector embeddings + LLM reranking)
 
 ## Why I Built This
 
@@ -61,29 +62,29 @@ Then run `/setup`. Claude Code handles everything: dependencies, authentication,
 
 ## Usage
 
-Talk to your assistant with the trigger word (default: `@Andy`):
+Just talk in any channel — no trigger words needed:
 
 ```
-@Andy send an overview of the sales pipeline every weekday morning at 9am (has access to my Obsidian vault folder)
-@Andy review the git history for the past week each Friday and update the README if there's drift
-@Andy every Monday at 8am, compile news on AI developments from Hacker News and TechCrunch and message me a briefing
+send an overview of the sales pipeline every weekday morning at 9am
+review the git history for the past week each Friday and update the README if there's drift
+every Monday at 8am, compile news on AI developments from Hacker News and TechCrunch and message me a briefing
 ```
 
-From the main channel (your self-chat), you can manage groups and tasks:
+From the main channel, you can manage tasks across all groups:
 ```
-@Andy list all scheduled tasks across groups
-@Andy pause the Monday briefing task
-@Andy join the Family Chat group
+list all scheduled tasks across groups
+pause the Monday briefing task
+schedule a task for the Family Chat group to send a daily reminder
 ```
 
 ## Customizing
 
 There are no configuration files to learn. Just tell Claude Code what you want:
 
-- "Change the trigger word to @Bob"
-- "Remember in the future to make responses shorter and more direct"
+- "Remember to make responses shorter and more direct"
 - "Add a custom greeting when I say good morning"
 - "Store conversation summaries weekly"
+- "Only respond in the work channel when explicitly mentioned"
 
 Or run `/customize` for guided changes.
 

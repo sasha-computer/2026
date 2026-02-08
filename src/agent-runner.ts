@@ -283,13 +283,15 @@ async function main(): Promise<void> {
           'Bash',
           'Read', 'Write', 'Edit', 'Glob', 'Grep',
           'WebSearch', 'WebFetch',
-          'mcp__nanoclaw__*'
+          'mcp__nanoclaw__*',
+          'mcp__qmd__*'
         ],
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
         settingSources: ['project'],
         mcpServers: {
-          nanoclaw: ipcMcp
+          nanoclaw: ipcMcp,
+          qmd: { command: 'qmd', args: ['mcp'], env: { PATH: `${process.env.HOME}/.bun/bin:${process.env.PATH}` } }
         },
         hooks: {
           PreCompact: [{ hooks: [createPreCompactHook(input.paths.groupDir)] }]

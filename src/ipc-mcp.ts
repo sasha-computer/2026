@@ -274,45 +274,6 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
             }]
           };
         }
-      ),
-
-      tool(
-        'register_group',
-        `Register a new Discord channel so the agent can respond to messages there. Main group only.
-
-Use available_groups.json to find the channel ID. The folder name should be lowercase with hyphens (e.g., "general-chat").`,
-        {
-          jid: z.string().describe('The Discord channel ID (e.g., "1234567890123456789")'),
-          name: z.string().describe('Display name for the group'),
-          folder: z.string().describe('Folder name for group files (lowercase, hyphens, e.g., "family-chat")'),
-          trigger: z.string().describe('Trigger word (e.g., "@Andy")')
-        },
-        async (args) => {
-          if (!isMain) {
-            return {
-              content: [{ type: 'text', text: 'Only the main group can register new groups.' }],
-              isError: true
-            };
-          }
-
-          const data = {
-            type: 'register_group',
-            jid: args.jid,
-            name: args.name,
-            folder: args.folder,
-            trigger: args.trigger,
-            timestamp: new Date().toISOString()
-          };
-
-          writeIpcFile(tasksDir, data);
-
-          return {
-            content: [{
-              type: 'text',
-              text: `Group "${args.name}" registered. It will start receiving messages immediately.`
-            }]
-          };
-        }
       )
     ]
   });

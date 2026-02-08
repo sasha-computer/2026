@@ -581,11 +581,6 @@ async function processTaskIpc(
     groupFolder?: string;
     chatJid?: string;
     targetJid?: string;
-    // For register_group
-    jid?: string;
-    name?: string;
-    folder?: string;
-    trigger?: string;
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -757,30 +752,6 @@ async function processTaskIpc(
         logger.warn(
           { sourceGroup },
           'Unauthorized refresh_groups attempt blocked',
-        );
-      }
-      break;
-
-    case 'register_group':
-      // Only main group can register new groups
-      if (!isMain) {
-        logger.warn(
-          { sourceGroup },
-          'Unauthorized register_group attempt blocked',
-        );
-        break;
-      }
-      if (data.jid && data.name && data.folder && data.trigger) {
-        registerGroup(data.jid, {
-          name: data.name,
-          folder: data.folder,
-          trigger: data.trigger,
-          added_at: new Date().toISOString(),
-        });
-      } else {
-        logger.warn(
-          { data },
-          'Invalid register_group request - missing required fields',
         );
       }
       break;
