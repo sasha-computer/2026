@@ -19,7 +19,7 @@ jobs:
 
           # Check if PR touches source
           CHANGED=$(git diff --name-only origin/main...HEAD)
-          SOURCE=$(echo "$CHANGED" | grep -E '^src/|^container/|^package\.json|^package-lock\.json' || true)
+          SOURCE=$(echo "$CHANGED" | grep -E '^src/|^package\.json|^package-lock\.json' || true)
 
           # Block if new skills are added AND source is modified
           if [ -n "$ADDED_SKILLS" ] && [ -n "$SOURCE" ]; then
@@ -44,7 +44,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `This PR adds a skill while also modifying source code. A skill PR should not change source files—the skill should contain **instructions** for Claude to follow. See \`/convert-to-docker\` for an example.
+              body: `This PR adds a skill while also modifying source code. A skill PR should not change source files—the skill should contain **instructions** for Claude to follow. See \`/setup\` for an example.
 
             If you're fixing a bug or simplifying code, please submit that as a separate PR.
 

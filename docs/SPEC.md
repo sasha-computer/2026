@@ -42,23 +42,14 @@ A personal Claude assistant accessible via WhatsApp, with persistent memory per 
 │  └────────┬─────────┘    └────────┬─────────┘    └───────────────┘  │
 │           │                       │                                  │
 │           └───────────┬───────────┘                                  │
-│                       │ spawns container                             │
+│                       │ spawns agent subprocess                      │
 │                       ▼                                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                  APPLE CONTAINER (Linux VM)                          │
-├─────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │                    AGENT RUNNER                               │   │
 │  │                                                                │   │
-│  │  Working directory: /workspace/group (mounted from host)       │   │
-│  │  Volume mounts:                                                │   │
-│  │    • groups/{name}/ → /workspace/group                         │   │
-│  │    • groups/global/ → /workspace/global/ (non-main only)        │   │
-│  │    • data/sessions/{group}/.claude/ → /home/node/.claude/      │   │
-│  │    • Additional dirs → /workspace/extra/*                      │   │
-│  │                                                                │   │
+│  │  Working directory: groups/{name}/                             │   │
 │  │  Tools (all groups):                                           │   │
-│  │    • Bash (safe - sandboxed in container!)                     │   │
+│  │    • Bash (runs on host)                                       │   │
 │  │    • Read, Write, Edit, Glob, Grep (file operations)           │   │
 │  │    • WebSearch, WebFetch (internet access)                     │   │
 │  │    • agent-browser (browser automation)                        │   │
@@ -75,7 +66,7 @@ A personal Claude assistant accessible via WhatsApp, with persistent memory per 
 |-----------|------------|---------|
 | WhatsApp Connection | Node.js (@whiskeysockets/baileys) | Connect to WhatsApp, send/receive messages |
 | Message Storage | SQLite (better-sqlite3) | Store messages for polling |
-| Container Runtime | Apple Container | Isolated Linux VMs for agent execution |
+| Agent Execution | Native subprocesses | Run Claude Agent SDK per request |
 | Agent | @anthropic-ai/claude-agent-sdk (0.2.29) | Run Claude with tools and MCP servers |
 | Browser Automation | agent-browser + Chromium | Web interaction and screenshots |
 | Runtime | Node.js 20+ | Host process for routing and scheduling |
@@ -98,26 +89,14 @@ gandalf/
 ├── .gitignore
 │
 ├── src/
-│   ├── index.ts                   # Main application (WhatsApp + routing)
+│   ├── index.ts                   # Main application (Discord + routing)
 │   ├── config.ts                  # Configuration constants
 │   ├── types.ts                   # TypeScript interfaces
-│   ├── utils.ts                   # Generic utility functions
 │   ├── db.ts                      # Database initialization and queries
-│   ├── whatsapp-auth.ts           # Standalone WhatsApp authentication
 │   ├── task-scheduler.ts          # Runs scheduled tasks when due
-│   └── container-runner.ts        # Spawns agents in Apple Containers
-│
-├── container/
-│   ├── Dockerfile                 # Container image (runs as 'node' user, includes Claude Code CLI)
-│   ├── build.sh                   # Build script for container image
-│   ├── agent-runner/              # Code that runs inside the container
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── src/
-│   │       ├── index.ts           # Entry point (reads JSON, runs agent)
-│   │       └── ipc-mcp.ts         # MCP server for host communication
-│   └── skills/
-│       └── agent-browser.md       # Browser automation skill
+│   ├── process-runner.ts          # Spawns agent subprocesses
+│   ├── agent-runner.ts            # Agent subprocess entry point
+│   └── ipc-mcp.ts                 # MCP server for host communication
 │
 ├── dist/                          # Compiled JavaScript (gitignored)
 │
@@ -128,7 +107,7 @@ gandalf/
 │       ├── customize/
 │       │   └── SKILL.md           # /customize skill
 │       └── debug/
-│           └── SKILL.md           # /debug skill (container debugging)
+│           └── SKILL.md           # /debug skill
 │
 ├── groups/
 │   ├── CLAUDE.md                  # Global memory (all groups read this)
@@ -145,16 +124,14 @@ gandalf/
 │   └── messages.db                # SQLite database (messages, scheduled_tasks, task_run_logs)
 │
 ├── data/                          # Application state (gitignored)
-│   ├── sessions.json              # Active session IDs per group
+│   ├── sessions.json              # Active session IDs per group (legacy)
 │   ├── registered_groups.json     # Group JID → folder mapping
 │   ├── router_state.json          # Last processed timestamp + last agent timestamps
-│   ├── env/env                    # Copy of .env for container mounting
-│   └── ipc/                       # Container IPC (messages/, tasks/)
+│   └── ipc/                       # IPC (messages/, tasks/, memory/)
 │
 ├── logs/                          # Runtime logs (gitignored)
 │   ├── gandalf.log               # Host stdout
 │   └── gandalf.error.log         # Host stderr
-│   # Note: Per-container logs are in groups/{folder}/logs/container-*.log
 │
 └── launchd/
     └── com.gandalf.plist         # macOS service configuration
@@ -169,53 +146,22 @@ Configuration constants are in `src/config.ts`:
 ```typescript
 import path from 'path';
 
-export const POLL_INTERVAL = 2000;
 export const SCHEDULER_POLL_INTERVAL = 60000;
 
-// Paths are absolute (required for container mounts)
+// Paths
 const PROJECT_ROOT = process.cwd();
 export const STORE_DIR = path.resolve(PROJECT_ROOT, 'store');
 export const GROUPS_DIR = path.resolve(PROJECT_ROOT, 'groups');
 export const DATA_DIR = path.resolve(PROJECT_ROOT, 'data');
 
-// Container configuration
-export const CONTAINER_IMAGE = process.env.CONTAINER_IMAGE || 'gandalf-agent:latest';
-export const CONTAINER_TIMEOUT = parseInt(process.env.CONTAINER_TIMEOUT || '300000', 10);
+// Agent configuration
+export const AGENT_TIMEOUT = parseInt(process.env.AGENT_TIMEOUT || '300000', 10);
+export const AGENT_MAX_OUTPUT_SIZE = parseInt(process.env.AGENT_MAX_OUTPUT_SIZE || '10485760', 10);
+export const MAX_CONCURRENT_AGENTS = parseInt(process.env.MAX_CONCURRENT_AGENTS || '5', 10);
 export const IPC_POLL_INTERVAL = 1000;
 
 export const BOT_MESSAGE_PREFIX = process.env.BOT_MESSAGE_PREFIX || '';
 ```
-
-**Note:** Paths must be absolute for Apple Container volume mounts to work correctly.
-
-### Container Configuration
-
-Groups can have additional directories mounted via `containerConfig` in `data/registered_groups.json`:
-
-```json
-{
-  "1234567890@g.us": {
-    "name": "Dev Team",
-    "folder": "dev-team",
-    "trigger": "none",
-    "added_at": "2026-01-31T12:00:00Z",
-    "containerConfig": {
-      "additionalMounts": [
-        {
-          "hostPath": "~/projects/webapp",
-          "containerPath": "webapp",
-          "readonly": false
-        }
-      ],
-      "timeout": 600000
-    }
-  }
-}
-```
-
-Additional mounts appear at `/workspace/extra/{containerPath}` inside the container.
-
-**Apple Container mount syntax note:** Read-write mounts use `-v host:container`, but readonly mounts require `--mount "type=bind,source=...,target=...,readonly"` (the `:ro` suffix doesn't work).
 
 ### Claude Authentication
 
@@ -232,7 +178,7 @@ The token can be extracted from `~/.claude/.credentials.json` if you're logged i
 ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
-Only the authentication variables (`CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_KEY`) are extracted from `.env` and mounted into the container at `/workspace/env-dir/env`, then sourced by the entrypoint script. This ensures other environment variables in `.env` are not exposed to the agent. This workaround is needed because Apple Container loses `-e` environment variables when using `-i` (interactive mode with piped stdin).
+The `.env` file is read by the host process and passed to the agent subprocess as needed. Keep secrets limited to only what the agent should access.
 
 ### Placeholder Values in launchd
 
@@ -271,8 +217,7 @@ Gandalf uses a hierarchical memory system based on CLAUDE.md files.
 3. **Main Channel Privileges**
    - Only the "main" group (self-chat) can write to global memory
    - Main can manage registered groups and schedule tasks for any group
-   - Main can configure additional directory mounts for any group
-   - All groups have Bash access (safe because it runs inside container)
+  - All groups have Bash access (runs on the host)
 
 ---
 
@@ -453,13 +398,12 @@ Gandalf runs as a single macOS launchd service.
 ### Startup Sequence
 
 When Gandalf starts, it:
-1. **Ensures Apple Container system is running** - Automatically starts it if needed (survives reboots)
-2. Initializes the SQLite database
-3. Loads state (registered groups, sessions, router state)
-4. Connects to WhatsApp
-5. Starts the message polling loop
-6. Starts the scheduler loop
-7. Starts the IPC watcher for container messages
+1. Initializes the SQLite database
+2. Loads state (registered groups, sessions, router state)
+3. Connects to WhatsApp
+4. Starts the message polling loop
+5. Starts the scheduler loop
+6. Starts the IPC watcher for task and memory messages
 
 ### Service: com.gandalf
 
@@ -520,21 +464,19 @@ tail -f logs/gandalf.log
 
 ## Security Considerations
 
-### Container Isolation
+### Process Isolation
 
-All agents run inside Apple Container (lightweight Linux VMs), providing:
-- **Filesystem isolation**: Agents can only access mounted directories
-- **Safe Bash access**: Commands run inside the container, not on your Mac
-- **Network isolation**: Can be configured per-container if needed
-- **Process isolation**: Container processes can't affect the host
-- **Non-root user**: Container runs as unprivileged `node` user (uid 1000)
+Agents run as native subprocesses with scoped working directories:
+- **Directory scoping**: Each agent runs with a group-specific working directory
+- **Explicit access**: The host controls which files and paths are provided to the agent
+- **Bash runs on host**: Treat tool access as privileged and keep permissions minimal
 
 ### Prompt Injection Risk
 
 WhatsApp messages could contain malicious instructions attempting to manipulate Claude's behavior.
 
 **Mitigations:**
-- Container isolation limits blast radius
+- Scoped working directories limit what the agent can access
 - Only registered groups are processed
 - Trigger word required (reduces accidental processing)
 - Agents can only access their group's mounted directories
@@ -551,7 +493,7 @@ WhatsApp messages could contain malicious instructions attempting to manipulate 
 
 | Credential | Storage Location | Notes |
 |------------|------------------|-------|
-| Claude CLI Auth | data/sessions/{group}/.claude/ | Per-group isolation, mounted to /home/node/.claude/ |
+| Claude CLI Auth | data/sessions/{group}/.claude/ | Per-group isolation on the host |
 | WhatsApp Session | store/auth/ | Auto-created, persists ~20 days |
 
 ### File Permissions
@@ -570,10 +512,8 @@ chmod 700 groups/
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | No response to messages | Service not running | Check `launchctl list | grep gandalf` |
-| "Claude Code process exited with code 1" | Apple Container failed to start | Check logs; Gandalf auto-starts container system but may fail |
-| "Claude Code process exited with code 1" | Session mount path wrong | Ensure mount is to `/home/node/.claude/` not `/root/.claude/` |
+| "Claude Code process exited with code 1" | Agent runner error | Check logs for the underlying exception |
 | Session not continuing | Session ID not saved | Check `data/sessions.json` |
-| Session not continuing | Mount path mismatch | Container user is `node` with HOME=/home/node; sessions must be at `/home/node/.claude/` |
 | "QR code expired" | WhatsApp session expired | Delete store/auth/ and restart |
 | "No groups registered" | Haven't added groups | Register groups from the main channel |
 

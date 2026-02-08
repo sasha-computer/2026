@@ -1,15 +1,15 @@
 # After macOS Tahoe Upgrade - Complete Gandalf Setup
 
-## 1. Install Apple Container
-```bash
-brew install container
-container system start
-```
-
-## 2. Build the Gandalf agent container image
+## 1. Install Dependencies
 ```bash
 cd ~/gandalf
-./container/build.sh
+bun install
+```
+
+## 2. Build Gandalf
+```bash
+cd ~/gandalf
+bun run build
 ```
 
 ## 3. Test Gandalf

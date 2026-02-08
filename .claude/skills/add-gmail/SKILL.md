@@ -161,7 +161,7 @@ For Tool Mode, integrate Gmail MCP into the agent runner. Execute these changes 
 
 ### Step 1: Add Gmail MCP to Agent Runner
 
-Read `container/agent-runner/src/index.ts` and find the `mcpServers` config in the `query()` call.
+Read `src/agent-runner.ts` and find the `mcpServers` config in the `query()` call.
 
 Add `gmail` to the `mcpServers` object:
 
@@ -180,6 +180,7 @@ The result should look like:
 ```typescript
 mcpServers: {
   gandalf: ipcMcp,
+  qmd: { command: 'qmd', args: ['mcp'], env: { PATH: `${process.env.HOME}/.bun/bin:${process.env.PATH}` } },
   gmail: { command: 'bunx', args: ['@gongrzhe/server-gmail-autoauth-mcp'] }
 },
 allowedTools: [
@@ -187,29 +188,12 @@ allowedTools: [
   'Read', 'Write', 'Edit', 'Glob', 'Grep',
   'WebSearch', 'WebFetch',
   'mcp__gandalf__*',
+  'mcp__qmd__*',
   'mcp__gmail__*'
 ],
 ```
 
-### Step 2: Mount Gmail Credentials in Container
-
-Read `src/container-runner.ts` and find the `buildVolumeMounts` function.
-
-Add this mount block (after the `.claude` mount is a good location):
-
-```typescript
-// Gmail credentials directory
-const gmailDir = path.join(homeDir, '.gmail-mcp');
-if (fs.existsSync(gmailDir)) {
-  mounts.push({
-    hostPath: gmailDir,
-    containerPath: '/home/node/.gmail-mcp',
-    readonly: false  // MCP may need to refresh tokens
-  });
-}
-```
-
-### Step 3: Update Group Memory
+### Step 2: Update Group Memory
 
 Append to `groups/CLAUDE.md` (the global memory file):
 
@@ -229,18 +213,12 @@ Example: "Check my unread emails from today" or "Send an email to john@example.c
 
 Also append the same section to `groups/main/CLAUDE.md`.
 
-### Step 4: Rebuild and Restart
+### Step 3: Rebuild and Restart
 
-Run these commands:
-
-```bash
-cd container && ./build.sh
-```
-
-Wait for container build to complete, then:
+Run this command:
 
 ```bash
-cd .. && bun run build
+bun run build
 ```
 
 Wait for TypeScript compilation, then restart the service:
@@ -562,8 +540,8 @@ async function runEmailAgent(
     added_at: new Date().toISOString()
   };
 
-  // Use existing runContainerAgent
-  const output = await runContainerAgent(emailGroup, {
+  // Use existing runAgent
+  const output = await runAgent(emailGroup, {
     prompt,
     sessionId: sessions[groupFolder],
     groupFolder,
@@ -583,7 +561,7 @@ async function runEmailAgent(
 
 ### Step 7: Update IPC for Email Responses (Optional)
 
-If you want the agent to be able to send emails proactively from within a session, read `container/agent-runner/src/ipc-mcp.ts` and add this tool:
+If you want the agent to be able to send emails proactively from within a session, read `src/ipc-mcp.ts` and add this tool:
 
 ```typescript
 // Add to the MCP tools
@@ -631,13 +609,7 @@ Each email thread or sender (depending on configuration) has its own conversatio
 
 ### Step 9: Rebuild and Test
 
-Rebuild the container (required since agent-runner changed):
-
-```bash
-cd container && ./build.sh
-```
-
-Wait for build to complete, then compile TypeScript:
+Compile TypeScript:
 
 ```bash
 cd .. && bun run build
@@ -692,34 +664,26 @@ bunx @gongrzhe/server-gmail-autoauth-mcp
 - Verify the label exists (for label mode)
 - Check `processed_emails` table for already-processed emails
 
-### Container can't access Gmail
-- Verify `~/.gmail-mcp` is mounted in container
-- Check container logs: `cat groups/main/logs/container-*.log | tail -50`
-
 ---
 
 ## Removing Gmail Integration
 
 To remove Gmail entirely:
 
-1. Remove from `container/agent-runner/src/index.ts`:
+1. Remove from `src/agent-runner.ts`:
    - Delete `gmail` from `mcpServers`
    - Remove `mcp__gmail__*` from `allowedTools`
 
-2. Remove from `src/container-runner.ts`:
-   - Delete the `~/.gmail-mcp` mount block
-
-3. Remove from `src/index.ts` (Channel Mode only):
+2. Remove from `src/index.ts` (Channel Mode only):
    - Delete `startEmailLoop()` call
    - Delete email-related imports
 
-4. Delete `src/email-channel.ts` (if created)
+3. Delete `src/email-channel.ts` (if created)
 
-5. Remove Gmail sections from `groups/*/CLAUDE.md`
+4. Remove Gmail sections from `groups/*/CLAUDE.md`
 
-6. Rebuild:
+5. Rebuild:
    ```bash
-   cd container && ./build.sh && cd ..
    bun run build
    launchctl kickstart -k gui/$(id -u)/com.gandalf
    ```

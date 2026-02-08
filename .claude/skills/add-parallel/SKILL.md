@@ -6,14 +6,14 @@ Adds Parallel AI MCP integration to Gandalf for advanced web research capabiliti
 
 - **Quick Search** - Fast web lookups using Parallel Search API (free to use)
 - **Deep Research** - Comprehensive analysis using Parallel Task API (asks permission)
-- **Non-blocking Design** - Uses Gandalf scheduler for result polling (no container blocking)
+- **Non-blocking Design** - Uses Gandalf scheduler for result polling
 
 ## Prerequisites
 
 User must have:
 1. Parallel AI API key from https://platform.parallel.ai
 2. Gandalf already set up and running
-3. Container system working (Apple Container or Docker)
+3. Gandalf running locally
 
 ## Implementation Steps
 
@@ -63,28 +63,15 @@ Verify:
 grep "PARALLEL_API_KEY" .env | head -c 50
 ```
 
-### 3. Update Container Runner
+### 3. Configure MCP Servers in Agent Runner
 
-Add `PARALLEL_API_KEY` to allowed environment variables in `src/container-runner.ts`:
-
-Find the line:
-```typescript
-const allowedVars = ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'];
-```
-
-Replace with:
-```typescript
-const allowedVars = ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'PARALLEL_API_KEY'];
-```
-
-### 4. Configure MCP Servers in Agent Runner
-
-Update `container/agent-runner/src/index.ts`:
+Update `src/agent-runner.ts`:
 
 Find the section where `mcpServers` is configured (around line 237-252):
 ```typescript
 const mcpServers: Record<string, any> = {
-  gandalf: ipcMcp
+  gandalf: ipcMcp,
+  qmd: { command: 'qmd', args: ['mcp'], env: { PATH: `${process.env.HOME}/.bun/bin:${process.env.PATH}` } }
 };
 ```
 
@@ -117,19 +104,20 @@ if (parallelApiKey) {
 }
 ```
 
-Also update the `allowedTools` array to include Parallel MCP tools (around line 242-248):
+Also update the `allowedTools` array to include Parallel MCP tools:
 ```typescript
 allowedTools: [
   'Bash',
   'Read', 'Write', 'Edit', 'Glob', 'Grep',
   'WebSearch', 'WebFetch',
   'mcp__gandalf__*',
+  'mcp__qmd__*',
   'mcp__parallel-search__*',
   'mcp__parallel-task__*'
 ],
 ```
 
-### 5. Add Usage Instructions to CLAUDE.md
+### 4. Add Usage Instructions to CLAUDE.md
 
 Add Parallel AI usage instructions to `groups/main/CLAUDE.md`:
 
@@ -216,25 +204,7 @@ I can do deep research on [topic] using Parallel's Task API. This will take
 **Default behavior:** Prefer search for most questions. Only suggest deep research when the topic genuinely requires comprehensive analysis.
 ```
 
-### 6. Rebuild Container
-
-Build the container with updated agent runner:
-
-```bash
-./container/build.sh
-```
-
-The build script will automatically:
-- Try Apple Container first
-- Fall back to Docker if Rosetta is required
-- Import to Apple Container
-
-Verify the build:
-```bash
-echo '{}' | container run -i --entrypoint /bin/echo gandalf-agent:latest "Container OK"
-```
-
-### 7. Restart Service
+### 5. Restart Service
 
 Rebuild the main app and restart:
 
@@ -249,7 +219,7 @@ sleep 3
 launchctl list | grep gandalf
 ```
 
-### 8. Test Integration
+### 6. Test Integration
 
 Tell the user to test:
 > Send a message to your assistant: `@[YourAssistantName] what's the latest news about AI?`
@@ -269,14 +239,8 @@ Look for: `Parallel AI MCP servers configured`
 
 ## Troubleshooting
 
-**Container hangs or times out:**
-- Check that `type: 'http'` is specified in MCP server config
-- Verify API key is correct in .env
-- Check container logs: `cat groups/main/logs/container-*.log | tail -50`
-
 **MCP servers not loading:**
 - Ensure PARALLEL_API_KEY is in .env
-- Verify container-runner.ts includes PARALLEL_API_KEY in allowedVars
 - Check agent-runner logs for "Parallel AI MCP servers configured" message
 
 **Task polling not working:**
@@ -289,7 +253,7 @@ Look for: `Parallel AI MCP servers configured`
 To remove Parallel AI integration:
 
 1. Remove from .env: `sed -i.bak '/PARALLEL_API_KEY/d' .env`
-2. Revert changes to container-runner.ts and agent-runner/src/index.ts
+2. Revert changes to src/agent-runner.ts
 3. Remove Web Research Tools section from groups/main/CLAUDE.md
-4. Rebuild: `./container/build.sh && bun run build`
+4. Rebuild: `bun run build`
 5. Restart: `launchctl kickstart -k gui/$(id -u)/com.gandalf`

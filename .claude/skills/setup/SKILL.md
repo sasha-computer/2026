@@ -15,65 +15,7 @@ Run all commands automatically. Only pause when user action is required (scannin
 bun install
 ```
 
-## 2. Install Container Runtime
-
-First, detect the platform and check what's available:
-
-```bash
-echo "Platform: $(uname -s)"
-which container && echo "Apple Container: installed" || echo "Apple Container: not installed"
-which docker && docker info >/dev/null 2>&1 && echo "Docker: installed and running" || echo "Docker: not installed or not running"
-```
-
-### If NOT on macOS (Linux, etc.)
-
-Apple Container is macOS-only. Use Docker instead.
-
-Tell the user:
-> You're on Linux, so we'll use Docker for container isolation. Let me set that up now.
-
-**Use the `/convert-to-docker` skill** to convert the codebase to Docker, then continue to Section 3.
-
-### If on macOS
-
-**If Apple Container is already installed:** Continue to Section 3.
-
-**If Apple Container is NOT installed:** Ask the user:
-> Gandalf needs a container runtime for isolated agent execution. You have two options:
->
-> 1. **Apple Container** (default) - macOS-native, lightweight, designed for Apple silicon
-> 2. **Docker** - Cross-platform, widely used, works on macOS and Linux
->
-> Which would you prefer?
-
-#### Option A: Apple Container
-
-Tell the user:
-> Apple Container is required for running agents in isolated environments.
->
-> 1. Download the latest `.pkg` from https://github.com/apple/container/releases
-> 2. Double-click to install
-> 3. Run `container system start` to start the service
->
-> Let me know when you've completed these steps.
-
-Wait for user confirmation, then verify:
-
-```bash
-container system start
-container --version
-```
-
-**Note:** Gandalf automatically starts the Apple Container system when it launches, so you don't need to start it manually after reboots.
-
-#### Option B: Docker
-
-Tell the user:
-> You've chosen Docker. Let me set that up now.
-
-**Use the `/convert-to-docker` skill** to convert the codebase to Docker, then continue to Section 3.
-
-## 3. Configure Claude Authentication
+## 2. Configure Claude Authentication
 
 Ask the user:
 > Do you want to use your **Claude subscription** (Pro/Max) or an **Anthropic API key**?
@@ -117,27 +59,7 @@ KEY=$(grep "^ANTHROPIC_API_KEY=" .env | cut -d= -f2)
 [ -n "$KEY" ] && echo "API key configured: ${KEY:0:10}...${KEY: -4}" || echo "Missing"
 ```
 
-## 4. Build Container Image
-
-Build the Gandalf agent container:
-
-```bash
-./container/build.sh
-```
-
-This creates the `gandalf-agent:latest` image with Node.js, Chromium, Claude Code CLI, and agent-browser.
-
-Verify the build succeeded by running a simple test (this auto-detects which runtime you're using):
-
-```bash
-if which docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-  echo '{}' | docker run -i --entrypoint /bin/echo gandalf-agent:latest "Container OK" || echo "Container build failed"
-else
-  echo '{}' | container run -i --entrypoint /bin/echo gandalf-agent:latest "Container OK" || echo "Container build failed"
-fi
-```
-
-## 5. WhatsApp Authentication
+## 3. WhatsApp Authentication
 
 **USER ACTION REQUIRED**
 
@@ -159,11 +81,11 @@ Wait for the script to output "Successfully authenticated" then continue.
 
 If it says "Already authenticated", skip to the next step.
 
-## 6. Configure Main Channel
+## 4. Configure Main Channel
 
 This step configures the main channel type and selection.
 
-### 6a. Explain security model and ask about main channel type
+### 4a. Explain security model and ask about main channel type
 
 **Use the AskUserQuestion tool** to present this:
 
@@ -197,7 +119,7 @@ If they choose option 3, ask a follow-up:
 > 1. Yes, I understand and want to proceed
 > 2. No, let me use a personal chat or solo group instead
 
-### 6b. Register the main channel
+### 4b. Register the main channel
 
 First build, then start the app briefly to connect to WhatsApp and sync group metadata. Use the Bash tool's timeout parameter (15000ms) — do NOT use the `timeout` shell command (it's not available on macOS). The app will be killed when the timeout fires, which is expected.
 
@@ -282,7 +204,7 @@ Skip to the next step.
 
 If **yes**, ask follow-up questions:
 
-### 7a. Collect Directory Paths
+### 5a. Collect Directory Paths
 
 Ask the user:
 > Which directories do you want to allow access to?
@@ -299,14 +221,14 @@ For each directory they provide, ask:
 > Read-write is needed for: code changes, creating files, git commits
 > Read-only is safer for: reference docs, config examples, templates
 
-### 7b. Configure Non-Main Group Access
+### 5b. Configure Non-Main Group Access
 
 Ask the user:
 > Should **non-main groups** (other WhatsApp chats you add later) be restricted to **read-only** access even if read-write is allowed for the directory?
 >
 > Recommended: **Yes** - this prevents other groups from modifying files even if you grant them access to a directory.
 
-### 7c. Create the Allowlist
+### 5c. Create the Allowlist
 
 Create the allowlist file based on their answers:
 
@@ -353,16 +275,9 @@ Tell the user:
 > - This config file is stored outside the project, so agents cannot modify it
 > - Changes require restarting the Gandalf service
 >
-> To grant a group access to a directory, add it to their config in `data/registered_groups.json`:
-> ```json
-> "containerConfig": {
->   "additionalMounts": [
->     { "hostPath": "~/projects/my-app", "containerPath": "my-app", "readonly": false }
->   ]
-> }
-> ```
+> To grant a group access to a directory, add it to the allowlist and restart the service.
 
-## 8. Configure launchd Service
+## 6. Configure launchd Service
 
 Generate the plist file with correct paths automatically:
 
@@ -422,7 +337,7 @@ Verify it's running:
 launchctl list | grep gandalf
 ```
 
-## 9. Test
+## 7. Test
 
 Tell the user:
 > Send `hello` in your registered chat and the agent should respond.
@@ -437,12 +352,6 @@ The user should receive a response in WhatsApp.
 ## Troubleshooting
 
 **Service not starting**: Check `logs/gandalf.error.log`
-
-**Container agent fails with "Claude Code process exited with code 1"**:
-- Ensure the container runtime is running:
-  - Apple Container: `container system start`
-  - Docker: `docker info` (start Docker Desktop on macOS, or `sudo systemctl start docker` on Linux)
-- Check container logs: `cat groups/main/logs/container-*.log | tail -50`
 
 **No response to messages**:
 - Verify the chat JID is registered

@@ -1,6 +1,5 @@
 # Core code - maintainer only
 /src/ @gavrielc
-/container/ @gavrielc
 /package.json @gavrielc
 /package-lock.json @gavrielc
 

@@ -77,8 +77,8 @@ Implementation:
 ### Changing Deployment
 
 Questions to ask:
-- Target platform? (Linux server, Docker, different Mac)
-- Service manager? (systemd, Docker, supervisord)
+- Target platform? (Linux server, different Mac)
+- Service manager? (systemd, launchd, supervisord)
 
 Implementation:
 1. Create appropriate service files
