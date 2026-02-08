@@ -90,7 +90,7 @@ Implementation:
 Always tell the user:
 ```bash
 # Rebuild and restart
-npm run build
+bun run build
 launchctl unload ~/Library/LaunchAgents/com.gandalf.plist
 launchctl load ~/Library/LaunchAgents/com.gandalf.plist
 ```

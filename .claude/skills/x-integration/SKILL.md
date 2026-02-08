@@ -26,7 +26,7 @@ Before using this skill, ensure:
 1. **Gandalf is installed and running** - WhatsApp connected, service active
 2. **Dependencies installed**:
    ```bash
-   npm ls playwright dotenv-cli || npm install playwright dotenv-cli
+   bun pm ls playwright dotenv-cli || bun add playwright dotenv-cli
    ```
 3. **CHROME_PATH configured** in `.env` (if Chrome is not at default location):
    ```bash
@@ -40,7 +40,7 @@ Before using this skill, ensure:
 
 ```bash
 # 1. Setup authentication (interactive)
-npx dotenv -e .env -- npx tsx .claude/skills/x-integration/scripts/setup.ts
+bunx dotenv -e .env -- bunx tsx .claude/skills/x-integration/scripts/setup.ts
 # Verify: data/x-auth.json should exist after successful login
 
 # 2. Rebuild container to include skill
@@ -48,7 +48,7 @@ npx dotenv -e .env -- npx tsx .claude/skills/x-integration/scripts/setup.ts
 # Verify: Output shows "COPY .claude/skills/x-integration/agent.ts"
 
 # 3. Rebuild host and restart service
-npm run build
+bun run build
 launchctl kickstart -k gui/$(id -u)/com.gandalf
 # Verify: launchctl list | grep gandalf shows PID and exit code 0
 ```
@@ -224,7 +224,7 @@ COPY container/agent-runner/package*.json ./
 COPY container/agent-runner/ ./
 ```
 
-Then add COPY line after `COPY container/agent-runner/ ./` and before `RUN npm run build`:
+Then add COPY line after `COPY container/agent-runner/ ./` and before `RUN bun run build`:
 ```dockerfile
 # Copy skill MCP tools
 COPY .claude/skills/x-integration/agent.ts ./src/skills/x-integration/
@@ -246,7 +246,7 @@ echo "Chrome not found - update CHROME_PATH in .env"
 ### 2. Run Authentication
 
 ```bash
-npx dotenv -e .env -- npx tsx .claude/skills/x-integration/scripts/setup.ts
+bunx dotenv -e .env -- bunx tsx .claude/skills/x-integration/scripts/setup.ts
 ```
 
 This opens Chrome for manual X login. Session saved to `data/x-browser-profile/`.
@@ -270,7 +270,7 @@ cat data/x-auth.json  # Should show {"authenticated": true, ...}
 ### 4. Restart Service
 
 ```bash
-npm run build
+bun run build
 launchctl kickstart -k gui/$(id -u)/com.gandalf
 ```
 
@@ -314,26 +314,26 @@ ls -la data/x-browser-profile/ 2>/dev/null | head -5
 ### Re-authenticate (if expired)
 
 ```bash
-npx dotenv -e .env -- npx tsx .claude/skills/x-integration/scripts/setup.ts
+bunx dotenv -e .env -- bunx tsx .claude/skills/x-integration/scripts/setup.ts
 ```
 
 ### Test Post (will actually post)
 
 ```bash
-echo '{"content":"Test tweet - please ignore"}' | npx dotenv -e .env -- npx tsx .claude/skills/x-integration/scripts/post.ts
+echo '{"content":"Test tweet - please ignore"}' | bunx dotenv -e .env -- bunx tsx .claude/skills/x-integration/scripts/post.ts
 ```
 
 ### Test Like
 
 ```bash
-echo '{"tweetUrl":"https://x.com/user/status/123"}' | npx dotenv -e .env -- npx tsx .claude/skills/x-integration/scripts/like.ts
+echo '{"tweetUrl":"https://x.com/user/status/123"}' | bunx dotenv -e .env -- bunx tsx .claude/skills/x-integration/scripts/like.ts
 ```
 
 Or export `CHROME_PATH` manually before running:
 
 ```bash
 export CHROME_PATH="/path/to/chrome"
-echo '{"content":"Test"}' | npx tsx .claude/skills/x-integration/scripts/post.ts
+echo '{"content":"Test"}' | bunx tsx .claude/skills/x-integration/scripts/post.ts
 ```
 
 ## Troubleshooting
@@ -341,7 +341,7 @@ echo '{"content":"Test"}' | npx tsx .claude/skills/x-integration/scripts/post.ts
 ### Authentication Expired
 
 ```bash
-npx dotenv -e .env -- npx tsx .claude/skills/x-integration/scripts/setup.ts
+bunx dotenv -e .env -- bunx tsx .claude/skills/x-integration/scripts/setup.ts
 launchctl kickstart -k gui/$(id -u)/com.gandalf
 ```
 

@@ -6,7 +6,7 @@
     <string>com.gandalf</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{{NODE_PATH}}</string>
+        <string>{{BUN_PATH}}</string>
         <string>{{PROJECT_ROOT}}/dist/index.js</string>
     </array>
     <key>WorkingDirectory</key>
@@ -25,8 +25,6 @@
         <string>{{DISCORD_BOT_TOKEN}}</string>
         <key>DISCORD_GUILD_ID</key>
         <string>{{DISCORD_GUILD_ID}}</string>
-        <key>DISCORD_MAIN_CHANNEL_ID</key>
-        <string>{{DISCORD_MAIN_CHANNEL_ID}}</string>
         <key>CLAUDE_CODE_OAUTH_TOKEN</key>
         <string>{{CLAUDE_CODE_OAUTH_TOKEN}}</string>
     </dict>

@@ -11,3 +11,12 @@
 - **QMD integration** — Local semantic search across conversations and memory via [QMD](https://github.com/tobi/qmd)
 
 Upstream: [NanoClaw](https://github.com/gavrielc/nanoclaw)
+
+## Development
+
+```bash
+bun run dev
+bun run build
+bun run test
+bun run verify:restart
+```

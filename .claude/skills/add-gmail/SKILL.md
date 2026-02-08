@@ -120,13 +120,13 @@ Tell the user:
 Run the authorization:
 
 ```bash
-npx -y @gongrzhe/server-gmail-autoauth-mcp auth
+bunx @gongrzhe/server-gmail-autoauth-mcp auth
 ```
 
 If that doesn't work (some versions don't have an auth subcommand), run it and let it prompt:
 
 ```bash
-timeout 60 npx -y @gongrzhe/server-gmail-autoauth-mcp || true
+timeout 60 bunx @gongrzhe/server-gmail-autoauth-mcp || true
 ```
 
 Tell user:
@@ -148,7 +148,7 @@ fi
 Test the connection by listing labels (quick sanity check):
 
 ```bash
-echo '{"method": "tools/list"}' | timeout 10 npx -y @gongrzhe/server-gmail-autoauth-mcp 2>/dev/null | head -20 || echo "MCP responded (check output above)"
+echo '{"method": "tools/list"}' | timeout 10 bunx @gongrzhe/server-gmail-autoauth-mcp 2>/dev/null | head -20 || echo "MCP responded (check output above)"
 ```
 
 If everything works, proceed to implementation.
@@ -166,7 +166,7 @@ Read `container/agent-runner/src/index.ts` and find the `mcpServers` config in t
 Add `gmail` to the `mcpServers` object:
 
 ```typescript
-gmail: { command: 'npx', args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'] }
+gmail: { command: 'bunx', args: ['@gongrzhe/server-gmail-autoauth-mcp'] }
 ```
 
 Find the `allowedTools` array and add Gmail tools:
@@ -180,7 +180,7 @@ The result should look like:
 ```typescript
 mcpServers: {
   gandalf: ipcMcp,
-  gmail: { command: 'npx', args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'] }
+  gmail: { command: 'bunx', args: ['@gongrzhe/server-gmail-autoauth-mcp'] }
 },
 allowedTools: [
   'Bash',
@@ -240,7 +240,7 @@ cd container && ./build.sh
 Wait for container build to complete, then:
 
 ```bash
-cd .. && npm run build
+cd .. && bun run build
 ```
 
 Wait for TypeScript compilation, then restart the service:
@@ -430,7 +430,7 @@ export async function checkForNewEmails(): Promise<EmailMessage[]> {
   // This requires calling Gmail MCP's search_emails tool
   // Implementation depends on how you want to invoke MCP from Node
   // Option 1: Use @anthropic-ai/claude-agent-sdk with just gmail MCP
-  // Option 2: Run npx gmail MCP as subprocess and parse output
+  // Option 2: Run bunx gmail MCP as subprocess and parse output
   // Option 3: Import gmail-autoauth-mcp directly
 
   // Placeholder - implement based on preference
@@ -640,7 +640,7 @@ cd container && ./build.sh
 Wait for build to complete, then compile TypeScript:
 
 ```bash
-cd .. && npm run build
+cd .. && bun run build
 ```
 
 Restart the service:
@@ -677,14 +677,14 @@ tail -f logs/gandalf.log | grep -E "(email|Email)"
 ### Gmail MCP not responding
 ```bash
 # Test Gmail MCP directly
-npx -y @gongrzhe/server-gmail-autoauth-mcp
+bunx @gongrzhe/server-gmail-autoauth-mcp
 ```
 
 ### OAuth token expired
 ```bash
 # Re-authorize
 rm ~/.gmail-mcp/credentials.json
-npx -y @gongrzhe/server-gmail-autoauth-mcp
+bunx @gongrzhe/server-gmail-autoauth-mcp
 ```
 
 ### Emails not being detected
@@ -720,6 +720,6 @@ To remove Gmail entirely:
 6. Rebuild:
    ```bash
    cd container && ./build.sh && cd ..
-   npm run build
+   bun run build
    launchctl kickstart -k gui/$(id -u)/com.gandalf
    ```

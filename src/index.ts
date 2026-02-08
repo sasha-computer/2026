@@ -290,8 +290,6 @@ function autoRegisterChannel(
 async function processGroupMessages(chatJid: string): Promise<boolean> {
   const group = getRegistrationForChannel(chatJid);
 
-  const isMainGroup = group.folder === MAIN_GROUP_FOLDER;
-
   // Get all messages since last agent interaction
   const sinceTimestamp = lastAgentTimestamp[chatJid] || '';
   const missedMessages = getMessagesSince(

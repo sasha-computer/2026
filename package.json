@@ -5,14 +5,15 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
+    "build": "bun x tsc",
+    "start": "bun dist/index.js",
+    "dev": "bun --watch src/index.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun x tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "verify:restart": "bun scripts/verify-and-restart.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.2.29",
@@ -27,10 +28,9 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.0",
     "prettier": "^3.8.1",
-    "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   },
   "engines": {
-    "node": ">=20"
+    "bun": ">=1.1.0"
   }
 }

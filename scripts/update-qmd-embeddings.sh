@@ -7,7 +7,7 @@ set -e
 # Ensure PATH includes bun bin directory
 export PATH="/Users/agentsc/.bun/bin:$PATH"
 
-cd /Users/agentsc/gandalf
+cd /Users/agentsc/nanoclaw
 
 # Update collections (re-index any modified files)
 qmd update

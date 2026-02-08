@@ -238,7 +238,7 @@ Only the authentication variables (`CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_
 
 Files with `{{PLACEHOLDER}}` values need to be configured:
 - `{{PROJECT_ROOT}}` - Absolute path to your gandalf installation
-- `{{NODE_PATH}}` - Path to node binary (detected via `which node`)
+- `{{BUN_PATH}}` - Path to bun binary (detected via `which bun`)
 - `{{HOME}}` - User's home directory
 
 ---
@@ -473,7 +473,7 @@ When Gandalf starts, it:
     <string>com.gandalf</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{{NODE_PATH}}</string>
+        <string>{{BUN_PATH}}</string>
         <string>{{PROJECT_ROOT}}/dist/index.js</string>
     </array>
     <key>WorkingDirectory</key>
@@ -586,7 +586,7 @@ chmod 700 groups/
 
 Run manually for verbose output:
 ```bash
-npm run dev
+bun run dev
 # or
-node dist/index.js
+bun dist/index.js
 ```

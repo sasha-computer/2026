@@ -43,7 +43,7 @@ Read `package.json` and add the `openai` package to dependencies:
 Then install it:
 
 ```bash
-npm install
+bun install
 ```
 
 ### Step 2: Create Transcription Configuration
@@ -301,15 +301,8 @@ if (registeredGroups[chatJid]) {
 Run these commands to ensure everything compiles:
 
 ```bash
-npm install
-npm run build
-```
-
-If using `--legacy-peer-deps` (due to Zod version conflicts), use:
-
-```bash
-npm install --legacy-peer-deps
-npm run build
+bun install
+bun run build
 ```
 
 ### Step 7: Restart Gandalf
@@ -322,7 +315,7 @@ launchctl kickstart -k gui/$(id -u)/com.gandalf
 
 # Or if running manually:
 # Stop the current process and restart with:
-npm start
+bun run start
 ```
 
 Verify it started:
@@ -415,15 +408,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 ```
 
-### Dependency conflicts (Zod versions)
-
-If you see Zod version conflicts during `npm install`:
-```bash
-npm install --legacy-peer-deps
-```
-
-This resolves conflicts between OpenAI SDK (requires Zod v3) and other dependencies.
-
 ---
 
 ## Security Notes
@@ -453,7 +437,7 @@ To remove the feature:
 
 1. Remove from `package.json`:
    ```bash
-   npm uninstall openai
+   bun remove openai
    ```
 
 2. Delete `src/transcription.ts`
@@ -469,7 +453,7 @@ To remove the feature:
 
 6. Rebuild:
    ```bash
-   npm run build
+   bun run build
    launchctl kickstart -k gui/$(id -u)/com.gandalf
    ```
 

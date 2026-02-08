@@ -32,8 +32,8 @@ Single Node.js process that connects to Discord, routes messages to Claude Agent
 Run commands directly--don't tell the user to run them.
 
 ```bash
-npm run dev          # Run with hot reload
-npm run build        # Compile TypeScript
+bun run dev          # Run with hot reload
+bun run build        # Compile TypeScript
 ```
 
 Service management:

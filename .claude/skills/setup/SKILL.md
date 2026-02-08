@@ -12,7 +12,7 @@ Run all commands automatically. Only pause when user action is required (scannin
 ## 1. Install Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ## 2. Install Container Runtime
@@ -152,7 +152,7 @@ Tell the user:
 Run with a long Bash tool timeout (120000ms) so the user has time to scan. Do NOT use the `timeout` shell command (it's not available on macOS).
 
 ```bash
-npm run auth
+bun run auth
 ```
 
 Wait for the script to output "Successfully authenticated" then continue.
@@ -202,12 +202,12 @@ If they choose option 3, ask a follow-up:
 First build, then start the app briefly to connect to WhatsApp and sync group metadata. Use the Bash tool's timeout parameter (15000ms) — do NOT use the `timeout` shell command (it's not available on macOS). The app will be killed when the timeout fires, which is expected.
 
 ```bash
-npm run build
+bun run build
 ```
 
 Then run briefly (set Bash tool timeout to 15000ms):
 ```bash
-npm run dev
+bun run dev
 ```
 
 **For personal chat** (they chose option 1):
@@ -367,7 +367,7 @@ Tell the user:
 Generate the plist file with correct paths automatically:
 
 ```bash
-NODE_PATH=$(which node)
+BUN_PATH=$(which bun)
 PROJECT_PATH=$(pwd)
 HOME_PATH=$HOME
 
@@ -380,7 +380,7 @@ cat > ~/Library/LaunchAgents/com.gandalf.plist << EOF
     <string>com.gandalf</string>
     <key>ProgramArguments</key>
     <array>
-        <string>${NODE_PATH}</string>
+        <string>${BUN_PATH}</string>
         <string>${PROJECT_PATH}/dist/index.js</string>
     </array>
     <key>WorkingDirectory</key>
@@ -405,14 +405,14 @@ cat > ~/Library/LaunchAgents/com.gandalf.plist << EOF
 EOF
 
 echo "Created launchd plist with:"
-echo "  Node: ${NODE_PATH}"
+echo "  Bun: ${BUN_PATH}"
 echo "  Project: ${PROJECT_PATH}"
 ```
 
 Build and start the service:
 
 ```bash
-npm run build
+bun run build
 mkdir -p logs
 launchctl load ~/Library/LaunchAgents/com.gandalf.plist
 ```
@@ -451,7 +451,7 @@ The user should receive a response in WhatsApp.
 
 **WhatsApp disconnected**:
 - The service will show a macOS notification
-- Run `npm run auth` to re-authenticate
+- Run `bun run auth` to re-authenticate
 - Restart the service: `launchctl kickstart -k gui/$(id -u)/com.gandalf`
 
 **Unload service**:
