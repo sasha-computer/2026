@@ -1,5 +1,5 @@
 /**
- * NanoClaw Agent Runner
+ * Gandalf Agent Runner
  * Runs as a native subprocess, receives config via stdin, outputs result to stdout
  */
 
@@ -76,8 +76,8 @@ async function readStdin(): Promise<string> {
   });
 }
 
-const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
-const OUTPUT_END_MARKER = '---NANOCLAW_OUTPUT_END---';
+const OUTPUT_START_MARKER = '---GANDALF_OUTPUT_START---';
+const OUTPUT_END_MARKER = '---GANDALF_OUTPUT_END---';
 
 function writeOutput(output: AgentOutput): void {
   console.log(OUTPUT_START_MARKER);
@@ -283,14 +283,14 @@ async function main(): Promise<void> {
           'Bash',
           'Read', 'Write', 'Edit', 'Glob', 'Grep',
           'WebSearch', 'WebFetch',
-          'mcp__nanoclaw__*',
+          'mcp__gandalf__*',
           'mcp__qmd__*'
         ],
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
         settingSources: ['project'],
         mcpServers: {
-          nanoclaw: ipcMcp,
+          gandalf: ipcMcp,
           qmd: { command: 'qmd', args: ['mcp'], env: { PATH: `${process.env.HOME}/.bun/bin:${process.env.PATH}` } }
         },
         hooks: {

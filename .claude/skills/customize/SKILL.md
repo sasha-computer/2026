@@ -1,9 +1,9 @@
 ---
 name: customize
-description: Add new capabilities or modify NanoClaw behavior. Use when user wants to add channels (Telegram, Slack, email input), add integrations, modify the router, or make any other customizations. This is an interactive skill that asks questions to understand what the user wants.
+description: Add new capabilities or modify Gandalf behavior. Use when user wants to add channels (Telegram, Slack, email input), add integrations, modify the router, or make any other customizations. This is an interactive skill that asks questions to understand what the user wants.
 ---
 
-# NanoClaw Customization
+# Gandalf Customization
 
 This skill helps users add capabilities or modify behavior. Use AskUserQuestion to understand what they want before making changes.
 
@@ -91,8 +91,8 @@ Always tell the user:
 ```bash
 # Rebuild and restart
 npm run build
-launchctl unload ~/Library/LaunchAgents/com.nanoclaw.plist
-launchctl load ~/Library/LaunchAgents/com.nanoclaw.plist
+launchctl unload ~/Library/LaunchAgents/com.gandalf.plist
+launchctl load ~/Library/LaunchAgents/com.gandalf.plist
 ```
 
 ## Example Interaction

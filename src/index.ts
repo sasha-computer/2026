@@ -22,10 +22,8 @@ import {
   DISCORD_BOT_TOKEN,
   DISCORD_GUILD_ID,
   DISCORD_IGNORE_CHANNEL_IDS,
-  DISCORD_MAIN_CHANNEL_ID,
   DISCORD_MAX_MESSAGE_LENGTH,
   IPC_POLL_INTERVAL,
-  MAIN_GROUP_FOLDER,
   MAX_CONCURRENT_AGENTS,
   TIMEZONE,
 } from './config.js';
@@ -367,7 +365,7 @@ async function runAgentForGroup(
   prompt: string,
   chatJid: string,
 ): Promise<AgentResponse | 'error'> {
-  const isMain = group.folder === MAIN_GROUP_FOLDER;
+  const isMain = false;
   const sessionId = sessions[group.folder]?.[chatJid];
 
   // Update tasks snapshot for agent to read (filtered by group)
@@ -496,7 +494,7 @@ function startIpcWatcher(): void {
     }
 
     for (const sourceGroup of groupFolders) {
-      const isMain = sourceGroup === MAIN_GROUP_FOLDER;
+      const isMain = false;
       const messagesDir = path.join(ipcBaseDir, sourceGroup, 'messages');
       const tasksDir = path.join(ipcBaseDir, sourceGroup, 'tasks');
       const memoryDir = path.join(ipcBaseDir, sourceGroup, 'memory');
@@ -514,10 +512,7 @@ function startIpcWatcher(): void {
               if (data.type === 'message' && data.chatJid && data.text) {
                 // Authorization: verify this group can send to this chatJid
                 const targetGroup = getRegistrationForChannel(data.chatJid);
-                if (
-                  isMain ||
-                  (targetGroup && targetGroup.folder === sourceGroup)
-                ) {
+                if (targetGroup && targetGroup.folder === sourceGroup) {
                   await sendMessage(data.chatJid, data.text);
                   logger.info(
                     { chatJid: data.chatJid, sourceGroup },
@@ -784,27 +779,19 @@ async function processTaskIpc(
       break;
 
     case 'refresh_groups':
-      // Only main group can request a refresh
-      if (isMain) {
-        logger.info(
-          { sourceGroup },
-          'Channel metadata refresh requested via IPC',
-        );
-        await syncChannelMetadata(true);
-        // Write updated snapshot immediately
-        const availableGroups = getAvailableGroups();
-        writeGroupsSnapshot(
-          sourceGroup,
-          true,
-          availableGroups,
-          new Set(Object.keys(registeredGroups)),
-        );
-      } else {
-        logger.warn(
-          { sourceGroup },
-          'Unauthorized refresh_groups attempt blocked',
-        );
-      }
+      logger.info(
+        { sourceGroup },
+        'Channel metadata refresh requested via IPC',
+      );
+      await syncChannelMetadata(true);
+      // Write updated snapshot immediately
+      const availableGroups = getAvailableGroups();
+      writeGroupsSnapshot(
+        sourceGroup,
+        false,
+        availableGroups,
+        new Set(Object.keys(registeredGroups)),
+      );
       break;
 
     default:
@@ -831,11 +818,6 @@ async function processMemoryIpc(
 ): Promise<void> {
   const scope = data.scope ?? undefined;
   const scopeKey = data.scope_key ?? undefined;
-
-  if (scope === 'global' && !isMain) {
-    logger.warn({ sourceGroup }, 'Unauthorized global memory write blocked');
-    return;
-  }
 
   if (scope === 'channel' && scopeKey) {
     const target = registeredGroups[scopeKey];
@@ -1064,10 +1046,6 @@ async function connectDiscord(): Promise<void> {
     logger.error('DISCORD_GUILD_ID not set. Add it to .env');
     process.exit(1);
   }
-  if (!DISCORD_MAIN_CHANNEL_ID) {
-    logger.error('DISCORD_MAIN_CHANNEL_ID not set. Add it to .env');
-    process.exit(1);
-  }
 
   client = new Client({
     intents: [
@@ -1080,17 +1058,6 @@ async function connectDiscord(): Promise<void> {
 
   client.once('ready', async () => {
     logger.info({ user: client.user?.tag }, 'Connected to Discord');
-
-    // Auto-register main channel if not already registered
-    if (!registeredGroups[DISCORD_MAIN_CHANNEL_ID]) {
-      registerGroup(DISCORD_MAIN_CHANNEL_ID, {
-    name: 'main',
-    folder: MAIN_GROUP_FOLDER,
-    trigger: 'none',
-        added_at: new Date().toISOString(),
-        requiresTrigger: false,
-      });
-    }
 
     // Sync channel metadata on startup (respects 24h cache)
     await syncChannelMetadata().catch((err) =>
@@ -1172,9 +1139,9 @@ async function main(): Promise<void> {
   await connectDiscord();
 }
 
-if (process.env.NANOCLAW_TEST_MODE !== '1') {
+if (process.env.GANDALF_TEST_MODE !== '1') {
   main().catch((err) => {
-    logger.error({ err }, 'Failed to start NanoClaw');
+    logger.error({ err }, 'Failed to start Gandalf');
     process.exit(1);
   });
 }

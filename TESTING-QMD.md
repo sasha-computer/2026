@@ -24,13 +24,13 @@ qmd collection list
 
 ### 4. Verify service is running
 ```bash
-launchctl list | grep nanoclaw
-# Expected: Process ID, exit code 0, com.nanoclaw
+launchctl list | grep gandalf
+# Expected: Process ID, exit code 0, com.gandalf
 ```
 
 ### 5. Verify PATH in service config
 ```bash
-grep -A1 PATH ~/Library/LaunchAgents/com.nanoclaw.plist
+grep -A1 PATH ~/Library/LaunchAgents/com.gandalf.plist
 # Expected: PATH includes /Users/agentsc/.bun/bin
 ```
 
@@ -39,28 +39,28 @@ grep -A1 PATH ~/Library/LaunchAgents/com.nanoclaw.plist
 ### Test 1: Keyword Search
 ```bash
 export PATH="/Users/agentsc/.bun/bin:$PATH"
-qmd search "memory" -c nanoclaw-main -n 3
+qmd search "memory" -c gandalf-main -n 3
 ```
 
 **Expected:** Results from main/CLAUDE.md with snippets containing "memory"
 
 ### Test 2: Vector Semantic Search
 ```bash
-qmd vsearch "how to remember information" -c nanoclaw-main -n 3
+qmd vsearch "how to remember information" -c gandalf-main -n 3
 ```
 
 **Expected:** Results related to memory/storage concepts, even without exact keyword match
 
 ### Test 3: Hybrid Query
 ```bash
-qmd query "agent capabilities and features" -c nanoclaw-global --min-score 0.2
+qmd query "agent capabilities and features" -c gandalf-global --min-score 0.2
 ```
 
 **Expected:** Relevant results from global CLAUDE.md with scores > 0.2
 
 ### Test 4: Get Specific Document
 ```bash
-qmd get qmd://nanoclaw-main/claude.md
+qmd get qmd://gandalf-main/claude.md
 ```
 
 **Expected:** Full contents of main/CLAUDE.md
@@ -100,7 +100,7 @@ These tests should be performed from Discord by sending messages to the main cha
 
 **Expected:** Agent calls `mcp__qmd__query` with:
 - `query`: "scheduling"
-- `collection`: "nanoclaw-main"
+- `collection`: "gandalf-main"
 
 Results should include mentions of task scheduling from CLAUDE.md
 
@@ -112,7 +112,7 @@ Results should include mentions of task scheduling from CLAUDE.md
 ### Test 4: Get Specific File
 **Send:** "Get the global CLAUDE.md file using QMD"
 
-**Expected:** Agent calls `mcp__qmd__get` with path `qmd://nanoclaw-global/claude.md`, returns file contents
+**Expected:** Agent calls `mcp__qmd__get` with path `qmd://gandalf-global/claude.md`, returns file contents
 
 ### Test 5: Multi-get Pattern
 **Send:** "Get all CLAUDE.md files from all groups, limit 30 lines each"
@@ -147,14 +147,14 @@ bash scripts/setup-qmd.sh
 
 ### Test 1: Invalid Collection Name
 ```bash
-qmd search "test" -c nanoclaw-nonexistent
+qmd search "test" -c gandalf-nonexistent
 ```
 
 **Expected:** Error message about collection not found
 
 ### Test 2: Invalid Document Path
 ```bash
-qmd get qmd://nanoclaw-main/nonexistent.md
+qmd get qmd://gandalf-main/nonexistent.md
 ```
 
 **Expected:** Error message about document not found
@@ -177,14 +177,14 @@ time qmd embed
 
 ### Test 2: Search Speed (Keyword)
 ```bash
-time qmd search "memory" -c nanoclaw-main
+time qmd search "memory" -c gandalf-main
 ```
 
 **Expected:** < 1 second
 
 ### Test 3: Search Speed (Semantic)
 ```bash
-time qmd vsearch "agent capabilities" -c nanoclaw-global
+time qmd vsearch "agent capabilities" -c gandalf-global
 ```
 
 **Expected:** 1-2 seconds
@@ -196,7 +196,7 @@ time qmd query "task scheduling features" --min-score 0.3
 
 **Expected:** 2-3 seconds
 
-## Integration with NanoClaw
+## Integration with Gandalf
 
 ### Test 1: Agent Can Call QMD Tools
 From Discord main channel:
@@ -218,7 +218,7 @@ From Discord main channel:
 ### Test 3: Agent Respects Collection Boundaries
 **Send:** "Search only the main channel for 'admin'"
 
-**Expected:** Agent includes `collection: "nanoclaw-main"` parameter
+**Expected:** Agent includes `collection: "gandalf-main"` parameter
 
 ## Scheduled Task Test (Future)
 
@@ -257,7 +257,7 @@ sqlite3 store/messages.db "
 1. Is `mcp__qmd__*` in allowedTools? (agent-runner.ts:287)
 2. Is QMD in mcpServers config? (agent-runner.ts:293)
 3. Was service restarted after code changes?
-4. Check logs: `tail -50 ~/nanoclaw/logs/nanoclaw.error.log`
+4. Check logs: `tail -50 ~/gandalf/logs/gandalf.error.log`
 
 ### Issue: No search results
 **Fix:** Re-embed: `qmd embed -f`
@@ -277,7 +277,7 @@ sqlite3 store/messages.db "
 ✅ All agent integration tests pass
 ✅ QMD tools appear in agent's tool list
 ✅ Agents use QMD when asked to search memory
-✅ No errors in NanoClaw logs related to QMD
+✅ No errors in Gandalf logs related to QMD
 ✅ Collections update correctly when files change
 ✅ Performance is acceptable (< 2s per search)
 

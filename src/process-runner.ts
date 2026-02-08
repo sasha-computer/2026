@@ -1,5 +1,5 @@
 /**
- * Process Runner for NanoClaw
+ * Process Runner for Gandalf
  * Spawns agent execution as native Node.js subprocess and handles IPC
  */
 import { ChildProcess, spawn } from 'child_process';
@@ -16,8 +16,8 @@ import { logger } from './logger.js';
 import { RegisteredGroup } from './types.js';
 
 // Sentinel markers for robust output parsing (must match agent-runner)
-const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
-const OUTPUT_END_MARKER = '---NANOCLAW_OUTPUT_END---';
+const OUTPUT_START_MARKER = '---GANDALF_OUTPUT_START---';
+const OUTPUT_END_MARKER = '---GANDALF_OUTPUT_END---';
 
 export interface AgentInput {
   prompt: string;
@@ -344,20 +344,18 @@ export interface AvailableGroup {
 
 /**
  * Write available groups snapshot for the agent to read.
- * Only main group can see all available groups (for activation).
- * Non-main groups only see their own registration status.
+ * All groups see the same available groups list.
  */
 export function writeGroupsSnapshot(
   groupFolder: string,
-  isMain: boolean,
+  _isMain: boolean,
   groups: AvailableGroup[],
   registeredJids: Set<string>,
 ): void {
   const groupIpcDir = path.join(DATA_DIR, 'ipc', groupFolder);
   fs.mkdirSync(groupIpcDir, { recursive: true });
 
-  // Main sees all groups; others see nothing (they can't activate groups)
-  const visibleGroups = isMain ? groups : [];
+  const visibleGroups = groups;
 
   const groupsFile = path.join(groupIpcDir, 'available_groups.json');
   fs.writeFileSync(

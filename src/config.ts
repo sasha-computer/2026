@@ -12,7 +12,7 @@ export const DISCORD_IGNORE_CHANNEL_IDS = new Set(
 export const DISCORD_MAX_MESSAGE_LENGTH = 2000;
 
 // Paths
-const PROJECT_ROOT = process.env.NANOCLAW_PROJECT_ROOT || process.cwd();
+const PROJECT_ROOT = process.env.GANDALF_PROJECT_ROOT || process.cwd();
 export const STORE_DIR = path.resolve(PROJECT_ROOT, 'store');
 export const GROUPS_DIR = path.resolve(PROJECT_ROOT, 'groups');
 export const DATA_DIR = path.resolve(PROJECT_ROOT, 'data');

@@ -1,4 +1,4 @@
-# NanoClaw Specification
+# Gandalf Specification
 
 A personal Claude assistant accessible via WhatsApp, with persistent memory per conversation, scheduled tasks, and email integration.
 
@@ -62,7 +62,7 @@ A personal Claude assistant accessible via WhatsApp, with persistent memory per 
 │  │    • Read, Write, Edit, Glob, Grep (file operations)           │   │
 │  │    • WebSearch, WebFetch (internet access)                     │   │
 │  │    • agent-browser (browser automation)                        │   │
-│  │    • mcp__nanoclaw__* (scheduler tools via IPC)                │   │
+│  │    • mcp__gandalf__* (scheduler tools via IPC)                │   │
 │  │                                                                │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 │                                                                      │
@@ -85,7 +85,7 @@ A personal Claude assistant accessible via WhatsApp, with persistent memory per 
 ## Folder Structure
 
 ```
-nanoclaw/
+gandalf/
 ├── CLAUDE.md                      # Project context for Claude Code
 ├── docs/
 │   ├── SPEC.md                    # This specification document
@@ -152,12 +152,12 @@ nanoclaw/
 │   └── ipc/                       # Container IPC (messages/, tasks/)
 │
 ├── logs/                          # Runtime logs (gitignored)
-│   ├── nanoclaw.log               # Host stdout
-│   └── nanoclaw.error.log         # Host stderr
+│   ├── gandalf.log               # Host stdout
+│   └── gandalf.error.log         # Host stderr
 │   # Note: Per-container logs are in groups/{folder}/logs/container-*.log
 │
 └── launchd/
-    └── com.nanoclaw.plist         # macOS service configuration
+    └── com.gandalf.plist         # macOS service configuration
 ```
 
 ---
@@ -179,7 +179,7 @@ export const GROUPS_DIR = path.resolve(PROJECT_ROOT, 'groups');
 export const DATA_DIR = path.resolve(PROJECT_ROOT, 'data');
 
 // Container configuration
-export const CONTAINER_IMAGE = process.env.CONTAINER_IMAGE || 'nanoclaw-agent:latest';
+export const CONTAINER_IMAGE = process.env.CONTAINER_IMAGE || 'gandalf-agent:latest';
 export const CONTAINER_TIMEOUT = parseInt(process.env.CONTAINER_TIMEOUT || '300000', 10);
 export const IPC_POLL_INTERVAL = 1000;
 
@@ -237,7 +237,7 @@ Only the authentication variables (`CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_
 ### Placeholder Values in launchd
 
 Files with `{{PLACEHOLDER}}` values need to be configured:
-- `{{PROJECT_ROOT}}` - Absolute path to your nanoclaw installation
+- `{{PROJECT_ROOT}}` - Absolute path to your gandalf installation
 - `{{NODE_PATH}}` - Path to node binary (detected via `which node`)
 - `{{HOME}}` - User's home directory
 
@@ -245,7 +245,7 @@ Files with `{{PLACEHOLDER}}` values need to be configured:
 
 ## Memory System
 
-NanoClaw uses a hierarchical memory system based on CLAUDE.md files.
+Gandalf uses a hierarchical memory system based on CLAUDE.md files.
 
 ### Memory Hierarchy
 
@@ -328,7 +328,7 @@ Sessions enable conversation continuity - Claude remembers what you talked about
    ├── cwd: groups/{group-name}/
    ├── prompt: conversation history + current message
    ├── resume: session_id (for continuity)
-   └── mcpServers: nanoclaw (scheduler)
+   └── mcpServers: gandalf (scheduler)
    │
    ▼
 8. Claude processes message:
@@ -358,7 +358,7 @@ This allows the agent to understand the conversation context even if it wasn't m
 
 ## Commands
 
-NanoClaw exposes slash commands in Discord:
+Gandalf exposes slash commands in Discord:
 - `/new` - Reset the conversation session
 - `/clear` - Compact context and continue from summary
 - `/status` - Show bot status and channel info
@@ -367,7 +367,7 @@ NanoClaw exposes slash commands in Discord:
 
 ## Scheduled Tasks
 
-NanoClaw has a built-in scheduler that runs tasks as full agents in their group's context.
+Gandalf has a built-in scheduler that runs tasks as full agents in their group's context.
 
 ### How Scheduling Works
 
@@ -389,7 +389,7 @@ NanoClaw has a built-in scheduler that runs tasks as full agents in their group'
 ```
 User: remind me every Monday at 9am to review the weekly metrics
 
-Claude: [calls mcp__nanoclaw__schedule_task]
+Claude: [calls mcp__gandalf__schedule_task]
         {
           "prompt": "Send a reminder to review weekly metrics. Be encouraging!",
           "schedule_type": "cron",
@@ -404,7 +404,7 @@ Claude: Done! I'll remind you every Monday at 9am.
 ```
 User: at 5pm today, send me a summary of today's emails
 
-Claude: [calls mcp__nanoclaw__schedule_task]
+Claude: [calls mcp__gandalf__schedule_task]
         {
           "prompt": "Search for today's emails, summarize the important ones, and send the summary to the group.",
           "schedule_type": "once",
@@ -428,9 +428,9 @@ From main channel:
 
 ## MCP Servers
 
-### NanoClaw MCP (built-in)
+### Gandalf MCP (built-in)
 
-The `nanoclaw` MCP server is created dynamically per agent call with the current group's context.
+The `gandalf` MCP server is created dynamically per agent call with the current group's context.
 
 **Available Tools:**
 | Tool | Purpose |
@@ -448,11 +448,11 @@ The `nanoclaw` MCP server is created dynamically per agent call with the current
 
 ## Deployment
 
-NanoClaw runs as a single macOS launchd service.
+Gandalf runs as a single macOS launchd service.
 
 ### Startup Sequence
 
-When NanoClaw starts, it:
+When Gandalf starts, it:
 1. **Ensures Apple Container system is running** - Automatically starts it if needed (survives reboots)
 2. Initializes the SQLite database
 3. Loads state (registered groups, sessions, router state)
@@ -461,16 +461,16 @@ When NanoClaw starts, it:
 6. Starts the scheduler loop
 7. Starts the IPC watcher for container messages
 
-### Service: com.nanoclaw
+### Service: com.gandalf
 
-**launchd/com.nanoclaw.plist:**
+**launchd/com.gandalf.plist:**
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "...">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.nanoclaw</string>
+    <string>com.gandalf</string>
     <key>ProgramArguments</key>
     <array>
         <string>{{NODE_PATH}}</string>
@@ -490,9 +490,9 @@ When NanoClaw starts, it:
         <string>{{HOME}}</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>{{PROJECT_ROOT}}/logs/nanoclaw.log</string>
+    <string>{{PROJECT_ROOT}}/logs/gandalf.log</string>
     <key>StandardErrorPath</key>
-    <string>{{PROJECT_ROOT}}/logs/nanoclaw.error.log</string>
+    <string>{{PROJECT_ROOT}}/logs/gandalf.error.log</string>
 </dict>
 </plist>
 ```
@@ -501,19 +501,19 @@ When NanoClaw starts, it:
 
 ```bash
 # Install service
-cp launchd/com.nanoclaw.plist ~/Library/LaunchAgents/
+cp launchd/com.gandalf.plist ~/Library/LaunchAgents/
 
 # Start service
-launchctl load ~/Library/LaunchAgents/com.nanoclaw.plist
+launchctl load ~/Library/LaunchAgents/com.gandalf.plist
 
 # Stop service
-launchctl unload ~/Library/LaunchAgents/com.nanoclaw.plist
+launchctl unload ~/Library/LaunchAgents/com.gandalf.plist
 
 # Check status
-launchctl list | grep nanoclaw
+launchctl list | grep gandalf
 
 # View logs
-tail -f logs/nanoclaw.log
+tail -f logs/gandalf.log
 ```
 
 ---
@@ -569,8 +569,8 @@ chmod 700 groups/
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| No response to messages | Service not running | Check `launchctl list | grep nanoclaw` |
-| "Claude Code process exited with code 1" | Apple Container failed to start | Check logs; NanoClaw auto-starts container system but may fail |
+| No response to messages | Service not running | Check `launchctl list | grep gandalf` |
+| "Claude Code process exited with code 1" | Apple Container failed to start | Check logs; Gandalf auto-starts container system but may fail |
 | "Claude Code process exited with code 1" | Session mount path wrong | Ensure mount is to `/home/node/.claude/` not `/root/.claude/` |
 | Session not continuing | Session ID not saved | Check `data/sessions.json` |
 | Session not continuing | Mount path mismatch | Container user is `node` with HOME=/home/node; sessions must be at `/home/node/.claude/` |
@@ -579,8 +579,8 @@ chmod 700 groups/
 
 ### Log Location
 
-- `logs/nanoclaw.log` - stdout
-- `logs/nanoclaw.error.log` - stderr
+- `logs/gandalf.log` - stdout
+- `logs/gandalf.error.log` - stderr
 
 ### Debug Mode
 

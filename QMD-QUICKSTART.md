@@ -2,7 +2,7 @@
 
 ## What is QMD?
 
-QMD is a local semantic search engine that gives your NanoClaw agents powerful memory search capabilities. It combines:
+QMD is a local semantic search engine that gives your Gandalf agents powerful memory search capabilities. It combines:
 - **BM25 keyword search** - Fast, exact matching
 - **Vector embeddings** - Semantic, meaning-based search
 - **LLM reranking** - Best quality results
@@ -22,7 +22,7 @@ qmd query "what we discussed about X" --min-score 0.3
 
 ### Search Specific Group
 ```bash
-qmd query "user preferences" -c nanoclaw-main
+qmd query "user preferences" -c gandalf-main
 ```
 
 ### List Collections
@@ -54,14 +54,14 @@ bash scripts/update-qmd-embeddings.sh
 
 ## Collections
 
-Your NanoClaw instance has these collections:
+Your Gandalf instance has these collections:
 
-- **nanoclaw-main** - Main admin channel
-- **nanoclaw-global** - Shared global memory
-- **nanoclaw-chan-general-387168** - Discord #general
-- **nanoclaw-chan-mac-771898** - Discord #mac
-- **nanoclaw-chan-meta-123334** - Discord #meta
-- **nanoclaw-chan-trading-379090** - Discord #trading
+- **gandalf-main** - Main admin channel
+- **gandalf-global** - Shared global memory
+- **gandalf-chan-general-387168** - Discord #general
+- **gandalf-chan-mac-771898** - Discord #mac
+- **gandalf-chan-meta-123334** - Discord #meta
+- **gandalf-chan-trading-379090** - Discord #trading
 
 Each collection indexes all `*.md` files in its group directory:
 - `CLAUDE.md` (agent memory)
@@ -74,7 +74,7 @@ From Discord main channel:
 
 **You:** "Schedule a task to run `bash scripts/update-qmd-embeddings.sh` every hour"
 
-**Gandalf:** [Uses `mcp__nanoclaw__schedule_task` to create hourly cron job]
+**Gandalf:** [Uses `mcp__gandalf__schedule_task` to create hourly cron job]
 
 This keeps your search index fresh as conversations are archived.
 
@@ -97,7 +97,7 @@ Agent uses semantic search to find thematically related discussions.
 ### Agent says "I don't have access to QMD tools"
 1. Check that the service was restarted after installation
 2. Verify agent-runner.ts has `mcp__qmd__*` in allowedTools
-3. Check logs: `tail -50 ~/nanoclaw/logs/nanoclaw.error.log`
+3. Check logs: `tail -50 ~/gandalf/logs/gandalf.error.log`
 
 ### Search returns no results
 ```bash
@@ -117,7 +117,7 @@ which qmd
 ### Service can't find qmd
 Check that PATH in launchd plist includes `/Users/agentsc/.bun/bin`:
 ```bash
-grep PATH ~/Library/LaunchAgents/com.nanoclaw.plist
+grep PATH ~/Library/LaunchAgents/com.gandalf.plist
 ```
 
 ## Performance

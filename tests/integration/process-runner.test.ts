@@ -6,8 +6,8 @@ import path from 'path';
 import type { ChildProcess } from 'child_process';
 import type { RegisteredGroup } from '../../src/types.js';
 
-const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'nanoclaw-runner-'));
-process.env.NANOCLAW_PROJECT_ROOT = testRoot;
+const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gandalf-runner-'));
+process.env.GANDALF_PROJECT_ROOT = testRoot;
 
 const { runAgent } = await import('../../src/process-runner.js');
 test('runAgent parses output markers', async () => {
@@ -54,7 +54,7 @@ test('runAgent parses output markers', async () => {
     queueMicrotask(() => {
       proc.stdout.emit(
         'data',
-        `---NANOCLAW_OUTPUT_START---${JSON.stringify(output)}---NANOCLAW_OUTPUT_END---`,
+        `---GANDALF_OUTPUT_START---${JSON.stringify(output)}---GANDALF_OUTPUT_END---`,
       );
       proc.exitCode = 0;
       proc.emit('close', 0);

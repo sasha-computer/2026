@@ -1,5 +1,5 @@
 /**
- * IPC-based MCP Server for NanoClaw
+ * IPC-based MCP Server for Gandalf
  * Writes messages and tasks to files for the host process to pick up
  */
 
@@ -37,7 +37,7 @@ export function createIpcMcp(ctx: IpcMcpContext) {
   const memoryDir = path.join(ipcDir, 'memory');
 
   return createSdkMcpServer({
-    name: 'nanoclaw',
+    name: 'gandalf',
     version: '1.0.0',
     tools: [
       tool(

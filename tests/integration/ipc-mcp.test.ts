@@ -6,7 +6,7 @@ import path from 'path';
 import { writeIpcFile } from '../../src/ipc-mcp.js';
 
 test('writeIpcFile writes JSON atomically', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nanoclaw-ipc-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gandalf-ipc-'));
   const payload = { type: 'message', text: 'hello' };
 
   const filename = writeIpcFile(dir, payload);

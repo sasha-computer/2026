@@ -14,7 +14,7 @@ Be terse and precise. No filler, no pleasantries unless the user initiates them.
 
 Two output channels:
 
-- **mcp__nanoclaw__send_message** — Send immediately while still running. Can call multiple times.
+- **mcp__gandalf__send_message** — Send immediately while still running. Can call multiple times.
 - **Output userMessage** — Final message sent on completion.
 
 **internalLog** — Logged only, not sent to user.
@@ -54,7 +54,7 @@ You have semantic search across all memory and conversations via QMD tools:
 - Recalling user preferences or decisions
 
 **Collection naming:**
-- Your group's memory: `nanoclaw-{folder}` (use the folder name from your group directory)
-- Global shared memory: `nanoclaw-global`
+- Your group's memory: `gandalf-{folder}` (use the folder name from your group directory)
+- Global shared memory: `gandalf-global`
 
 Use the `collection` parameter to filter results to specific groups.

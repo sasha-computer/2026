@@ -1,4 +1,4 @@
-# After macOS Tahoe Upgrade - Complete NanoClaw Setup
+# After macOS Tahoe Upgrade - Complete Gandalf Setup
 
 ## 1. Install Apple Container
 ```bash
@@ -6,23 +6,23 @@ brew install container
 container system start
 ```
 
-## 2. Build the NanoClaw agent container image
+## 2. Build the Gandalf agent container image
 ```bash
-cd ~/nanoclaw
+cd ~/gandalf
 ./container/build.sh
 ```
 
-## 3. Test NanoClaw
+## 3. Test Gandalf
 ```bash
-cd ~/nanoclaw
+cd ~/gandalf
 npm run start
 ```
-You should see "Connected to Discord" and "NanoClaw running on Discord" in the logs.
+You should see "Connected to Discord" and "Gandalf running on Discord" in the logs.
 Send a message in any channel in your Gymnasium server to test.
 
 ## 4. Install as launchd service (auto-start on boot)
 ```bash
-cd ~/nanoclaw
+cd ~/gandalf
 # Fill in the plist template
 sed -e "s|{{NODE_PATH}}|$(which node)|g" \
     -e "s|{{PROJECT_ROOT}}|$(pwd)|g" \
@@ -30,10 +30,10 @@ sed -e "s|{{NODE_PATH}}|$(which node)|g" \
     -e "s|{{DISCORD_BOT_TOKEN}}|$(grep DISCORD_BOT_TOKEN .env | cut -d= -f2)|g" \
     -e "s|{{DISCORD_GUILD_ID}}|$(grep DISCORD_GUILD_ID .env | cut -d= -f2)|g" \
     -e "s|{{DISCORD_MAIN_CHANNEL_ID}}|$(grep DISCORD_MAIN_CHANNEL_ID .env | cut -d= -f2)|g" \
-    launchd/com.nanoclaw.plist > ~/Library/LaunchAgents/com.nanoclaw.plist
+    launchd/com.gandalf.plist > ~/Library/LaunchAgents/com.gandalf.plist
 
 # Load the service
-launchctl load ~/Library/LaunchAgents/com.nanoclaw.plist
+launchctl load ~/Library/LaunchAgents/com.gandalf.plist
 ```
 
 ## Config summary

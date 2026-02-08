@@ -2,7 +2,7 @@
 
 ## What Was Done
 
-Successfully integrated QMD (local semantic search engine) into NanoClaw, giving agents powerful search capabilities across their memory and conversation archives.
+Successfully integrated QMD (local semantic search engine) into Gandalf, giving agents powerful search capabilities across their memory and conversation archives.
 
 ## Components Installed
 
@@ -21,12 +21,12 @@ Successfully integrated QMD (local semantic search engine) into NanoClaw, giving
 
 All group directories have been indexed as QMD collections:
 
-- `nanoclaw-main` - Main admin channel (1 file indexed)
-- `nanoclaw-global` - Shared global memory (1 file indexed)
-- `nanoclaw-chan-general-387168` - Discord channel (1 file indexed)
-- `nanoclaw-chan-mac-771898` - Discord channel (empty)
-- `nanoclaw-chan-meta-123334` - Discord channel (empty)
-- `nanoclaw-chan-trading-379090` - Discord channel (empty)
+- `gandalf-main` - Main admin channel (1 file indexed)
+- `gandalf-global` - Shared global memory (1 file indexed)
+- `gandalf-chan-general-387168` - Discord channel (1 file indexed)
+- `gandalf-chan-mac-771898` - Discord channel (empty)
+- `gandalf-chan-meta-123334` - Discord channel (empty)
+- `gandalf-chan-trading-379090` - Discord channel (empty)
 
 Each collection indexes all `**/*.md` files in its group directory, including:
 - `CLAUDE.md` (agent memory)
@@ -55,13 +55,13 @@ Added same QMD documentation plus "QMD Administration" section with commands for
 - Collection management
 - Context management
 
-### ~/Library/LaunchAgents/com.nanoclaw.plist
+### ~/Library/LaunchAgents/com.gandalf.plist
 Updated PATH environment variable to include `/Users/agentsc/.bun/bin` so QMD is available to agent subprocesses.
 
 ## Scripts Created
 
 ### scripts/setup-qmd.sh
-Initializes all QMD collections for NanoClaw groups:
+Initializes all QMD collections for Gandalf groups:
 - Creates collection for each `groups/*/` directory
 - Adds context descriptions for each collection
 - Runs initial embedding
@@ -100,7 +100,7 @@ Fast BM25 keyword search. Good for exact phrase matching.
 Retrieve a specific document by path or docid.
 
 **Parameters:**
-- `path` (string) - Document path (e.g., `qmd://nanoclaw-main/claude.md`)
+- `path` (string) - Document path (e.g., `qmd://gandalf-main/claude.md`)
 - `from_line` (number, optional) - Start from line number
 - `max_lines` (number, optional) - Maximum lines to return
 
@@ -129,7 +129,7 @@ mcp__qmd__query({
 ```typescript
 mcp__qmd__query({
   query: "user preferences",
-  collection: "nanoclaw-main",
+  collection: "gandalf-main",
   count: 10
 })
 ```
@@ -137,7 +137,7 @@ mcp__qmd__query({
 ### Get a specific file
 ```typescript
 mcp__qmd__get({
-  path: "qmd://nanoclaw-main/claude.md"
+  path: "qmd://gandalf-main/claude.md"
 })
 ```
 
@@ -153,7 +153,7 @@ mcp__qmd__multi_get({
 
 ### Manual Index Update
 ```bash
-cd /Users/agentsc/nanoclaw
+cd /Users/agentsc/gandalf
 export PATH="/Users/agentsc/.bun/bin:$PATH"
 qmd update && qmd embed
 ```
@@ -174,7 +174,7 @@ bash scripts/setup-qmd.sh
 
 1. **Schedule Hourly Embedding Task** (from main channel):
    ```
-   Use mcp__nanoclaw__schedule_task to run scripts/update-qmd-embeddings.sh every hour
+   Use mcp__gandalf__schedule_task to run scripts/update-qmd-embeddings.sh every hour
    ```
 
 2. **Test Search Integration** (from main channel):
@@ -184,7 +184,7 @@ bash scripts/setup-qmd.sh
 
 3. **Add Custom Context** (optional, from main channel):
    ```bash
-   qmd context add qmd://nanoclaw-chan-general-387168 "General discussion channel with user preferences and casual conversations"
+   qmd context add qmd://gandalf-chan-general-387168 "General discussion channel with user preferences and casual conversations"
    ```
 
 ## Verification
@@ -197,7 +197,7 @@ $ qmd collection list
 
 ### Search works
 ```bash
-$ qmd search "memory" -c nanoclaw-main -n 3
+$ qmd search "memory" -c gandalf-main -n 3
 # Should return results from main/CLAUDE.md
 ```
 
@@ -225,7 +225,7 @@ qmd embed -f
 ### Agent can't access QMD tools
 1. Check that agent-runner.ts has `mcp__qmd__*` in allowedTools
 2. Verify the service was restarted after code changes
-3. Check logs at `/Users/agentsc/nanoclaw/logs/nanoclaw.error.log`
+3. Check logs at `/Users/agentsc/gandalf/logs/gandalf.error.log`
 
 ## Performance Notes
 
