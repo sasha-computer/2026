@@ -60,8 +60,14 @@ import {
 } from './db.js';
 import { GroupQueue } from './group-queue.js';
 import { startSchedulerLoop } from './task-scheduler.js';
-import { RegisteredGroup } from './types.js';
+import { MemoryItem, RegisteredGroup } from './types.js';
 import { logger } from './logger.js';
+import {
+  forgetMemory,
+  formatMemoryBlock,
+  getEffectiveMemoryItems,
+  saveMemoryItem,
+} from './memory-service.js';
 
 const GROUP_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -78,6 +84,8 @@ let ipcWatcherRunning = false;
 let groupSyncTimerStarted = false;
 
 const queue = new GroupQueue();
+const MEMORY_INSTRUCTION =
+  'If the user asks to remember/save something, you MUST call the memory_save tool to persist it. If they ask to forget, call memory_forget. If they ask what you remember, call memory_list.';
 
 async function setTyping(channelId: string, isTyping: boolean): Promise<void> {
   if (!isTyping) return; // Discord typing auto-expires; no "stop" needed
@@ -89,6 +97,24 @@ async function setTyping(channelId: string, isTyping: boolean): Promise<void> {
   } catch (err) {
     logger.debug({ channelId, err }, 'Failed to send typing indicator');
   }
+}
+
+function writeMemorySnapshot(
+  groupFolder: string,
+  chatJid: string,
+  userId: string | undefined,
+  items: MemoryItem[],
+): void {
+  const ipcDir = path.join(DATA_DIR, 'ipc', groupFolder);
+  fs.mkdirSync(ipcDir, { recursive: true });
+  const snapshotPath = path.join(ipcDir, 'current_memory.json');
+  const snapshot = {
+    generated_at: new Date().toISOString(),
+    chatJid,
+    userId: userId ?? null,
+    items,
+  };
+  fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
 }
 
 function loadState(): void {
@@ -290,7 +316,21 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
         .replace(/"/g, '&quot;');
     return `<message sender="${escapeXml(m.sender_name)}" time="${m.timestamp}">${escapeXml(m.content)}</message>`;
   });
-  const prompt = `<messages>\n${lines.join('\n')}\n</messages>`;
+  let prompt = `<messages>\n${lines.join('\n')}\n</messages>`;
+
+  const lastSender = missedMessages[missedMessages.length - 1]?.sender;
+  const memoryItems = getEffectiveMemoryItems({
+    chatJid,
+    userId: lastSender,
+  });
+  writeMemorySnapshot(group.folder, chatJid, lastSender, memoryItems);
+  const memoryBlock = formatMemoryBlock(memoryItems);
+  const instructionBlock = `<memory_instructions>${MEMORY_INSTRUCTION}</memory_instructions>`;
+  if (memoryBlock) {
+    prompt = `${instructionBlock}\n${memoryBlock}\n\n${prompt}`;
+  } else {
+    prompt = `${instructionBlock}\n\n${prompt}`;
+  }
 
   logger.info(
     { group: group.name, messageCount: missedMessages.length },
@@ -479,6 +519,7 @@ function startIpcWatcher(): void {
       const isMain = sourceGroup === MAIN_GROUP_FOLDER;
       const messagesDir = path.join(ipcBaseDir, sourceGroup, 'messages');
       const tasksDir = path.join(ipcBaseDir, sourceGroup, 'tasks');
+      const memoryDir = path.join(ipcBaseDir, sourceGroup, 'memory');
 
       // Process messages from this group's IPC directory
       try {
@@ -560,6 +601,36 @@ function startIpcWatcher(): void {
         }
       } catch (err) {
         logger.error({ err, sourceGroup }, 'Error reading IPC tasks directory');
+      }
+
+      // Process memory actions from this group's IPC directory
+      try {
+        if (fs.existsSync(memoryDir)) {
+          const memoryFiles = fs
+            .readdirSync(memoryDir)
+            .filter((f) => f.endsWith('.json'));
+          for (const file of memoryFiles) {
+            const filePath = path.join(memoryDir, file);
+            try {
+              const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+              await processMemoryIpc(data, sourceGroup, isMain);
+              fs.unlinkSync(filePath);
+            } catch (err) {
+              logger.error(
+                { file, sourceGroup, err },
+                'Error processing IPC memory action',
+              );
+              const errorDir = path.join(ipcBaseDir, 'errors');
+              fs.mkdirSync(errorDir, { recursive: true });
+              fs.renameSync(
+                filePath,
+                path.join(errorDir, `${sourceGroup}-${file}`),
+              );
+            }
+          }
+        }
+      } catch (err) {
+        logger.error({ err, sourceGroup }, 'Error reading IPC memory directory');
       }
     }
 
@@ -758,6 +829,91 @@ async function processTaskIpc(
 
     default:
       logger.warn({ type: data.type }, 'Unknown IPC task type');
+  }
+}
+
+async function processMemoryIpc(
+  data: {
+    type: string;
+    scope?: string | null;
+    scope_key?: string | null;
+    memory_type?: string | null;
+    content?: string | null;
+    importance?: number | null;
+    ttl_seconds?: number | null;
+    replace?: boolean | null;
+    id?: string | null;
+    contains?: string | null;
+    chatJid?: string | null;
+  },
+  sourceGroup: string,
+  isMain: boolean,
+): Promise<void> {
+  const scope = data.scope ?? undefined;
+  const scopeKey = data.scope_key ?? undefined;
+
+  if (scope === 'global' && !isMain) {
+    logger.warn({ sourceGroup }, 'Unauthorized global memory write blocked');
+    return;
+  }
+
+  if (scope === 'channel' && scopeKey) {
+    const target = registeredGroups[scopeKey];
+    if (!target) {
+      logger.warn({ scopeKey }, 'Channel memory scope not registered');
+      return;
+    }
+    if (!isMain && target.folder !== sourceGroup) {
+      logger.warn(
+        { sourceGroup, targetFolder: target.folder },
+        'Unauthorized channel memory write blocked',
+      );
+      return;
+    }
+  }
+
+  if (data.type === 'memory_save') {
+    if (!scope || !data.memory_type || !data.content) {
+      logger.warn({ data }, 'Invalid memory_save payload');
+      return;
+    }
+
+    saveMemoryItem({
+      scope: scope as 'global' | 'channel' | 'user',
+      scope_key: scope === 'global' ? null : scopeKey,
+      type: data.memory_type as 'preference' | 'fact' | 'tool_state',
+      content: data.content,
+      importance: data.importance ?? 0,
+      ttl_seconds: data.ttl_seconds ?? null,
+      replace: data.replace ?? false,
+      source: 'ipc',
+    });
+  } else if (data.type === 'memory_forget') {
+    if (!data.id && !scope && !data.memory_type && !data.contains) {
+      logger.warn({ data }, 'Invalid memory_forget payload');
+      return;
+    }
+
+    forgetMemory({
+      id: data.id ?? undefined,
+      scope: scope as 'global' | 'channel' | 'user' | undefined,
+      scope_key: scope === 'global' ? null : scopeKey,
+      type: data.memory_type as 'preference' | 'fact' | 'tool_state' | undefined,
+      contains: data.contains ?? undefined,
+    });
+  } else {
+    logger.warn({ type: data.type }, 'Unknown IPC memory type');
+    return;
+  }
+
+  if (data.chatJid) {
+    const userId =
+      scope === 'user' && typeof scopeKey === 'string' ? scopeKey : undefined;
+    const memoryItems = getEffectiveMemoryItems({
+      chatJid: data.chatJid,
+      userId,
+    });
+    writeMemorySnapshot(sourceGroup, data.chatJid, userId, memoryItems);
   }
 }
 

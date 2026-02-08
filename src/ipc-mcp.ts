@@ -34,6 +34,7 @@ export function createIpcMcp(ctx: IpcMcpContext) {
   const { chatJid, groupFolder, isMain, ipcDir } = ctx;
   const messagesDir = path.join(ipcDir, 'messages');
   const tasksDir = path.join(ipcDir, 'tasks');
+  const memoryDir = path.join(ipcDir, 'memory');
 
   return createSdkMcpServer({
     name: 'nanoclaw',
@@ -193,6 +194,143 @@ SCHEDULE VALUE FORMAT (all times are LOCAL timezone):
                 type: 'text',
                 text: `Error reading tasks: ${err instanceof Error ? err.message : String(err)}`
               }]
+            };
+          }
+        }
+      ),
+
+      tool(
+        'memory_save',
+        'Save a durable memory item. Use for preferences, facts, or tool defaults you should remember.',
+        {
+          scope: z.enum(['global', 'channel', 'user']).describe('global=all channels, channel=this chat, user=across channels for one user'),
+          scope_key: z.string().optional().describe('Required for channel/user scopes. For channel: chat ID. For user: user ID.'),
+          type: z.enum(['preference', 'fact', 'tool_state']).describe('Memory type'),
+          content: z.string().describe('The memory content to store'),
+          importance: z.number().int().min(0).max(10).optional().describe('Higher importance keeps memory more visible'),
+          ttl_seconds: z.number().int().positive().optional().describe('Optional time-to-live in seconds'),
+          replace: z.boolean().optional().describe('If true, replaces existing memories of same scope+type'),
+          source: z.string().optional().describe('Optional source or rationale for the memory'),
+        },
+        async (args) => {
+          let scopeKey = args.scope_key;
+          if (args.scope === 'channel' && !scopeKey) {
+            scopeKey = chatJid;
+          }
+          if (args.scope === 'user' && !scopeKey) {
+            return {
+              content: [{ type: 'text', text: 'scope_key is required for user scope.' }],
+              isError: true,
+            };
+          }
+
+          const data = {
+            type: 'memory_save',
+            scope: args.scope,
+            scope_key: args.scope === 'global' ? null : scopeKey,
+            memory_type: args.type,
+            content: args.content,
+            importance: args.importance ?? 0,
+            ttl_seconds: args.ttl_seconds ?? null,
+            replace: args.replace ?? false,
+            source: args.source ?? null,
+            chatJid,
+            groupFolder,
+            timestamp: new Date().toISOString(),
+          };
+
+          const filename = writeIpcFile(memoryDir, data);
+          return {
+            content: [{ type: 'text', text: `Memory saved (${filename}).` }],
+          };
+        }
+      ),
+
+      tool(
+        'memory_forget',
+        'Delete memory items by id or filter.',
+        {
+          id: z.string().optional().describe('Delete a specific memory item by ID'),
+          scope: z.enum(['global', 'channel', 'user']).optional(),
+          scope_key: z.string().optional(),
+          type: z.enum(['preference', 'fact', 'tool_state']).optional(),
+          contains: z.string().optional().describe('Delete items whose content contains this text'),
+        },
+        async (args) => {
+          if (!args.id && !args.scope && !args.type && !args.contains) {
+            return {
+              content: [{ type: 'text', text: 'Provide id or at least one filter (scope, type, contains).' }],
+              isError: true,
+            };
+          }
+
+          let scopeKey = args.scope_key;
+          if (args.scope === 'channel' && !scopeKey) {
+            scopeKey = chatJid;
+          }
+
+          const data = {
+            type: 'memory_forget',
+            id: args.id ?? null,
+            scope: args.scope ?? null,
+            scope_key: scopeKey ?? null,
+            memory_type: args.type ?? null,
+            contains: args.contains ?? null,
+            chatJid,
+            groupFolder,
+            timestamp: new Date().toISOString(),
+          };
+
+          const filename = writeIpcFile(memoryDir, data);
+          return {
+            content: [{ type: 'text', text: `Memory deletion requested (${filename}).` }],
+          };
+        }
+      ),
+
+      tool(
+        'memory_list',
+        'List currently effective memory items for this context.',
+        {
+          scope: z.enum(['global', 'channel', 'user']).optional(),
+          scope_key: z.string().optional(),
+          type: z.enum(['preference', 'fact', 'tool_state']).optional(),
+          limit: z.number().int().positive().optional(),
+        },
+        async (args) => {
+          const snapshotPath = path.join(ipcDir, 'current_memory.json');
+          if (!fs.existsSync(snapshotPath)) {
+            return {
+              content: [{ type: 'text', text: 'No memory snapshot available yet.' }],
+            };
+          }
+
+          try {
+            const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf-8')) as {
+              items?: Array<{ id: string; scope: string; scope_key: string | null; type: string; content: string }>;
+            };
+            const items = snapshot.items || [];
+            const filtered = items.filter((item) => {
+              if (args.scope && item.scope !== args.scope) return false;
+              if (args.scope_key && item.scope_key !== args.scope_key) return false;
+              if (args.type && item.type !== args.type) return false;
+              return true;
+            });
+            const limited = args.limit ? filtered.slice(0, args.limit) : filtered;
+
+            if (limited.length === 0) {
+              return { content: [{ type: 'text', text: 'No memory items found.' }] };
+            }
+
+            const lines = limited.map((item) =>
+              `- [${item.id}] (${item.scope}/${item.type}) ${item.content}`,
+            );
+            return {
+              content: [{ type: 'text', text: `Memory items:\n${lines.join('\n')}` }],
+            };
+          } catch (err) {
+            return {
+              content: [{ type: 'text', text: `Error reading memory snapshot: ${err instanceof Error ? err.message : String(err)}` }],
             };
           }
         }

@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 import {
+  DATA_DIR,
   GROUPS_DIR,
   MAIN_GROUP_FOLDER,
   SCHEDULER_POLL_INTERVAL,
@@ -20,6 +21,10 @@ import {
 import { GroupQueue } from './group-queue.js';
 import { logger } from './logger.js';
 import { RegisteredGroup, ScheduledTask } from './types.js';
+import { formatMemoryBlock, getEffectiveMemoryItems } from './memory-service.js';
+
+const MEMORY_INSTRUCTION =
+  'If the user asks to remember/save something, you MUST call the memory_save tool to persist it. If they ask to forget, call memory_forget. If they ask what you remember, call memory_list.';
 
 export interface SchedulerDependencies {
   sendMessage: (jid: string, text: string) => Promise<void>;
@@ -27,6 +32,24 @@ export interface SchedulerDependencies {
   getSessions: () => Record<string, Record<string, string>>;
   queue: GroupQueue;
   onProcess: (groupJid: string, proc: ChildProcess) => void;
+}
+
+function writeMemorySnapshot(
+  groupFolder: string,
+  chatJid: string,
+  userId: string | undefined,
+  items: Array<{ id: string; scope: string; scope_key: string | null; type: string; content: string }>,
+): void {
+  const ipcDir = path.join(DATA_DIR, 'ipc', groupFolder);
+  fs.mkdirSync(ipcDir, { recursive: true });
+  const snapshotPath = path.join(ipcDir, 'current_memory.json');
+  const snapshot = {
+    generated_at: new Date().toISOString(),
+    chatJid,
+    userId: userId ?? null,
+    items,
+  };
+  fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
 }
 
 async function runTask(
@@ -91,10 +114,20 @@ async function runTask(
       : undefined;
 
   try {
+    const memoryItems = getEffectiveMemoryItems({
+      chatJid: task.chat_jid,
+    });
+    writeMemorySnapshot(task.group_folder, task.chat_jid, undefined, memoryItems);
+    const memoryBlock = formatMemoryBlock(memoryItems);
+    const instructionBlock = `<memory_instructions>${MEMORY_INSTRUCTION}</memory_instructions>`;
+    const prompt = memoryBlock
+      ? `${instructionBlock}\n${memoryBlock}\n\n${task.prompt}`
+      : `${instructionBlock}\n\n${task.prompt}`;
+
     const output = await runAgent(
       group,
       {
-        prompt: task.prompt,
+        prompt,
         sessionId,
         groupFolder: task.group_folder,
         chatJid: task.chat_jid,

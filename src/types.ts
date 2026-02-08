@@ -39,3 +39,20 @@ export interface TaskRunLog {
   result: string | null;
   error: string | null;
 }
+
+export type MemoryScope = 'global' | 'channel' | 'user';
+
+export type MemoryType = 'preference' | 'fact' | 'tool_state';
+
+export interface MemoryItem {
+  id: string;
+  scope: MemoryScope;
+  scope_key: string | null;
+  type: MemoryType;
+  content: string;
+  source: string | null;
+  importance: number;
+  created_at: string;
+  updated_at: string;
+  ttl_seconds: number | null;
+}

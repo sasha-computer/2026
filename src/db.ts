@@ -4,7 +4,15 @@ import path from 'path';
 
 import { DATA_DIR, STORE_DIR } from './config.js';
 import { logger } from './logger.js';
-import { NewMessage, RegisteredGroup, ScheduledTask, TaskRunLog } from './types.js';
+import {
+  MemoryItem,
+  MemoryScope,
+  MemoryType,
+  NewMessage,
+  RegisteredGroup,
+  ScheduledTask,
+  TaskRunLog,
+} from './types.js';
 
 let db: Database.Database;
 
@@ -107,6 +115,21 @@ export function initDatabase(): void {
       container_config TEXT,
       requires_trigger INTEGER DEFAULT 1
     );
+    CREATE TABLE IF NOT EXISTS memory_items (
+      id TEXT PRIMARY KEY,
+      scope TEXT NOT NULL,
+      scope_key TEXT,
+      type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      source TEXT,
+      importance INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      ttl_seconds INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_memory_scope ON memory_items(scope, scope_key);
+    CREATE INDEX IF NOT EXISTS idx_memory_type ON memory_items(type);
+    CREATE INDEX IF NOT EXISTS idx_memory_updated ON memory_items(updated_at);
   `);
 
   // Migrate sessions table from single-key to composite key if needed
@@ -535,6 +558,123 @@ export function getAllRegisteredGroups(): Record<string, RegisteredGroup> {
     };
   }
   return result;
+}
+
+// --- Memory accessors ---
+
+function isMemoryExpired(item: MemoryItem, nowMs: number): boolean {
+  if (!item.ttl_seconds) return false;
+  const createdMs = Date.parse(item.created_at);
+  if (isNaN(createdMs)) return false;
+  return createdMs + item.ttl_seconds * 1000 <= nowMs;
+}
+
+export function createMemoryItem(item: MemoryItem): void {
+  db.prepare(
+    `
+    INSERT INTO memory_items (id, scope, scope_key, type, content, source, importance, created_at, updated_at, ttl_seconds)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(
+    item.id,
+    item.scope,
+    item.scope_key,
+    item.type,
+    item.content,
+    item.source,
+    item.importance,
+    item.created_at,
+    item.updated_at,
+    item.ttl_seconds,
+  );
+}
+
+export function listMemoryItems(filters: {
+  scope?: MemoryScope;
+  scope_key?: string | null;
+  type?: MemoryType;
+  limit?: number;
+  includeExpired?: boolean;
+}): MemoryItem[] {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  if (filters.scope) {
+    conditions.push('scope = ?');
+    values.push(filters.scope);
+  }
+  if (filters.scope_key !== undefined) {
+    if (filters.scope_key === null) {
+      conditions.push('scope_key IS NULL');
+    } else {
+      conditions.push('scope_key = ?');
+      values.push(filters.scope_key);
+    }
+  }
+  if (filters.type) {
+    conditions.push('type = ?');
+    values.push(filters.type);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const limitClause = filters.limit ? `LIMIT ${filters.limit}` : '';
+
+  const rows = db
+    .prepare(
+      `
+    SELECT * FROM memory_items
+    ${whereClause}
+    ORDER BY importance DESC, updated_at DESC, created_at DESC
+    ${limitClause}
+  `,
+    )
+    .all(...values) as MemoryItem[];
+
+  if (filters.includeExpired) return rows;
+  const nowMs = Date.now();
+  return rows.filter((item) => !isMemoryExpired(item, nowMs));
+}
+
+export function deleteMemoryItems(filters: {
+  id?: string;
+  scope?: MemoryScope;
+  scope_key?: string | null;
+  type?: MemoryType;
+  contains?: string;
+}): number {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  if (filters.id) {
+    conditions.push('id = ?');
+    values.push(filters.id);
+  }
+  if (filters.scope) {
+    conditions.push('scope = ?');
+    values.push(filters.scope);
+  }
+  if (filters.scope_key !== undefined) {
+    if (filters.scope_key === null) {
+      conditions.push('scope_key IS NULL');
+    } else {
+      conditions.push('scope_key = ?');
+      values.push(filters.scope_key);
+    }
+  }
+  if (filters.type) {
+    conditions.push('type = ?');
+    values.push(filters.type);
+  }
+  if (filters.contains) {
+    conditions.push('content LIKE ?');
+    values.push(`%${filters.contains}%`);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const info = db
+    .prepare(`DELETE FROM memory_items ${whereClause}`)
+    .run(...values);
+  return info.changes;
 }
 
 // --- Sessions table migration (single-key -> composite key) ---
