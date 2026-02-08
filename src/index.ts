@@ -17,6 +17,7 @@ import { CronExpressionParser } from 'cron-parser';
 
 import {
   ASSISTANT_NAME,
+  BOT_MESSAGE_PREFIX,
   DATA_DIR,
   DISCORD_BOT_TOKEN,
   DISCORD_GUILD_ID,
@@ -27,7 +28,6 @@ import {
   MAIN_GROUP_FOLDER,
   MAX_CONCURRENT_AGENTS,
   TIMEZONE,
-  TRIGGER_PATTERN,
 } from './config.js';
 import {
   AgentResponse,
@@ -68,6 +68,11 @@ import {
   getEffectiveMemoryItems,
   saveMemoryItem,
 } from './memory-service.js';
+import {
+  createBotCommandHandler,
+  executeBotCommand,
+  splitMessage,
+} from './router-helpers.js';
 
 const GROUP_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -267,7 +272,7 @@ function autoRegisterChannel(
   const group: RegisteredGroup = {
     name: rawName,
     folder,
-    trigger: `@${ASSISTANT_NAME}`,
+    trigger: 'none',
     added_at: new Date().toISOString(),
     requiresTrigger: false,
   };
@@ -294,18 +299,10 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   const missedMessages = getMessagesSince(
     chatJid,
     sinceTimestamp,
-    ASSISTANT_NAME,
+    BOT_MESSAGE_PREFIX,
   );
 
   if (missedMessages.length === 0) return true;
-
-  // Only require trigger if explicitly set to true
-  if (group.requiresTrigger === true) {
-    const hasTrigger = missedMessages.some((m) =>
-      TRIGGER_PATTERN.test(m.content.trim()),
-    );
-    if (!hasTrigger) return true;
-  }
 
   const lines = missedMessages.map((m) => {
     const escapeXml = (s: string) =>
@@ -434,38 +431,6 @@ async function runAgentForGroup(
   }
 }
 
-/**
- * Split a long message into chunks that fit Discord's 2000-char limit.
- * Prefers splitting at newlines, then spaces, then hard-splits.
- */
-function splitMessage(text: string, maxLength: number): string[] {
-  const chunks: string[] = [];
-  let remaining = text;
-
-  while (remaining.length > 0) {
-    if (remaining.length <= maxLength) {
-      chunks.push(remaining);
-      break;
-    }
-
-    // Try to split at a newline within the limit
-    let splitIndex = remaining.lastIndexOf('\n', maxLength);
-    if (splitIndex <= 0 || splitIndex < maxLength * 0.5) {
-      // No good newline; try space
-      splitIndex = remaining.lastIndexOf(' ', maxLength);
-    }
-    if (splitIndex <= 0 || splitIndex < maxLength * 0.5) {
-      // Hard split
-      splitIndex = maxLength;
-    }
-
-    chunks.push(remaining.slice(0, splitIndex));
-    remaining = remaining.slice(splitIndex).trimStart();
-  }
-
-  return chunks;
-}
-
 async function sendMessage(channelId: string, text: string): Promise<void> {
   try {
     const channel = await client.channels.fetch(channelId);
@@ -490,6 +455,21 @@ async function sendMessage(channelId: string, text: string): Promise<void> {
     logger.error({ channelId, err }, 'Failed to send message');
   }
 }
+
+const handleBotCommand = createBotCommandHandler({
+  sessions,
+  lastAgentTimestamp,
+  registeredGroups,
+  startTime,
+  maxConcurrentAgents: MAX_CONCURRENT_AGENTS,
+  logInfo: (meta, message) => logger.info(meta, message),
+  deleteSession,
+  saveState,
+  storeMessage,
+  enqueueMessageCheck: (jid) => queue.enqueueMessageCheck(jid),
+  getActiveCount: () => queue.getActiveCount(),
+  sendMessage,
+});
 
 function startIpcWatcher(): void {
   if (ipcWatcherRunning) {
@@ -918,93 +898,6 @@ async function processMemoryIpc(
 }
 
 /**
- * Execute a bot command. Returns the response string, or null if unknown command.
- */
-function executeBotCommand(
-  command: string,
-  channelId: string,
-  registration: RegisteredGroup,
-  userId?: string,
-): string | null {
-  if (command === 'new') {
-    const folder = registration.folder;
-    if (sessions[folder]?.[channelId]) {
-      delete sessions[folder][channelId];
-      deleteSession(folder, channelId);
-    }
-    delete lastAgentTimestamp[channelId];
-    saveState();
-
-    logger.info({ channelId, folder }, 'Session reset via /new command');
-    return 'Session reset. Next message starts a fresh conversation.';
-  }
-
-  if (command === 'clear') {
-    storeMessage(
-      `clear-${Date.now()}`,
-      channelId,
-      userId || 'unknown',
-      'System',
-      'Please summarize the key context from our conversation so far in a few bullet points, then continue from this summary.',
-      new Date().toISOString(),
-      false,
-    );
-    delete lastAgentTimestamp[channelId];
-    saveState();
-    queue.enqueueMessageCheck(channelId);
-
-    logger.info({ channelId }, 'Context compaction via /clear command');
-    return 'Context compaction requested. Summarizing conversation...';
-  }
-
-  if (command === 'status') {
-    const folder = registration.folder;
-    const sessionId = sessions[folder]?.[channelId];
-    const uptimeMs = Date.now() - startTime;
-    const uptimeH = Math.floor(uptimeMs / 3600000);
-    const uptimeM = Math.floor((uptimeMs % 3600000) / 60000);
-
-    const activeAgents = queue.getActiveCount();
-    const channelCount = Object.keys(registeredGroups).length;
-
-    return [
-      `**NanoClaw Status**`,
-      `Uptime: ${uptimeH}h ${uptimeM}m`,
-      `Agents: ${activeAgents} active / ${MAX_CONCURRENT_AGENTS} max`,
-      `Registered channels: ${channelCount}`,
-      ``,
-      `**This Channel**`,
-      `Folder: \`${folder}\``,
-      `Session: \`${sessionId ? sessionId.slice(0, 12) + '...' : 'none'}\``,
-      `Trigger: ${registration.requiresTrigger ? 'required' : 'responds to all messages'}`,
-    ].join('\n');
-  }
-
-  return null;
-}
-
-/**
- * Handle bot commands from text messages (/new, /clear, /status).
- * Returns true if the message was a command (and should not be stored/queued).
- */
-async function handleBotCommand(
-  message: Message,
-  channelId: string,
-  registration: RegisteredGroup,
-): Promise<boolean> {
-  const content = message.content.trim().toLowerCase();
-  if (!content.startsWith('/')) return false;
-
-  const command = content.split(/\s+/)[0].slice(1); // strip leading /
-  const response = executeBotCommand(command, channelId, registration, message.author.id);
-  if (response) {
-    await sendMessage(channelId, response);
-    return true;
-  }
-  return false;
-}
-
-/**
  * Handle Discord slash command interactions.
  */
 async function handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -1029,6 +922,19 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction): Pro
     interaction.commandName,
     channelId,
     registration,
+    {
+      sessions,
+      lastAgentTimestamp,
+      registeredGroups,
+      startTime,
+      maxConcurrentAgents: MAX_CONCURRENT_AGENTS,
+      logInfo: (meta, message) => logger.info(meta, message),
+      deleteSession,
+      saveState,
+      storeMessage,
+      enqueueMessageCheck: (jid) => queue.enqueueMessageCheck(jid),
+      getActiveCount: () => queue.getActiveCount(),
+    },
     interaction.user.id,
   );
 
@@ -1045,7 +951,7 @@ const slashCommands = [
     .setDescription('Compact the conversation context (summarize and continue)'),
   new SlashCommandBuilder()
     .setName('status')
-    .setDescription('Show NanoClaw status and channel info'),
+    .setDescription(`Show ${ASSISTANT_NAME} status and channel info`),
 ];
 
 /**
@@ -1178,9 +1084,9 @@ async function connectDiscord(): Promise<void> {
     // Auto-register main channel if not already registered
     if (!registeredGroups[DISCORD_MAIN_CHANNEL_ID]) {
       registerGroup(DISCORD_MAIN_CHANNEL_ID, {
-        name: 'main',
-        folder: MAIN_GROUP_FOLDER,
-        trigger: `@${ASSISTANT_NAME}`,
+    name: 'main',
+    folder: MAIN_GROUP_FOLDER,
+    trigger: 'none',
         added_at: new Date().toISOString(),
         requiresTrigger: false,
       });
@@ -1217,7 +1123,7 @@ async function connectDiscord(): Promise<void> {
     // Register slash commands (clears stale global commands too)
     await registerSlashCommands();
 
-    logger.info(`NanoClaw running on Discord (trigger: @${ASSISTANT_NAME})`);
+    logger.info(`${ASSISTANT_NAME} running on Discord`);
   });
 
   client.on('messageCreate', handleDiscordMessage);
@@ -1237,7 +1143,7 @@ async function connectDiscord(): Promise<void> {
 function recoverPendingMessages(): void {
   for (const [chatJid, group] of Object.entries(registeredGroups)) {
     const sinceTimestamp = lastAgentTimestamp[chatJid] || '';
-    const pending = getMessagesSince(chatJid, sinceTimestamp, ASSISTANT_NAME);
+  const pending = getMessagesSince(chatJid, sinceTimestamp, BOT_MESSAGE_PREFIX);
     if (pending.length > 0) {
       logger.info(
         { group: group.name, pendingCount: pending.length },
@@ -1266,7 +1172,9 @@ async function main(): Promise<void> {
   await connectDiscord();
 }
 
-main().catch((err) => {
-  logger.error({ err }, 'Failed to start NanoClaw');
-  process.exit(1);
-});
+if (process.env.NANOCLAW_TEST_MODE !== '1') {
+  main().catch((err) => {
+    logger.error({ err }, 'Failed to start NanoClaw');
+    process.exit(1);
+  });
+}

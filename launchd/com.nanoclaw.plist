@@ -21,8 +21,6 @@
         <string>/opt/homebrew/bin:{{HOME}}/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
         <string>{{HOME}}</string>
-        <key>ASSISTANT_NAME</key>
-        <string>Andy</string>
         <key>DISCORD_BOT_TOKEN</key>
         <string>{{DISCORD_BOT_TOKEN}}</string>
         <key>DISCORD_GUILD_ID</key>

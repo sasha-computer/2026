@@ -1,6 +1,5 @@
 import path from 'path';
 
-export const ASSISTANT_NAME = process.env.ASSISTANT_NAME || 'Gandalf';
 export const SCHEDULER_POLL_INTERVAL = 60000;
 
 // Discord configuration
@@ -13,7 +12,7 @@ export const DISCORD_IGNORE_CHANNEL_IDS = new Set(
 export const DISCORD_MAX_MESSAGE_LENGTH = 2000;
 
 // Paths
-const PROJECT_ROOT = process.cwd();
+const PROJECT_ROOT = process.env.NANOCLAW_PROJECT_ROOT || process.cwd();
 export const STORE_DIR = path.resolve(PROJECT_ROOT, 'store');
 export const GROUPS_DIR = path.resolve(PROJECT_ROOT, 'groups');
 export const DATA_DIR = path.resolve(PROJECT_ROOT, 'data');
@@ -34,14 +33,8 @@ export const MAX_CONCURRENT_AGENTS = Math.max(
   parseInt(process.env.MAX_CONCURRENT_AGENTS || process.env.MAX_CONCURRENT_CONTAINERS || '5', 10) || 5,
 );
 
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-export const TRIGGER_PATTERN = new RegExp(
-  `^@${escapeRegex(ASSISTANT_NAME)}\\b`,
-  'i',
-);
+export const ASSISTANT_NAME = process.env.ASSISTANT_NAME || 'Gandalf';
+export const BOT_MESSAGE_PREFIX = process.env.BOT_MESSAGE_PREFIX || '';
 
 // Timezone for scheduled tasks (cron expressions, etc.)
 // Uses system timezone by default

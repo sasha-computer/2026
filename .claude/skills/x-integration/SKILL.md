@@ -281,18 +281,18 @@ launchctl list | grep nanoclaw  # Should show PID and exit code 0 or -
 
 ## Usage via WhatsApp
 
-Replace `@Assistant` with your configured trigger name (`ASSISTANT_NAME` in `.env`):
+No trigger prefix is required. Send plain messages like:
 
 ```
-@Assistant post a tweet: Hello world!
+post a tweet: Hello world!
 
-@Assistant like this tweet https://x.com/user/status/123
+like this tweet https://x.com/user/status/123
 
-@Assistant reply to https://x.com/user/status/123 with: Great post!
+reply to https://x.com/user/status/123 with: Great post!
 
-@Assistant retweet https://x.com/user/status/123
+retweet https://x.com/user/status/123
 
-@Assistant quote https://x.com/user/status/123 with comment: Interesting
+quote https://x.com/user/status/123 with comment: Interesting
 ```
 
 **Note:** Only the main group can use X tools. Other groups will receive an error.

@@ -16,7 +16,7 @@ export interface IpcMcpContext {
   ipcDir: string;
 }
 
-function writeIpcFile(dir: string, data: object): string {
+export function writeIpcFile(dir: string, data: object): string {
   fs.mkdirSync(dir, { recursive: true });
 
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;

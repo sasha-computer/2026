@@ -252,10 +252,10 @@ const content = transcribedContent ||
 
 ### Step 5: Integrate Transcription into Message Handler
 
-**Note:** Voice messages are transcribed for all messages in registered groups, regardless of the trigger word. This is because:
-1. Voice notes can't easily include a trigger word
+**Note:** Voice messages are transcribed for all messages in registered groups. This is because:
+1. Voice notes can't easily include a trigger prefix
 2. Users expect voice notes to work the same as text messages
-3. The transcribed content is stored in the database for context, even if it doesn't trigger the agent
+3. The transcribed content is stored in the database for context, even if the agent doesn't respond
 
 Read `src/index.ts` and find the `sock.ev.on('messages.upsert', ...)` event handler.
 

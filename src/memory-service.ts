@@ -76,12 +76,38 @@ export function forgetMemory(filters: {
   return deleted;
 }
 
-function sortMemory(items: MemoryItem[]): MemoryItem[] {
+export function orderMemoryItems(items: MemoryItem[]): MemoryItem[] {
   return [...items].sort((a, b) => {
     if (a.importance !== b.importance) return b.importance - a.importance;
     if (a.updated_at !== b.updated_at) return b.updated_at.localeCompare(a.updated_at);
     return b.created_at.localeCompare(a.created_at);
   });
+}
+
+export function selectEffectiveMemoryItems(params: {
+  globalItems: MemoryItem[];
+  userItems: MemoryItem[];
+  channelItems: MemoryItem[];
+  limitPerType: number;
+  maxItems: number;
+}): MemoryItem[] {
+  const ordered = [
+    ...orderMemoryItems(params.globalItems),
+    ...orderMemoryItems(params.userItems),
+    ...orderMemoryItems(params.channelItems),
+  ];
+  const perTypeCounts = new Map<MemoryType, number>();
+  const result: MemoryItem[] = [];
+
+  for (const item of ordered) {
+    if (result.length >= params.maxItems) break;
+    const count = perTypeCounts.get(item.type) ?? 0;
+    if (count >= params.limitPerType) continue;
+    perTypeCounts.set(item.type, count + 1);
+    result.push(item);
+  }
+
+  return result;
 }
 
 export function getEffectiveMemoryItems(params: {
@@ -93,35 +119,31 @@ export function getEffectiveMemoryItems(params: {
   const limitPerType = params.limitPerType ?? DEFAULT_LIMIT_PER_TYPE;
   const maxItems = params.maxItems ?? DEFAULT_MAX_ITEMS;
 
-  const globalItems = sortMemory(
-    listMemoryItems({ scope: 'global', scope_key: null, limit: 100 }),
-  );
+  const globalItems = listMemoryItems({
+    scope: 'global',
+    scope_key: null,
+    limit: 100,
+  });
   const userItems = params.userId
-    ? sortMemory(
-        listMemoryItems({
-          scope: 'user',
-          scope_key: params.userId,
-          limit: 100,
-        }),
-      )
+    ? listMemoryItems({
+        scope: 'user',
+        scope_key: params.userId,
+        limit: 100,
+      })
     : [];
-  const channelItems = sortMemory(
-    listMemoryItems({ scope: 'channel', scope_key: params.chatJid, limit: 100 }),
-  );
+  const channelItems = listMemoryItems({
+    scope: 'channel',
+    scope_key: params.chatJid,
+    limit: 100,
+  });
 
-  const ordered = [...globalItems, ...userItems, ...channelItems];
-  const perTypeCounts = new Map<MemoryType, number>();
-  const result: MemoryItem[] = [];
-
-  for (const item of ordered) {
-    if (result.length >= maxItems) break;
-    const count = perTypeCounts.get(item.type) ?? 0;
-    if (count >= limitPerType) continue;
-    perTypeCounts.set(item.type, count + 1);
-    result.push(item);
-  }
-
-  return result;
+  return selectEffectiveMemoryItems({
+    globalItems,
+    userItems,
+    channelItems,
+    limitPerType,
+    maxItems,
+  });
 }
 
 export function formatMemoryBlock(items: MemoryItem[]): string | null {

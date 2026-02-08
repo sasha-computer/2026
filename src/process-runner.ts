@@ -57,6 +57,7 @@ export async function runAgent(
     isScheduledTask?: boolean;
   },
   onProcess: (proc: ChildProcess) => void,
+  spawnFn: typeof spawn = spawn,
 ): Promise<AgentOutput> {
   const startTime = Date.now();
 
@@ -91,7 +92,7 @@ export async function runAgent(
   fs.mkdirSync(logsDir, { recursive: true });
 
   return new Promise((resolve) => {
-    const proc = spawn('node', [path.join(process.cwd(), 'dist', 'agent-runner.js')], {
+    const proc = spawnFn('node', [path.join(process.cwd(), 'dist', 'agent-runner.js')], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
     });

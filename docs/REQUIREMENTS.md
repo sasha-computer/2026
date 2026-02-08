@@ -28,7 +28,7 @@ This isn't a framework or a platform. It's working software for my specific need
 
 ### Customization = Code Changes
 
-No configuration sprawl. If you want different behavior, modify the code. The codebase is small enough that this is safe and practical. Very minimal things like the trigger word are in config. Everything else - just change the code to do what you want.
+No configuration sprawl. If you want different behavior, modify the code. The codebase is small enough that this is safe and practical. Everything else - just change the code to do what you want.
 
 ### AI-Native Development
 
@@ -90,7 +90,7 @@ A personal Claude assistant accessible via WhatsApp, with minimal custom code.
 ### Message Routing
 - A router listens to WhatsApp and routes messages based on configuration
 - Only messages from registered groups are processed
-- Trigger: `@Andy` prefix (case insensitive), configurable via `ASSISTANT_NAME` env var
+- Trigger: none (responds to all messages in registered channels)
 - Unregistered groups are ignored completely
 
 ### Memory System
@@ -184,8 +184,9 @@ A personal Claude assistant accessible via WhatsApp, with minimal custom code.
 
 These are the creator's settings, stored here for reference:
 
-- **Trigger**: `@Andy` (case insensitive)
-- **Response prefix**: `Andy:`
+- **Assistant name**: Gandalf
+- **Trigger**: none
+- **Response prefix**: none
 - **Persona**: Default Claude (no custom personality)
 - **Main channel**: Self-chat (messaging yourself in WhatsApp)
 

@@ -159,21 +159,11 @@ Wait for the script to output "Successfully authenticated" then continue.
 
 If it says "Already authenticated", skip to the next step.
 
-## 6. Configure Assistant Name and Main Channel
+## 6. Configure Main Channel
 
-This step configures three things at once: the trigger word, the main channel type, and the main channel selection.
+This step configures the main channel type and selection.
 
-### 6a. Ask for trigger word
-
-Ask the user:
-> What trigger word do you want to use? (default: `Andy`)
->
-> In group chats, messages starting with `@TriggerWord` will be sent to Claude.
-> In your main channel (and optionally solo chats), no prefix is needed — all messages are processed.
-
-Store their choice for use in the steps below.
-
-### 6b. Explain security model and ask about main channel type
+### 6a. Explain security model and ask about main channel type
 
 **Use the AskUserQuestion tool** to present this:
 
@@ -207,7 +197,7 @@ If they choose option 3, ask a follow-up:
 > 1. Yes, I understand and want to proceed
 > 2. No, let me use a personal chat or solo group instead
 
-### 6c. Register the main channel
+### 6b. Register the main channel
 
 First build, then start the app briefly to connect to WhatsApp and sync group metadata. Use the Bash tool's timeout parameter (15000ms) — do NOT use the `timeout` shell command (it's not available on macOS). The app will be killed when the timeout fires, which is expected.
 
@@ -238,23 +228,19 @@ sqlite3 store/messages.db "SELECT jid, name FROM chats WHERE name LIKE '%GROUP_N
 
 ### 6d. Write the configuration
 
-Once you have the JID, configure it. Use the assistant name from step 6a.
-
-For personal chats (solo, no prefix needed), set `requiresTrigger` to `false`:
+Once you have the JID, configure it. No trigger prefix is required.
 
 ```json
 {
   "JID_HERE": {
     "name": "main",
     "folder": "main",
-    "trigger": "@ASSISTANT_NAME",
+    "trigger": "none",
     "added_at": "CURRENT_ISO_TIMESTAMP",
     "requiresTrigger": false
   }
 }
 ```
-
-For groups, keep `requiresTrigger` as `true` (default).
 
 Write to the database directly by creating a temporary registration script, or write `data/registered_groups.json` which will be auto-migrated on first run:
 
@@ -262,11 +248,7 @@ Write to the database directly by creating a temporary registration script, or w
 mkdir -p data
 ```
 
-Then write `data/registered_groups.json` with the correct JID, trigger, and timestamp.
-
-If the user chose a name other than `Andy`, also update:
-1. `groups/global/CLAUDE.md` - Change "# Andy" and "You are Andy" to the new name
-2. `groups/main/CLAUDE.md` - Same changes at the top
+Then write `data/registered_groups.json` with the correct JID and timestamp.
 
 Ensure the groups folder exists:
 ```bash
@@ -442,10 +424,8 @@ launchctl list | grep nanoclaw
 
 ## 9. Test
 
-Tell the user (using the assistant name they configured):
-> Send `@ASSISTANT_NAME hello` in your registered chat.
->
-> **Tip:** In your main channel, you don't need the `@` prefix — just send `hello` and the agent will respond.
+Tell the user:
+> Send `hello` in your registered chat and the agent should respond.
 
 Check the logs:
 ```bash
@@ -465,9 +445,7 @@ The user should receive a response in WhatsApp.
 - Check container logs: `cat groups/main/logs/container-*.log | tail -50`
 
 **No response to messages**:
-- Verify the trigger pattern matches (e.g., `@AssistantName` at start of message)
-- Main channel doesn't require a prefix — all messages are processed
-- Personal/solo chats with `requiresTrigger: false` also don't need a prefix
+- Verify the chat JID is registered
 - Check that the chat JID is in the database: `sqlite3 store/messages.db "SELECT * FROM registered_groups"`
 - Check `logs/nanoclaw.log` for errors
 

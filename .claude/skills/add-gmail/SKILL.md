@@ -1,13 +1,13 @@
 ---
 name: add-gmail
-description: Add Gmail integration to NanoClaw. Can be configured as a tool (agent reads/sends emails when triggered from WhatsApp) or as a full channel (emails can trigger the agent, schedule tasks, and receive replies). Guides through GCP OAuth setup and implements the integration.
+description: Add Gmail integration to NanoClaw. Can be configured as a tool (agent reads/sends emails when requested from WhatsApp) or as a full channel (emails can trigger the agent, schedule tasks, and receive replies). Guides through GCP OAuth setup and implements the integration.
 ---
 
 # Add Gmail Integration
 
 This skill adds Gmail capabilities to NanoClaw. It can be configured in two modes:
 
-1. **Tool Mode** - Agent can read/send emails, but only when triggered from WhatsApp
+1. **Tool Mode** - Agent can read/send emails, but only when requested from WhatsApp
 2. **Channel Mode** - Emails can trigger the agent, schedule tasks, and receive email replies
 
 ## Initial Questions
@@ -18,7 +18,7 @@ Ask the user:
 >
 > **Option 1: Tool Mode**
 > - Agent can read and send emails when you ask it to
-> - Triggered only from WhatsApp (e.g., "@Andy check my email" or "@Andy send an email to...")
+> - Requested only from WhatsApp (e.g., "check my email" or "send an email to...")
 > - Simpler setup, no email polling
 >
 > **Option 2: Channel Mode**
@@ -261,11 +261,11 @@ Tell the user:
 
 > Gmail integration is set up! Test it by sending this message in your WhatsApp main channel:
 >
-> `@Andy check my recent emails`
+> `check my recent emails`
 >
 > Or:
 >
-> `@Andy list my Gmail labels`
+> `list my Gmail labels`
 
 Watch the logs for any errors:
 
@@ -318,7 +318,7 @@ Store their choices for implementation.
 
 ### Step 1: Complete Tool Mode First
 
-Complete all Tool Mode steps above before continuing. Verify Gmail tools work by having the user test `@Andy check my recent emails`.
+Complete all Tool Mode steps above before continuing. Verify Gmail tools work by having the user test `check my recent emails`.
 
 ### Step 2: Add Email Polling Configuration
 

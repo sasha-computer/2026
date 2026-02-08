@@ -1,6 +1,6 @@
 ---
 name: customize
-description: Add new capabilities or modify NanoClaw behavior. Use when user wants to add channels (Telegram, Slack, email input), change triggers, add integrations, modify the router, or make any other customizations. This is an interactive skill that asks questions to understand what the user wants.
+description: Add new capabilities or modify NanoClaw behavior. Use when user wants to add channels (Telegram, Slack, email input), add integrations, modify the router, or make any other customizations. This is an interactive skill that asks questions to understand what the user wants.
 ---
 
 # NanoClaw Customization
@@ -18,7 +18,7 @@ This skill helps users add capabilities or modify behavior. Use AskUserQuestion 
 
 | File | Purpose |
 |------|---------|
-| `src/config.ts` | Assistant name, trigger pattern, directories |
+| `src/config.ts` | Runtime settings and directories |
 | `src/index.ts` | Message routing, WhatsApp connection, agent invocation |
 | `src/db.ts` | Database initialization and queries |
 | `src/types.ts` | TypeScript interfaces |
@@ -32,7 +32,6 @@ This skill helps users add capabilities or modify behavior. Use AskUserQuestion 
 
 Questions to ask:
 - Which channel? (Telegram, Slack, Discord, email, SMS, etc.)
-- Same trigger word or different?
 - Same memory hierarchy or separate?
 - Should messages from this channel go to existing groups or new ones?
 
@@ -57,7 +56,7 @@ Implementation:
 ### Changing Assistant Behavior
 
 Questions to ask:
-- What aspect? (name, trigger, persona, response style)
+- What aspect? (name, persona, response style)
 - Apply to all groups or specific ones?
 
 Simple changes → edit `src/config.ts`
@@ -73,7 +72,7 @@ Questions to ask:
 
 Implementation:
 1. Add command handling in `processMessage()` in `src/index.ts`
-2. Check for the command before the trigger pattern check
+2. Check for the command before normal routing logic
 
 ### Changing Deployment
 
@@ -100,7 +99,7 @@ launchctl load ~/Library/LaunchAgents/com.nanoclaw.plist
 
 User: "Add Telegram as an input channel"
 
-1. Ask: "Should Telegram use the same @Andy trigger, or a different one?"
+1. Ask: "Should Telegram messages go to existing groups or new ones?"
 2. Ask: "Should Telegram messages create separate conversation contexts, or share with WhatsApp groups?"
 3. Find Telegram MCP or library
 4. Add connection handling in index.ts
