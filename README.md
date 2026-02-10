@@ -73,6 +73,24 @@ A tiny CLI tool that turns Claude Code into an autonomous task runner. Give it a
 
 → [browse code](./ralph-wiggum)
 
+## ⭐ gandalf
+
+My fork of [NanoClaw](https://github.com/gavrielc/nanoclaw), a personal Claude assistant that lives in WhatsApp/Discord. Started as experimentation on top of the original project and evolved into a significantly reworked version. Key changes I made:
+
+- Ripped out Apple Container and replaced with native subprocess execution for simplicity and reliability
+- Added a durable memory store with QMD memory search, so the assistant actually remembers things across conversations
+- Built per-group message queues with SQLite state and graceful shutdown
+- Migrated the runtime to Bun
+- Added structured agent output to fix infinite retry loops on silent responses
+- Simplified the privilege model and made routing always-on
+- Various reliability fixes: message loss prevention, proper error handling, container lifecycle management
+
+This was part of my broader experimentation with building a personal AI agent (OpenClaw) that works across different chat platforms.
+
+**Stack:** TypeScript · Bun · SQLite · Claude API
+
+→ [browse code](./gandalf)
+
 ## ⭐ my-runs
 
 A Hugo frontend for [plain-text-running-tracker](https://github.com/sasha-computer/personal-software/tree/main/plain-text-running-tracker), which parses Apple Health exports and Garmin FIT files into a markdown running log. This site takes that data and renders it as an interactive calendar view.
