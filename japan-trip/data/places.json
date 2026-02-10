@@ -1,0 +1,1720 @@
+{
+  "places": [
+    {
+      "id": "arise-coffee",
+      "name": "Arise Coffee Roasters",
+      "nameJa": "アライズコーヒーロースターズ",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.6803,
+        139.7989
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "Cozy third-wave roaster with skateboard decks on walls. Light, fruity roasts from Dominican Republic.",
+      "priceRange": "¥400-600",
+      "hours": "10:00-18:00",
+      "closedDays": [
+        "Tuesday"
+      ],
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.4,
+      "userRatingsTotal": 642,
+      "googlePlaceId": "ChIJGTP74RaJGGARy5Fp3vNCwn4"
+    },
+    {
+      "id": "koffee-mameya",
+      "name": "Koffee Mameya Kakeru",
+      "nameJa": "コーヒー マメヤ カケル",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.6798,
+        139.7984
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "Stylish coffee tasting courses. Front for takeaway, back for serious coffee exploration.",
+      "priceRange": "¥600-2000",
+      "hours": "10:00-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.5,
+      "userRatingsTotal": 631,
+      "googlePlaceId": "ChIJ9f0aP7iJGGAR3BB7LqfZdhE"
+    },
+    {
+      "id": "allpress-tokyo",
+      "name": "Allpress Espresso",
+      "nameJa": "オールプレス エスプレッソ",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.6795,
+        139.8001
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "New Zealand roaster in renovated warehouse. Excellent flat whites and espresso.",
+      "priceRange": "¥400-700",
+      "hours": "9:00-18:00",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 1028,
+      "googlePlaceId": "ChIJb7rwOxqJGGARg_ywAgrBU4E"
+    },
+    {
+      "id": "blue-bottle-kiyosumi",
+      "name": "Blue Bottle Coffee",
+      "nameJa": "ブルーボトルコーヒー",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.6801,
+        139.7996
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "First Japan location. Industrial warehouse feel. Very busy on weekends.",
+      "priceRange": "¥500-800",
+      "hours": "8:00-19:00",
+      "shellfish": false,
+      "rating": 4.6,
+      "userRatingsTotal": 1431,
+      "googlePlaceId": "ChIJiXocb7WNGGAReVVBhRwWLoQ"
+    },
+    {
+      "id": "cream-of-crop",
+      "name": "Cream of the Crop",
+      "nameJa": "クリーム オブ ザ クロップ",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.6807,
+        139.7978
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "Quality roastery in renovated warehouse. Five different roasts, all hand-dripped.",
+      "priceRange": "¥400-600",
+      "hours": "11:00-19:00",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 349,
+      "googlePlaceId": "ChIJzRqUwRyJGGARtXNwh30rzm4"
+    },
+    {
+      "id": "iki-espresso",
+      "name": "iki Espresso/Roastery",
+      "nameJa": "イキ エスプレッソ",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.6812,
+        139.7965
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "Riverfront warehouse with in-house bakery. Watch roasting Mon/Tue 10am-4pm.",
+      "priceRange": "¥500-900",
+      "hours": "8:00-18:00",
+      "shellfish": false,
+      "rating": 4,
+      "userRatingsTotal": 601,
+      "googlePlaceId": "ChIJZy2XZNeJGGARlRcCEKxTyqE"
+    },
+    {
+      "id": "rikashitsu",
+      "name": "Rikashitsu Distillery",
+      "nameJa": "理科室蒸留所",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "specialty",
+      "coordinates": [
+        35.6799,
+        139.7972
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "Lab-equipment coffee brewing. Cold-brew through artisanal chemistry glass.",
+      "priceRange": "¥500-800",
+      "hours": "12:00-19:00",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 63,
+      "googlePlaceId": "ChIJMV78-haJGGAReZzwL3yERHc"
+    },
+    {
+      "id": "bear-pond",
+      "name": "Bear Pond Espresso",
+      "nameJa": "ベアポンド エスプレッソ",
+      "city": "tokyo",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.6618,
+        139.6676
+      ],
+      "neighbourhood": "Shimokitazawa",
+      "description": "Legendary espresso bar. Tiny, no-frills, serious coffee. Angel Stain blend is famous.",
+      "priceRange": "¥400-600",
+      "hours": "11:00-18:00",
+      "closedDays": [
+        "Monday",
+        "Tuesday"
+      ],
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4,
+      "userRatingsTotal": 748,
+      "googlePlaceId": "ChIJ_6-SI2vzGGARTwHyOGabtyI"
+    },
+    {
+      "id": "kamachiku",
+      "name": "Kamachiku",
+      "nameJa": "釜竹",
+      "city": "tokyo",
+      "category": "restaurant",
+      "subcategory": "udon",
+      "coordinates": [
+        35.7213,
+        139.7621
+      ],
+      "neighbourhood": "Nezu",
+      "description": "Udon in 100+ year old building with Japanese garden views. ¥850-1000 per bowl.",
+      "priceRange": "¥850-1500",
+      "hours": "11:30-21:00",
+      "closedDays": [
+        "Monday"
+      ],
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 1067,
+      "googlePlaceId": "ChIJcRRPoS6MGGARe-LEXkndq_s"
+    },
+    {
+      "id": "niku-no-satou",
+      "name": "Niku no Satou",
+      "nameJa": "肉のサトー",
+      "city": "tokyo",
+      "category": "restaurant",
+      "subcategory": "street-food",
+      "coordinates": [
+        35.7268,
+        139.7665
+      ],
+      "neighbourhood": "Yanaka",
+      "description": "Famous Yanaka menchi-katsu (ground meat cutlet). A5 wagyu used. Queue expected.",
+      "priceRange": "¥200-400",
+      "hours": "10:30-19:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.2,
+      "userRatingsTotal": 1793,
+      "googlePlaceId": "ChIJEerD2EfuGGARNzol9ZsrCkg"
+    },
+    {
+      "id": "hantei",
+      "name": "Hantei",
+      "nameJa": "はん亭",
+      "city": "tokyo",
+      "category": "restaurant",
+      "subcategory": "kushikatsu",
+      "coordinates": [
+        35.7201,
+        139.7634
+      ],
+      "neighbourhood": "Nezu",
+      "description": "Upscale kushikatsu in beautiful wooden building. Multi-course deep-fried skewers.",
+      "priceRange": "¥4000-8000",
+      "hours": "17:00-22:00",
+      "closedDays": [
+        "Monday"
+      ],
+      "shellfish": true,
+      "shellfishNote": "Menu may include shrimp - ask for alternatives",
+      "rating": 4.2,
+      "userRatingsTotal": 823,
+      "googlePlaceId": "ChIJVVVpkS6MGGARScP-LtAcTGc"
+    },
+    {
+      "id": "afuri-ebisu",
+      "name": "Afuri",
+      "nameJa": "阿夫利",
+      "city": "tokyo",
+      "category": "restaurant",
+      "subcategory": "ramen",
+      "coordinates": [
+        35.6476,
+        139.7104
+      ],
+      "neighbourhood": "Ebisu",
+      "description": "Famous yuzu shio ramen. Light, refreshing broth from Mt Afuri spring water.",
+      "priceRange": "¥1000-1500",
+      "hours": "11:00-23:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.2,
+      "userRatingsTotal": 3797,
+      "googlePlaceId": "ChIJgYtUxUGLGGAR2LLtCdmLFbs"
+    },
+    {
+      "id": "daikanyama-tsite",
+      "name": "Daikanyama T-Site",
+      "nameJa": "代官山T-SITE",
+      "city": "tokyo",
+      "category": "activity",
+      "subcategory": "shopping",
+      "coordinates": [
+        35.6488,
+        139.7003
+      ],
+      "neighbourhood": "Daikanyama",
+      "description": "Stunning bookstore complex. Architecture, coffee, and curated lifestyle goods.",
+      "priceRange": "Free entry",
+      "hours": "7:00-23:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 7362,
+      "googlePlaceId": "ChIJla_VyE-LGGARrCE9vCxYtus"
+    },
+    {
+      "id": "kiyosumi-garden",
+      "name": "Kiyosumi Garden",
+      "nameJa": "清澄庭園",
+      "city": "tokyo",
+      "category": "nature",
+      "subcategory": "garden",
+      "coordinates": [
+        35.681,
+        139.7972
+      ],
+      "neighbourhood": "Kiyosumi-Shirakawa",
+      "description": "Traditional landscape garden with stepping stones and tea house. Peaceful.",
+      "priceRange": "¥150",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "rating": 4.4,
+      "userRatingsTotal": 5233,
+      "googlePlaceId": "ChIJ_SvuyD-JGGARUQZhJInwMIc"
+    },
+    {
+      "id": "nezu-shrine",
+      "name": "Nezu Shrine",
+      "nameJa": "根津神社",
+      "city": "tokyo",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        35.72,
+        139.7601
+      ],
+      "neighbourhood": "Nezu",
+      "description": "Beautiful shrine with vermillion torii gates. Azalea garden stunning in spring.",
+      "priceRange": "Free",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.4,
+      "userRatingsTotal": 8767,
+      "googlePlaceId": "ChIJ-X4hzjKMGGARDSsGeHOACgw"
+    },
+    {
+      "id": "yanaka-cemetery",
+      "name": "Yanaka Cemetery",
+      "nameJa": "谷中霊園",
+      "city": "tokyo",
+      "category": "nature",
+      "subcategory": "walk",
+      "coordinates": [
+        35.7262,
+        139.7697
+      ],
+      "neighbourhood": "Yanaka",
+      "description": "Historic cemetery, peaceful walks. Cherry blossoms in spring, cats year-round.",
+      "priceRange": "Free",
+      "hours": "Always open",
+      "shellfish": false,
+      "rating": 4.1,
+      "userRatingsTotal": 934,
+      "googlePlaceId": "ChIJO8HByiqMGGARP9I5xBEXlCM"
+    },
+    {
+      "id": "yanaka-ginza",
+      "name": "Yanaka Ginza",
+      "nameJa": "谷中銀座",
+      "city": "tokyo",
+      "category": "activity",
+      "subcategory": "shopping",
+      "coordinates": [
+        35.7271,
+        139.7663
+      ],
+      "neighbourhood": "Yanaka",
+      "description": "Traditional shopping street. 60+ shops, street food, local atmosphere.",
+      "priceRange": "Varies",
+      "hours": "~10:00-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.1,
+      "userRatingsTotal": 10841,
+      "googlePlaceId": "ChIJPYwFnNGNGGARYEeXwiYQPe8"
+    },
+    {
+      "id": "petra-kanazawa",
+      "name": "Petra Bake & Coffee",
+      "nameJa": "ペトラ",
+      "city": "kanazawa",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        36.5715,
+        136.6592
+      ],
+      "neighbourhood": "Omicho",
+      "description": "Specialty coffee and pastries near Omicho Market. Great banana bread and cookies.",
+      "priceRange": "¥400-800",
+      "hours": "8:00-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.8,
+      "userRatingsTotal": 176,
+      "googlePlaceId": "ChIJgyGWhWEz-F8RihUQoP8mmp4"
+    },
+    {
+      "id": "townsfolk-coffee",
+      "name": "Townsfolk Coffee",
+      "nameJa": "タウンズフォークコーヒー",
+      "city": "kanazawa",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        36.5698,
+        136.6554
+      ],
+      "neighbourhood": "Central",
+      "description": "Owner trained in Copenhagen and Tokyo. Freshly roasted beans from around the world.",
+      "priceRange": "¥450-700",
+      "hours": "10:00-18:00",
+      "closedDays": [
+        "Tuesday",
+        "Wednesday"
+      ],
+      "shellfish": false,
+      "rating": 4.7,
+      "userRatingsTotal": 427,
+      "googlePlaceId": "ChIJlxkp4W8z-F8RnXKksnTqsMI"
+    },
+    {
+      "id": "curio-kanazawa",
+      "name": "Curio Espresso & Vintage Design",
+      "nameJa": "キュリオ",
+      "city": "kanazawa",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        36.5702,
+        136.6598
+      ],
+      "neighbourhood": "Omicho",
+      "description": "Seattle expats' coffee shop in renovated machiya. Pioneer of new-wave coffee in Kanazawa.",
+      "priceRange": "¥400-700",
+      "hours": "10:00-18:00",
+      "closedDays": [
+        "Wednesday"
+      ],
+      "shellfish": false,
+      "rating": 4.6,
+      "userRatingsTotal": 1048,
+      "googlePlaceId": "ChIJide0P24z-F8RfSHcyCEZlrc"
+    },
+    {
+      "id": "kanazawaya-coffee",
+      "name": "Kanazawaya Coffee",
+      "nameJa": "金澤屋珈琲店",
+      "city": "kanazawa",
+      "category": "coffee",
+      "subcategory": "kissaten",
+      "coordinates": [
+        36.562,
+        136.6564
+      ],
+      "neighbourhood": "Castle",
+      "description": "Near Kanazawa Castle. 8+ bean varieties, each roasted for optimal flavor.",
+      "priceRange": "¥500-800",
+      "hours": "9:00-18:00",
+      "shellfish": false,
+      "rating": 4.5,
+      "userRatingsTotal": 625,
+      "googlePlaceId": "ChIJxZSlUHcz-F8RdjEGsiPNDgY"
+    },
+    {
+      "id": "angolo-caffe",
+      "name": "Angolo Caffe",
+      "nameJa": "アンゴロカフェ",
+      "city": "kanazawa",
+      "category": "coffee",
+      "subcategory": "kissaten",
+      "coordinates": [
+        36.5782,
+        136.6478
+      ],
+      "neighbourhood": "Station",
+      "description": "130-year-old machiya house near station. Original blend coffee and light fare.",
+      "priceRange": "¥450-700",
+      "hours": "10:00-18:00",
+      "shellfish": false,
+      "rating": 4.6,
+      "userRatingsTotal": 227,
+      "googlePlaceId": "ChIJ-UqmWiIz-F8Rrjwx7GFzGjs"
+    },
+    {
+      "id": "gyokusen-an",
+      "name": "Gyokusen-an",
+      "nameJa": "玉泉庵",
+      "city": "kanazawa",
+      "category": "coffee",
+      "subcategory": "tea",
+      "coordinates": [
+        36.5615,
+        136.6583
+      ],
+      "neighbourhood": "Castle",
+      "description": "Tea served by geisha in Kanazawa Castle Park. Matcha with wagashi and garden views.",
+      "priceRange": "¥730",
+      "hours": "9:00-16:30",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.6,
+      "userRatingsTotal": 154,
+      "googlePlaceId": "ChIJ1bFCtHkz-F8RKwmxo6kbooo"
+    },
+    {
+      "id": "omicho-market",
+      "name": "Omicho Market",
+      "nameJa": "近江町市場",
+      "city": "kanazawa",
+      "category": "restaurant",
+      "subcategory": "market",
+      "coordinates": [
+        36.5717,
+        136.6589
+      ],
+      "neighbourhood": "Central",
+      "description": "300-year-old 'citizens' kitchen'. Fresh seafood, kaisendon, crab, local produce.",
+      "priceRange": "¥500-3000",
+      "hours": "9:00-17:00",
+      "shellfish": true,
+      "shellfishNote": "Seafood market - many options but shellfish everywhere. Ask vendors.",
+      "highlight": true,
+      "rating": 4,
+      "userRatingsTotal": 18435,
+      "googlePlaceId": "ChIJ0xPT93Az-F8RpTSlbHwo9L8"
+    },
+    {
+      "id": "mori-mori-sushi",
+      "name": "Mori Mori Sushi",
+      "nameJa": "もりもり寿司",
+      "city": "kanazawa",
+      "category": "restaurant",
+      "subcategory": "sushi",
+      "coordinates": [
+        36.572,
+        136.6585
+      ],
+      "neighbourhood": "Omicho",
+      "description": "Fresh sushi in Omicho Market. Order via iPad, delivered by carousel.",
+      "priceRange": "¥1500-3000",
+      "hours": "10:00-21:00",
+      "shellfish": true,
+      "shellfishNote": "Sushi restaurant - can order non-shellfish options",
+      "rating": 4,
+      "userRatingsTotal": 3880,
+      "googlePlaceId": "ChIJp45QVlcz-F8RQ-_oMHY920I"
+    },
+    {
+      "id": "omicho-korokke",
+      "name": "Omicho Korokke",
+      "nameJa": "近江町コロッケ",
+      "city": "kanazawa",
+      "category": "restaurant",
+      "subcategory": "street-food",
+      "coordinates": [
+        36.5715,
+        136.6591
+      ],
+      "neighbourhood": "Omicho",
+      "description": "Famous crab cream croquettes. Crispy outside, fluffy inside with fresh local crab.",
+      "priceRange": "¥200-400",
+      "hours": "9:00-17:00",
+      "shellfish": true,
+      "shellfishNote": "Contains crab - avoid",
+      "rating": 4,
+      "userRatingsTotal": 18435,
+      "googlePlaceId": "ChIJ0xPT93Az-F8RpTSlbHwo9L8"
+    },
+    {
+      "id": "waguri-shiratsuyu",
+      "name": "Waguri Shiratsuyu",
+      "nameJa": "和栗白露",
+      "city": "kanazawa",
+      "category": "restaurant",
+      "subcategory": "dessert",
+      "coordinates": [
+        36.568,
+        136.656
+      ],
+      "neighbourhood": "Central",
+      "description": "Japanese chestnut desserts. Signature mont blanc made with aged chestnuts, no added sugar.",
+      "priceRange": "¥800-1500",
+      "hours": "11:00-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.1,
+      "userRatingsTotal": 200,
+      "googlePlaceId": "ChIJ7U1wimgz-F8ReXGNEuvrkSU"
+    },
+    {
+      "id": "kenrokuen",
+      "name": "Kenrokuen Garden",
+      "nameJa": "兼六園",
+      "city": "kanazawa",
+      "category": "nature",
+      "subcategory": "garden",
+      "coordinates": [
+        36.5618,
+        136.6625
+      ],
+      "neighbourhood": "Central",
+      "description": "One of Japan's top 3 gardens. Go early morning to avoid crowds.",
+      "priceRange": "¥320",
+      "hours": "7:00-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.4,
+      "userRatingsTotal": 35927,
+      "googlePlaceId": "ChIJBVmy-YMz-F8R5PID8D17Cpc"
+    },
+    {
+      "id": "21st-century-museum",
+      "name": "21st Century Museum of Contemporary Art",
+      "nameJa": "金沢21世紀美術館",
+      "city": "kanazawa",
+      "category": "activity",
+      "subcategory": "museum",
+      "coordinates": [
+        36.5604,
+        136.6577
+      ],
+      "neighbourhood": "Central",
+      "description": "Circular modern art museum. Famous swimming pool installation. Free to enter main areas.",
+      "priceRange": "Free-¥1200",
+      "hours": "10:00-18:00",
+      "closedDays": [
+        "Monday"
+      ],
+      "shellfish": false,
+      "highlight": true,
+      "rating": 3.8,
+      "userRatingsTotal": 17525,
+      "googlePlaceId": "ChIJAbhT24Az-F8RwWhli9sBKlE"
+    },
+    {
+      "id": "higashi-chaya",
+      "name": "Higashi Chaya District",
+      "nameJa": "ひがし茶屋街",
+      "city": "kanazawa",
+      "category": "activity",
+      "subcategory": "walk",
+      "coordinates": [
+        36.5729,
+        136.6662
+      ],
+      "neighbourhood": "Higashi",
+      "description": "Preserved geisha district. Tea houses, gold leaf shops, traditional architecture.",
+      "priceRange": "Free",
+      "hours": "Always open",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.2,
+      "userRatingsTotal": 22148,
+      "googlePlaceId": "ChIJsfC6oXQz-F8RdA1qXiF6jLs"
+    },
+    {
+      "id": "nagamachi",
+      "name": "Nagamachi Samurai District",
+      "nameJa": "長町武家屋敷跡",
+      "city": "kanazawa",
+      "category": "activity",
+      "subcategory": "walk",
+      "coordinates": [
+        36.5641,
+        136.6515
+      ],
+      "neighbourhood": "Nagamachi",
+      "description": "Restored samurai houses, narrow lanes, earthen walls. Nomura-ke house worth visiting.",
+      "priceRange": "Free (houses ¥550)",
+      "hours": "8:30-17:00",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 4636,
+      "googlePlaceId": "ChIJhycOJtYz-F8RO54LaTG6_p0"
+    },
+    {
+      "id": "myoryuji",
+      "name": "Myoryuji (Ninja Temple)",
+      "nameJa": "妙立寺",
+      "city": "kanazawa",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        36.5552,
+        136.6489
+      ],
+      "neighbourhood": "Teramachi",
+      "description": "Temple with hidden passages, trap doors, secret rooms. Book ahead, tours in Japanese.",
+      "priceRange": "¥1000",
+      "hours": "9:00-16:00",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 4314,
+      "googlePlaceId": "ChIJuYLrXHs0-F8RGY1Ld3voBB4"
+    },
+    {
+      "id": "falo-coffee",
+      "name": "Falo Coffee Roasters",
+      "nameJa": "ファーロコーヒーロースターズ",
+      "city": "takayama",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        36.1403,
+        137.2535
+      ],
+      "neighbourhood": "Central",
+      "description": "Third-wave coffee with Scandinavian interior. Minimalist, cozy vibes.",
+      "priceRange": "¥400-600",
+      "hours": "10:00-17:00",
+      "closedDays": [
+        "Wednesday"
+      ],
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.8,
+      "userRatingsTotal": 768,
+      "googlePlaceId": "ChIJJ5tS7XW7AmARQZGP7lQEYCM"
+    },
+    {
+      "id": "kissako-katsute",
+      "name": "Kissako Katsute",
+      "nameJa": "喫茶去かつて",
+      "city": "takayama",
+      "category": "coffee",
+      "subcategory": "kissaten",
+      "coordinates": [
+        36.1415,
+        137.2562
+      ],
+      "neighbourhood": "Sanmachi",
+      "description": "Charming café blending traditional and modern. Stunning interior, upstairs seating.",
+      "priceRange": "¥500-800",
+      "hours": "10:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 490,
+      "googlePlaceId": "ChIJ69Q_Sdq6AmAR0x4xJvgovNA"
+    },
+    {
+      "id": "suzuya",
+      "name": "Suzuya",
+      "nameJa": "寿々や",
+      "city": "takayama",
+      "category": "restaurant",
+      "subcategory": "hida-beef",
+      "coordinates": [
+        36.1428,
+        137.2519
+      ],
+      "neighbourhood": "Central",
+      "description": "Casual Hida beef specialist. Steak on hoba leaf, sukiyaki style. English-friendly.",
+      "priceRange": "¥2500-4000",
+      "hours": "11:00-14:00, 17:00-20:30",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.6,
+      "userRatingsTotal": 1570,
+      "googlePlaceId": "ChIJtd7Bd9e6AmARFunBfw9luY4"
+    },
+    {
+      "id": "hidagyu-maruaki",
+      "name": "Hidagyu Maruaki",
+      "nameJa": "飛騨牛まるあき",
+      "city": "takayama",
+      "category": "restaurant",
+      "subcategory": "hida-beef",
+      "coordinates": [
+        36.1412,
+        137.2548
+      ],
+      "neighbourhood": "Sanmachi",
+      "description": "Popular yakiniku with own Hida beef farm. No reservations, arrive early. Private rooms available.",
+      "priceRange": "¥3000-6000",
+      "hours": "11:00-14:00, 17:00-21:00",
+      "shellfish": false,
+      "rating": 4.1,
+      "userRatingsTotal": 3854,
+      "googlePlaceId": "ChIJAQAQxNe6AmARcMMVA_bBjus"
+    },
+    {
+      "id": "sakaguchiya",
+      "name": "Sakaguchiya",
+      "nameJa": "坂口屋",
+      "city": "takayama",
+      "category": "restaurant",
+      "subcategory": "hida-beef",
+      "coordinates": [
+        36.141,
+        137.2555
+      ],
+      "neighbourhood": "Sanmachi",
+      "description": "Small sushi shop - first place to serve Hida beef sushi. Order the beef sushi!",
+      "priceRange": "¥1500-3000",
+      "hours": "10:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 779,
+      "googlePlaceId": "ChIJazMER9q6AmAR-Tq_56aur3M"
+    },
+    {
+      "id": "hirase-sake",
+      "name": "Hirase Sake Brewery",
+      "nameJa": "平瀬酒造店",
+      "city": "takayama",
+      "category": "activity",
+      "subcategory": "sake",
+      "coordinates": [
+        36.1405,
+        137.2558
+      ],
+      "neighbourhood": "Sanmachi",
+      "description": "Oldest brewery in Takayama (~400 years). Kusudama brand. ¥500 for 30 sake tastings.",
+      "priceRange": "¥500",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.5,
+      "userRatingsTotal": 212,
+      "googlePlaceId": "ChIJO7R6Gdu6AmARMKdg-_ukTxw"
+    },
+    {
+      "id": "funasaka-sake",
+      "name": "Funasaka Sake Brewery",
+      "nameJa": "舩坂酒造店",
+      "city": "takayama",
+      "category": "activity",
+      "subcategory": "sake",
+      "coordinates": [
+        36.1408,
+        137.2552
+      ],
+      "neighbourhood": "Sanmachi",
+      "description": "Modern brewery for sake newcomers. Plum/yuzu liqueurs, cosmetics, restaurant attached.",
+      "priceRange": "¥300-800",
+      "hours": "8:30-18:00",
+      "shellfish": false,
+      "rating": 4.4,
+      "userRatingsTotal": 1040,
+      "googlePlaceId": "ChIJn1cKutu6AmARJa9jdUnCmtI"
+    },
+    {
+      "id": "miyagawa-market",
+      "name": "Miyagawa Morning Market",
+      "nameJa": "宮川朝市",
+      "city": "takayama",
+      "category": "activity",
+      "subcategory": "market",
+      "coordinates": [
+        36.1421,
+        137.2542
+      ],
+      "neighbourhood": "Riverside",
+      "description": "Morning market along the river. Fresh produce, pickles, crafts. Open until noon.",
+      "priceRange": "Varies",
+      "hours": "6:00-12:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.1,
+      "userRatingsTotal": 9895,
+      "googlePlaceId": "ChIJE-ywz9a6AmAR1uD5rAwvJkw"
+    },
+    {
+      "id": "hida-folk-village",
+      "name": "Hida Folk Village",
+      "nameJa": "飛騨の里",
+      "city": "takayama",
+      "category": "activity",
+      "subcategory": "museum",
+      "coordinates": [
+        36.1552,
+        137.2319
+      ],
+      "neighbourhood": "West",
+      "description": "Open-air museum with traditional houses. Like Shirakawa-go but quieter.",
+      "priceRange": "¥700",
+      "hours": "8:30-17:00",
+      "shellfish": false,
+      "rating": 4.5,
+      "userRatingsTotal": 6170,
+      "googlePlaceId": "ChIJmWTYrzm7AmARRPwmwmCypNY"
+    },
+    {
+      "id": "sanmachi-suji",
+      "name": "Sanmachi Suji",
+      "nameJa": "三町筋",
+      "city": "takayama",
+      "category": "activity",
+      "subcategory": "walk",
+      "coordinates": [
+        36.1407,
+        137.2553
+      ],
+      "neighbourhood": "Central",
+      "description": "Historic merchant district. Preserved Edo buildings, sake breweries, craft shops.",
+      "priceRange": "Free",
+      "hours": "Always open",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.5,
+      "userRatingsTotal": 1136,
+      "googlePlaceId": "ChIJczG1tNu6AmARjrgU-Yh3zH8"
+    },
+    {
+      "id": "arabica-kyoto",
+      "name": "% Arabica",
+      "nameJa": "アラビカ",
+      "city": "kyoto",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.0034,
+        135.7809
+      ],
+      "neighbourhood": "Arashiyama",
+      "description": "Famous Kyoto roaster. Multiple locations. Arashiyama branch has great views.",
+      "priceRange": "¥400-600",
+      "hours": "8:00-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.4,
+      "userRatingsTotal": 2815,
+      "googlePlaceId": "ChIJnW0DdsUIAWAROy9GuxW9QVI"
+    },
+    {
+      "id": "kurasu-kyoto",
+      "name": "Kurasu Kyoto",
+      "nameJa": "クラス京都",
+      "city": "kyoto",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        34.9858,
+        135.7584
+      ],
+      "neighbourhood": "Station",
+      "description": "Near station. Rotating roasts from across Japan. Founder grew up in a kissaten.",
+      "priceRange": "¥400-700",
+      "hours": "8:00-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.7,
+      "userRatingsTotal": 2214,
+      "googlePlaceId": "ChIJIXEre6gIAWAREVefMDUfbV8"
+    },
+    {
+      "id": "weekenders-coffee",
+      "name": "Weekenders Coffee",
+      "nameJa": "ウィークエンダーズコーヒー",
+      "city": "kyoto",
+      "category": "coffee",
+      "subcategory": "third-wave",
+      "coordinates": [
+        35.0312,
+        135.7689
+      ],
+      "neighbourhood": "Nishijin",
+      "description": "Essential for coffee lovers. Standing bar, great beans to take home.",
+      "priceRange": "¥400-600",
+      "hours": "7:30-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.5,
+      "userRatingsTotal": 1636,
+      "googlePlaceId": "ChIJo1NzBZEIAWARdotwsy_FrBU"
+    },
+    {
+      "id": "smart-coffee",
+      "name": "Smart Coffee",
+      "nameJa": "スマート珈琲店",
+      "city": "kyoto",
+      "category": "coffee",
+      "subcategory": "kissaten",
+      "coordinates": [
+        35.0091,
+        135.7669
+      ],
+      "neighbourhood": "Teramachi",
+      "description": "Classic kissaten since 1932. Famous for fluffy hotcakes and house blend.",
+      "priceRange": "¥500-1000",
+      "hours": "8:00-19:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 3473,
+      "googlePlaceId": "ChIJFY1ePZIIAWARwnZmEXSRqz4"
+    },
+    {
+      "id": "murmur-coffee",
+      "name": "Murmur Coffee",
+      "nameJa": "マーマーコーヒー",
+      "city": "kyoto",
+      "category": "coffee",
+      "subcategory": "kissaten",
+      "coordinates": [
+        35.0068,
+        135.7713
+      ],
+      "neighbourhood": "Gion",
+      "description": "Romanticized kissaten by Takase River. Delicious toasts, expertly-brewed coffee.",
+      "priceRange": "¥500-900",
+      "hours": "9:00-18:00",
+      "shellfish": false,
+      "rating": 4.6,
+      "userRatingsTotal": 745,
+      "googlePlaceId": "ChIJK4XrorAIAWARi2Ofny4EqeU"
+    },
+    {
+      "id": "ogawa-coffee",
+      "name": "Ogawa Coffee",
+      "nameJa": "小川珈琲",
+      "city": "kyoto",
+      "category": "coffee",
+      "subcategory": "kissaten",
+      "coordinates": [
+        35.0045,
+        135.7688
+      ],
+      "neighbourhood": "Central",
+      "description": "Kyoto institution bridging traditional and third-wave. Multiple locations.",
+      "priceRange": "¥450-800",
+      "hours": "7:00-21:00",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 1407,
+      "googlePlaceId": "ChIJ-zXRVU8GAWARKu8Phd3QWBo"
+    },
+    {
+      "id": "nishiki-market",
+      "name": "Nishiki Market",
+      "nameJa": "錦市場",
+      "city": "kyoto",
+      "category": "restaurant",
+      "subcategory": "market",
+      "coordinates": [
+        35.005,
+        135.7649
+      ],
+      "neighbourhood": "Central",
+      "description": "Kyoto's kitchen. 400m covered arcade. Pickles, tofu, sweets, street food.",
+      "priceRange": "¥200-1500",
+      "hours": "9:00-18:00",
+      "shellfish": true,
+      "shellfishNote": "Market with various stalls - many options, some may have shellfish",
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 49224,
+      "googlePlaceId": "ChIJT8uMzZwIAWARnGzsARCjnrY"
+    },
+    {
+      "id": "fushimi-sake",
+      "name": "Gekkeikan Okura Sake Museum",
+      "nameJa": "月桂冠大倉記念館",
+      "city": "kyoto",
+      "category": "activity",
+      "subcategory": "sake",
+      "coordinates": [
+        34.9283,
+        135.7598
+      ],
+      "neighbourhood": "Fushimi",
+      "description": "Learn sake brewing history, tastings included. In Fushimi sake district.",
+      "priceRange": "¥600",
+      "hours": "9:30-16:30",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 4489,
+      "googlePlaceId": "ChIJLZRyoJIPAWAR0xnG_CrMzn4"
+    },
+    {
+      "id": "kizakura",
+      "name": "Kizakura Kappa Country",
+      "nameJa": "キザクラカッパカントリー",
+      "city": "kyoto",
+      "category": "activity",
+      "subcategory": "sake",
+      "coordinates": [
+        34.9291,
+        135.7589
+      ],
+      "neighbourhood": "Fushimi",
+      "description": "Sake + beer brewery with restaurant. Tastings and food in historic building.",
+      "priceRange": "¥500-2000",
+      "hours": "11:00-22:00",
+      "shellfish": false,
+      "rating": 4,
+      "userRatingsTotal": 2155,
+      "googlePlaceId": "ChIJIXzLlI0PAWARJiwufrqdwpo"
+    },
+    {
+      "id": "arashiyama-bamboo",
+      "name": "Arashiyama Bamboo Grove",
+      "nameJa": "嵐山竹林",
+      "city": "kyoto",
+      "category": "nature",
+      "subcategory": "walk",
+      "coordinates": [
+        35.0171,
+        135.6716
+      ],
+      "neighbourhood": "Arashiyama",
+      "description": "Iconic bamboo forest. Magical before 8am, crowded after 9am. Go early!",
+      "priceRange": "Free",
+      "hours": "Always open",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 20116,
+      "googlePlaceId": "ChIJrYtcv-urAWAR3XzWvXv8n_s"
+    },
+    {
+      "id": "fushimi-inari",
+      "name": "Fushimi Inari Shrine",
+      "nameJa": "伏見稲荷大社",
+      "city": "kyoto",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        34.9671,
+        135.7727
+      ],
+      "neighbourhood": "South",
+      "description": "Thousands of vermillion torii gates. Stunning at sunrise, hike partway up Mt Inari.",
+      "priceRange": "Free",
+      "hours": "24 hours",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.6,
+      "userRatingsTotal": 84132,
+      "googlePlaceId": "ChIJIW0uPRUPAWAR6eI6dRzKGns"
+    },
+    {
+      "id": "philosophers-path",
+      "name": "Philosopher's Path",
+      "nameJa": "哲学の道",
+      "city": "kyoto",
+      "category": "nature",
+      "subcategory": "walk",
+      "coordinates": [
+        35.026,
+        135.7941
+      ],
+      "neighbourhood": "Higashiyama",
+      "description": "2km stone path along canal. Cherry blossoms in spring, stunning autumn colours.",
+      "priceRange": "Free",
+      "hours": "Always open",
+      "shellfish": false,
+      "highlight": true,
+      "googlePlaceId": "ChIJC1iQcQQJAWARJ1jqp_e7tLU"
+    },
+    {
+      "id": "eikando",
+      "name": "Eikan-do Temple",
+      "nameJa": "永観堂",
+      "city": "kyoto",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        35.014,
+        135.7929
+      ],
+      "neighbourhood": "Higashiyama",
+      "description": "Famous for autumn colours. Night illumination in November. Worth the entry fee.",
+      "priceRange": "¥600 (¥1000 autumn)",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.6,
+      "userRatingsTotal": 9378,
+      "googlePlaceId": "ChIJF42zshgJAWARVK2wk6AFlxw"
+    },
+    {
+      "id": "ginkakuji",
+      "name": "Ginkaku-ji (Silver Pavilion)",
+      "nameJa": "銀閣寺",
+      "city": "kyoto",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        35.027,
+        135.7982
+      ],
+      "neighbourhood": "Higashiyama",
+      "description": "Zen temple at north end of Philosopher's Path. Beautiful sand garden.",
+      "priceRange": "¥500",
+      "hours": "8:30-17:00",
+      "shellfish": false,
+      "rating": 4.5,
+      "userRatingsTotal": 16458,
+      "googlePlaceId": "ChIJ4W9CCwUJAWARyauI6BzKiiU"
+    },
+    {
+      "id": "tenryuji",
+      "name": "Tenryu-ji Temple",
+      "nameJa": "天龍寺",
+      "city": "kyoto",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        35.0157,
+        135.6742
+      ],
+      "neighbourhood": "Arashiyama",
+      "description": "UNESCO World Heritage Zen temple. Beautiful garden backed by mountains.",
+      "priceRange": "¥500",
+      "hours": "8:30-17:00",
+      "shellfish": false,
+      "rating": 4.4,
+      "userRatingsTotal": 15779,
+      "googlePlaceId": "ChIJk54PuAGqAWARwEgz_9o-nM0"
+    },
+    {
+      "id": "okochi-sanso",
+      "name": "Okochi Sanso Villa",
+      "nameJa": "大河内山荘",
+      "city": "kyoto",
+      "category": "nature",
+      "subcategory": "garden",
+      "coordinates": [
+        35.0197,
+        135.6693
+      ],
+      "neighbourhood": "Arashiyama",
+      "description": "Actor's hillside estate. Stunning views, beautiful gardens, matcha included.",
+      "priceRange": "¥1000",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.6,
+      "userRatingsTotal": 1780,
+      "googlePlaceId": "ChIJGTfQ9gSqAWARvzp3lzOgjk8"
+    },
+    {
+      "id": "nagata-ya",
+      "name": "Nagata-ya",
+      "nameJa": "長田屋",
+      "city": "hiroshima",
+      "category": "restaurant",
+      "subcategory": "okonomiyaki",
+      "coordinates": [
+        34.3929,
+        132.4527
+      ],
+      "neighbourhood": "Peace Park",
+      "description": "Popular okonomiyaki near Peace Park. English menu, vegetarian options available.",
+      "priceRange": "¥800-1200",
+      "hours": "11:00-21:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.4,
+      "userRatingsTotal": 3135,
+      "googlePlaceId": "ChIJOaWjGw2iWjUR5RdB0fPip1Q"
+    },
+    {
+      "id": "okonomimura",
+      "name": "Okonomimura",
+      "nameJa": "お好み村",
+      "city": "hiroshima",
+      "category": "restaurant",
+      "subcategory": "okonomiyaki",
+      "coordinates": [
+        34.3944,
+        132.4594
+      ],
+      "neighbourhood": "Hondori",
+      "description": "3-story building with 25 okonomiyaki restaurants. Great for variety.",
+      "priceRange": "¥700-1200",
+      "hours": "11:00-23:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.2,
+      "userRatingsTotal": 8386,
+      "googlePlaceId": "ChIJ8wsenQ-iWjUR1opIxHCTeBM"
+    },
+    {
+      "id": "hassei",
+      "name": "Hassei",
+      "nameJa": "八誠",
+      "city": "hiroshima",
+      "category": "restaurant",
+      "subcategory": "okonomiyaki",
+      "coordinates": [
+        34.3889,
+        132.4612
+      ],
+      "neighbourhood": "Central",
+      "description": "Cozy joint worth the walk from Peace Park. English menu, staff speak some English.",
+      "priceRange": "¥800-1200",
+      "hours": "11:00-20:00",
+      "shellfish": false,
+      "rating": 4.6,
+      "userRatingsTotal": 1015,
+      "googlePlaceId": "ChIJr-d_VBCiWjUR4TVZzdbUB_4"
+    },
+    {
+      "id": "ekohiiki",
+      "name": "Ekohiiki",
+      "nameJa": "えこ贔屓",
+      "city": "hiroshima",
+      "category": "restaurant",
+      "subcategory": "oyster",
+      "coordinates": [
+        34.393,
+        132.4528
+      ],
+      "neighbourhood": "Peace Park",
+      "description": "Great oyster restaurant near Nagata-ya. Hiroshima is famous for oysters.",
+      "priceRange": "¥2000-4000",
+      "hours": "11:30-14:00, 17:00-22:00",
+      "shellfish": true,
+      "shellfishNote": "Oyster specialist - avoid",
+      "rating": 4.3,
+      "userRatingsTotal": 442,
+      "googlePlaceId": "ChIJUfi1BA2iWjURYr1Ep8GVyxo"
+    },
+    {
+      "id": "choueccha",
+      "name": "CHOUECCHA",
+      "nameJa": "チョウエッチャ",
+      "city": "hiroshima",
+      "category": "coffee",
+      "subcategory": "cafe",
+      "coordinates": [
+        34.3945,
+        132.4558
+      ],
+      "neighbourhood": "Central",
+      "description": "Cute cafe near City Hall. Good breakfast and lunch, cakes, afternoon coffee.",
+      "priceRange": "¥500-1200",
+      "hours": "8:00-18:00",
+      "shellfish": false,
+      "rating": 4.1,
+      "userRatingsTotal": 300,
+      "googlePlaceId": "ChIJCyx4q9ajWjURezsili6lrTw"
+    },
+    {
+      "id": "peace-memorial",
+      "name": "Peace Memorial Park & Museum",
+      "nameJa": "平和記念公園",
+      "city": "hiroshima",
+      "category": "activity",
+      "subcategory": "museum",
+      "coordinates": [
+        34.3915,
+        132.4536
+      ],
+      "neighbourhood": "Central",
+      "description": "Moving memorial and museum. A-Bomb Dome nearby. Allow 2+ hours.",
+      "priceRange": "¥200",
+      "hours": "8:30-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.7,
+      "userRatingsTotal": 27661,
+      "googlePlaceId": "ChIJtyvayxKiWjURgIGSanFnMPE"
+    },
+    {
+      "id": "shukkeien",
+      "name": "Shukkeien Garden",
+      "nameJa": "縮景園",
+      "city": "hiroshima",
+      "category": "nature",
+      "subcategory": "garden",
+      "coordinates": [
+        34.3984,
+        132.4678
+      ],
+      "neighbourhood": "Central",
+      "description": "Beautiful historic garden. Good autumn colours, peaceful morning walk.",
+      "priceRange": "¥260",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "rating": 4.5,
+      "userRatingsTotal": 8065,
+      "googlePlaceId": "ChIJAfBmWKmYWjUR42FdSpYghNc"
+    },
+    {
+      "id": "itsukushima",
+      "name": "Itsukushima Shrine",
+      "nameJa": "厳島神社",
+      "city": "miyajima",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        34.2961,
+        132.3198
+      ],
+      "neighbourhood": "Main",
+      "description": "Famous floating torii gate. UNESCO World Heritage. Best at high tide.",
+      "priceRange": "¥300",
+      "hours": "6:30-18:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.6,
+      "userRatingsTotal": 34267,
+      "googlePlaceId": "ChIJj23HfgTjGmARkNW10PcocjU"
+    },
+    {
+      "id": "daishoin",
+      "name": "Daisho-in Temple",
+      "nameJa": "大聖院",
+      "city": "miyajima",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        34.2889,
+        132.3199
+      ],
+      "neighbourhood": "South",
+      "description": "Atmospheric temple, hidden gem. Spin the prayer wheels on the way up.",
+      "priceRange": "Free",
+      "hours": "8:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.6,
+      "userRatingsTotal": 4808,
+      "googlePlaceId": "ChIJCcnfu8uwWjURP_wHx2YZPro"
+    },
+    {
+      "id": "mt-misen",
+      "name": "Mount Misen",
+      "nameJa": "弥山",
+      "city": "miyajima",
+      "category": "nature",
+      "subcategory": "hike",
+      "coordinates": [
+        34.2796,
+        132.3137
+      ],
+      "neighbourhood": "Central",
+      "description": "Ropeway to near summit. Short hike to top for views over Inland Sea.",
+      "priceRange": "¥1100 one-way",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.7,
+      "userRatingsTotal": 716,
+      "googlePlaceId": "ChIJGUy2HtSwWjURk5ao-WBFAf0"
+    },
+    {
+      "id": "kakiya",
+      "name": "Kakiya",
+      "nameJa": "牡蠣屋",
+      "city": "miyajima",
+      "category": "restaurant",
+      "subcategory": "oyster",
+      "coordinates": [
+        34.2972,
+        132.3209
+      ],
+      "neighbourhood": "Main Street",
+      "description": "Popular oyster restaurant. Oysters served 10 different ways. Extensive wine cellar.",
+      "priceRange": "¥2000-4000",
+      "hours": "10:00-18:00",
+      "shellfish": true,
+      "shellfishNote": "Oyster specialist - avoid",
+      "rating": 4.4,
+      "userRatingsTotal": 1472,
+      "googlePlaceId": "ChIJX4xKFx6xWjURzZSe0kvIX8s"
+    },
+    {
+      "id": "kishibe",
+      "name": "Kishibe",
+      "nameJa": "岸辺",
+      "city": "miyajima",
+      "category": "restaurant",
+      "subcategory": "okonomiyaki",
+      "coordinates": [
+        34.2968,
+        132.3204
+      ],
+      "neighbourhood": "Machiya",
+      "description": "Small okonomiyaki spot. Counter seating for 12. From ¥700.",
+      "priceRange": "¥700-1200",
+      "hours": "10:30-17:00",
+      "shellfish": false,
+      "rating": 4.6,
+      "userRatingsTotal": 414,
+      "googlePlaceId": "ChIJF7SO1LawWjUR74Fu38K1WA4"
+    },
+    {
+      "id": "itsuki-coffee-miyajima",
+      "name": "Itsuki Coffee Miyajima",
+      "nameJa": "伊都岐珈琲",
+      "city": "miyajima",
+      "category": "coffee",
+      "subcategory": "specialty",
+      "coordinates": [
+        34.2974,
+        132.3212
+      ],
+      "neighbourhood": "Main Street",
+      "description": "Only specialty coffee on Miyajima. Drip coffee, morning sets with Cadona bakery bread.",
+      "priceRange": "¥400-800",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 875,
+      "googlePlaceId": "ChIJkYdHibawWjURuhI3hds9GjI"
+    },
+    {
+      "id": "sarasvati",
+      "name": "Sarasvati",
+      "nameJa": "サラスヴァティ",
+      "city": "miyajima",
+      "category": "coffee",
+      "subcategory": "cafe",
+      "coordinates": [
+        34.2965,
+        132.3195
+      ],
+      "neighbourhood": "Central",
+      "description": "Coffee roastery in 1900s warehouse. Handmade cakes. Shabby chic over two floors.",
+      "priceRange": "¥500-1000",
+      "hours": "10:00-17:00",
+      "shellfish": false,
+      "rating": 4.3,
+      "userRatingsTotal": 366,
+      "googlePlaceId": "ChIJZVb_krawWjURyPFN2y3uouY"
+    },
+    {
+      "id": "cafe-lente",
+      "name": "Café Lente",
+      "nameJa": "カフェレンテ",
+      "city": "miyajima",
+      "category": "coffee",
+      "subcategory": "cafe",
+      "coordinates": [
+        34.2959,
+        132.3201
+      ],
+      "neighbourhood": "Central",
+      "description": "Best views of floating torii. Lunch sets, vegan options. Stylish.",
+      "priceRange": "¥500-1200",
+      "hours": "11:00-16:00",
+      "shellfish": false,
+      "rating": 4.6,
+      "userRatingsTotal": 270,
+      "googlePlaceId": "ChIJH13qjrWwWjURkvsmO59oUtE"
+    },
+    {
+      "id": "momiji-manju",
+      "name": "Momiji Manju Shops",
+      "nameJa": "もみじ饅頭",
+      "city": "miyajima",
+      "category": "restaurant",
+      "subcategory": "sweets",
+      "coordinates": [
+        34.297,
+        132.3208
+      ],
+      "neighbourhood": "Main Street",
+      "description": "Maple leaf-shaped cakes. Miyajima specialty. Many shops, try fresh ones.",
+      "priceRange": "¥100-200 each",
+      "hours": "9:00-17:00",
+      "shellfish": false,
+      "rating": 4.3,
+      "userRatingsTotal": 1316,
+      "googlePlaceId": "ChIJAa56vLawWjURtGbpkHEhmrY"
+    },
+    {
+      "id": "byodoin",
+      "name": "Byodo-in Temple",
+      "nameJa": "平等院",
+      "city": "uji",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        34.8894,
+        135.8076
+      ],
+      "neighbourhood": "Central",
+      "description": "UNESCO World Heritage temple featuring the iconic Phoenix Hall. Appears on the ¥10 coin.",
+      "priceRange": "¥600",
+      "hours": "8:30-17:30",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.5,
+      "userRatingsTotal": 21181,
+      "googlePlaceId": "ChIJqyva4AwRAWARpAf6j5MUhGA"
+    },
+    {
+      "id": "nakamura-tokichi",
+      "name": "Nakamura Tokichi Honten",
+      "nameJa": "中村藤吉本店",
+      "city": "uji",
+      "category": "coffee",
+      "subcategory": "matcha",
+      "coordinates": [
+        34.8911,
+        135.8018
+      ],
+      "neighbourhood": "Uji-bashi",
+      "description": "Legendary tea house since 1854. Best matcha in Japan. Try the matcha parfait, soba, and tea.",
+      "priceRange": "¥800-2000",
+      "hours": "10:00-17:30",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.4,
+      "userRatingsTotal": 5034,
+      "googlePlaceId": "ChIJsY2yLgkRAWARRxd0gBbV7XI"
+    },
+    {
+      "id": "ujigami",
+      "name": "Ujigami Shrine",
+      "nameJa": "宇治上神社",
+      "city": "uji",
+      "category": "activity",
+      "subcategory": "temple",
+      "coordinates": [
+        34.8939,
+        135.8121
+      ],
+      "neighbourhood": "East Bank",
+      "description": "UNESCO World Heritage shrine - oldest original shrine building in Japan (11th century).",
+      "priceRange": "Free",
+      "hours": "9:00-16:30",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.3,
+      "userRatingsTotal": 3006,
+      "googlePlaceId": "ChIJYfl6dXMRAWARX1-X0_AOYBE"
+    },
+    {
+      "id": "uji-omotesando",
+      "name": "Uji Omotesando Tea Street",
+      "nameJa": "宇治橋通り商店街",
+      "city": "uji",
+      "category": "activity",
+      "subcategory": "walk",
+      "coordinates": [
+        34.8907,
+        135.8052
+      ],
+      "neighbourhood": "Uji-bashi",
+      "description": "Traditional shopping street lined with matcha shops. Sample tea, sweets, and buy souvenirs.",
+      "priceRange": "Free to browse",
+      "hours": "10:00-17:00",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.5,
+      "userRatingsTotal": 196,
+      "googlePlaceId": "ChIJy9Uz30ERAWARP3Sz9DkSW2w"
+    },
+    {
+      "id": "tsuen-tea",
+      "name": "Tsuen Tea",
+      "nameJa": "通圓",
+      "city": "uji",
+      "category": "coffee",
+      "subcategory": "matcha",
+      "coordinates": [
+        34.8901,
+        135.8066
+      ],
+      "neighbourhood": "Uji-bashi",
+      "description": "World's oldest tea house, operating since 1160. 24 generations of tea masters. Overlooking Uji River.",
+      "priceRange": "¥500-1500",
+      "hours": "9:30-17:30",
+      "shellfish": false,
+      "highlight": true,
+      "rating": 4.2,
+      "userRatingsTotal": 1114,
+      "googlePlaceId": "ChIJW7lOHQsRAWARQdYdv9VcLR0"
+    },
+    {
+      "id": "itohkyuemon",
+      "name": "Itohkyuemon",
+      "nameJa": "伊藤久右衛門",
+      "city": "uji",
+      "category": "coffee",
+      "subcategory": "matcha",
+      "coordinates": [
+        34.8885,
+        135.8042
+      ],
+      "neighbourhood": "Uji-bashi",
+      "description": "Famous for matcha parfaits and matcha soba. Beautiful riverside location near Byodo-in.",
+      "priceRange": "¥700-1500",
+      "hours": "10:00-18:00",
+      "shellfish": false,
+      "rating": 4.2,
+      "userRatingsTotal": 3490,
+      "googlePlaceId": "ChIJ0YWlmwsRAWARqE4O5igHGMs"
+    },
+    {
+      "id": "taihoan",
+      "name": "Taihoan Tea House",
+      "nameJa": "対鳳庵",
+      "city": "uji",
+      "category": "coffee",
+      "subcategory": "matcha",
+      "coordinates": [
+        34.8878,
+        135.8058
+      ],
+      "neighbourhood": "Central",
+      "description": "Traditional tea ceremony experience. Whisked matcha and wagashi in peaceful garden setting.",
+      "priceRange": "¥500-1000",
+      "hours": "10:00-16:00",
+      "shellfish": false,
+      "rating": 4.3,
+      "userRatingsTotal": 187,
+      "googlePlaceId": "ChIJpwPkLQ0RAWAR_oYLmZjsoH4"
+    },
+    {
+      "id": "masudachahoten",
+      "name": "Masuda Chaho",
+      "nameJa": "増田茶舗",
+      "city": "uji",
+      "category": "coffee",
+      "subcategory": "matcha",
+      "coordinates": [
+        34.8903,
+        135.8055
+      ],
+      "neighbourhood": "Uji-bashi",
+      "description": "Small family tea shop. Excellent matcha soft serve and tea to take home.",
+      "priceRange": "¥300-800",
+      "hours": "9:00-18:00",
+      "shellfish": false,
+      "rating": 4.1,
+      "userRatingsTotal": 729,
+      "googlePlaceId": "ChIJldiqgQwRAWARl6IGs31uN4I"
+    }
+  ]
+}

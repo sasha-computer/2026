@@ -1,0 +1,176 @@
+{
+  "cities": [
+    {
+      "id": "tokyo",
+      "name": "Tokyo",
+      "nameJa": "東京",
+      "coordinates": [35.6762, 139.6503],
+      "days": [1, 2, 3, 4],
+      "nights": 4,
+      "description": "Japan's capital - explore the old-town charm of Yanaka and the coffee scene of Kiyosumi-Shirakawa",
+      "neighbourhoods": [
+        {
+          "name": "Yanaka/Nezu",
+          "nameJa": "谷中/根津",
+          "description": "Traditional Tokyo that escaped WWII bombing. Temples, old wooden houses, shopping streets.",
+          "recommended": true
+        },
+        {
+          "name": "Kiyosumi-Shirakawa",
+          "nameJa": "清澄白河",
+          "description": "Tokyo's coffee town. Converted warehouses, specialty roasters, traditional gardens.",
+          "recommended": true
+        },
+        {
+          "name": "Ebisu",
+          "nameJa": "恵比寿",
+          "description": "Sophisticated dining scene, from izakaya to Michelin stars."
+        }
+      ]
+    },
+    {
+      "id": "kamakura",
+      "name": "Kamakura",
+      "nameJa": "鎌倉",
+      "coordinates": [35.3192, 139.5466],
+      "days": [4],
+      "nights": 0,
+      "description": "Day trip from Tokyo - temples, Great Buddha, coastal walks",
+      "neighbourhoods": []
+    },
+    {
+      "id": "kanazawa",
+      "name": "Kanazawa",
+      "nameJa": "金沢",
+      "coordinates": [36.5944, 136.6256],
+      "days": [5, 6, 7],
+      "nights": 3,
+      "description": "Traditional culture preserved - one of Japan's top gardens, geisha districts, samurai houses",
+      "neighbourhoods": [
+        {
+          "name": "Kazuemachi",
+          "nameJa": "主計町",
+          "description": "Quiet geisha district along the canal. Traditional atmosphere.",
+          "recommended": true
+        },
+        {
+          "name": "Higashi Chaya",
+          "nameJa": "ひがし茶屋街",
+          "description": "Main geisha district. Tea houses, gold leaf shops, traditional architecture."
+        },
+        {
+          "name": "Teramachi",
+          "nameJa": "寺町",
+          "description": "Temple district, residential feel, quieter than tourist areas."
+        }
+      ]
+    },
+    {
+      "id": "shirakawago",
+      "name": "Shirakawa-go",
+      "nameJa": "白川郷",
+      "coordinates": [36.2576, 136.9064],
+      "days": [8],
+      "nights": 0,
+      "description": "UNESCO World Heritage village - traditional thatched-roof houses",
+      "neighbourhoods": []
+    },
+    {
+      "id": "takayama",
+      "name": "Takayama",
+      "nameJa": "高山",
+      "coordinates": [36.1461, 137.2522],
+      "days": [8, 9],
+      "nights": 2,
+      "description": "Preserved Edo-period town in the mountains - Hida beef, sake breweries, morning markets",
+      "neighbourhoods": [
+        {
+          "name": "Sanmachi Suji",
+          "nameJa": "三町筋",
+          "description": "Historic merchant district. Traditional buildings, sake breweries, shops.",
+          "recommended": true
+        }
+      ]
+    },
+    {
+      "id": "kyoto",
+      "name": "Kyoto",
+      "nameJa": "京都",
+      "coordinates": [35.0116, 135.7681],
+      "days": [10, 11, 12, 13],
+      "nights": 4,
+      "description": "Cultural heart of Japan - temples, gardens, geisha districts",
+      "neighbourhoods": [
+        {
+          "name": "Nishijin",
+          "nameJa": "西陣",
+          "description": "Traditional textile district. Machiya houses, local atmosphere.",
+          "recommended": true
+        },
+        {
+          "name": "Okazaki",
+          "nameJa": "岡崎",
+          "description": "Near museums and Philosopher's Path. Quiet, residential."
+        },
+        {
+          "name": "Gion",
+          "nameJa": "祇園",
+          "description": "Famous geisha district. Best in early evening before crowds."
+        }
+      ]
+    },
+    {
+      "id": "uji",
+      "name": "Uji",
+      "nameJa": "宇治",
+      "coordinates": [34.8897, 135.8072],
+      "days": [13],
+      "nights": 0,
+      "description": "Japan's matcha capital - world-famous green tea, beautiful temples, riverside scenery",
+      "neighbourhoods": [
+        {
+          "name": "Uji-bashi Area",
+          "nameJa": "宇治橋",
+          "description": "Main area around Uji Bridge with tea shops, temples, and riverside walks.",
+          "recommended": true
+        }
+      ]
+    },
+    {
+      "id": "hiroshima",
+      "name": "Hiroshima",
+      "nameJa": "広島",
+      "coordinates": [34.3853, 132.4553],
+      "days": [14, 15, 16],
+      "nights": 2,
+      "description": "Peace Memorial, amazing okonomiyaki, gateway to Miyajima",
+      "neighbourhoods": [
+        {
+          "name": "Hondori/Nagarekawa",
+          "nameJa": "本通り/流川",
+          "description": "Central shopping arcade and entertainment district. Good food scene.",
+          "recommended": true
+        }
+      ]
+    },
+    {
+      "id": "miyajima",
+      "name": "Miyajima",
+      "nameJa": "宮島",
+      "coordinates": [34.2961, 132.3198],
+      "days": [15],
+      "nights": 0,
+      "description": "Sacred island with floating torii gate, friendly deer",
+      "neighbourhoods": []
+    }
+  ],
+  "route": [
+    { "from": "tokyo", "to": "kanazawa", "method": "Hokuriku Shinkansen", "duration": "2.5 hours", "jrPass": true },
+    { "from": "kanazawa", "to": "shirakawago", "method": "Nohi Bus", "duration": "1.5 hours", "jrPass": false, "cost": "¥2,000" },
+    { "from": "shirakawago", "to": "takayama", "method": "Nohi Bus", "duration": "1 hour", "jrPass": false, "cost": "¥2,500" },
+    { "from": "takayama", "to": "kyoto", "method": "JR via Nagoya", "duration": "4 hours", "jrPass": true },
+    { "from": "kyoto", "to": "hiroshima", "method": "Sanyo Shinkansen", "duration": "1.5 hours", "jrPass": true },
+    { "from": "hiroshima", "to": "miyajima", "method": "Tram + JR Ferry", "duration": "50 min", "jrPass": true },
+    { "from": "hiroshima", "to": "tokyo", "method": "Tokaido Shinkansen", "duration": "4 hours", "jrPass": true, "notes": "Departure day only" }
+  ]
+}

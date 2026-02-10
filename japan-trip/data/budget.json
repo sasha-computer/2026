@@ -1,0 +1,148 @@
+{
+  "exchangeRate": {
+    "jpyToGbp": 0.0052,
+    "note": "Approximate rate: ¥192 = £1 (as of late 2025)"
+  },
+  "transport": {
+    "jrPass": {
+      "type": "14-day JR Pass",
+      "yen": 70000,
+      "gbp": 365,
+      "perPerson": true,
+      "note": "Covers most Shinkansen and JR trains"
+    },
+    "flights": {
+      "type": "London - Tokyo return",
+      "yen": 150000,
+      "gbp": 780,
+      "perPerson": true,
+      "note": "November shoulder season pricing"
+    },
+    "notCoveredByJR": [
+      {
+        "route": "Kanazawa → Shirakawa-go",
+        "method": "Nohi Bus",
+        "yen": 2000,
+        "gbp": 10
+      },
+      {
+        "route": "Shirakawa-go → Takayama",
+        "method": "Nohi Bus",
+        "yen": 2600,
+        "gbp": 14
+      },
+      {
+        "route": "Tokyo Metro (4 days)",
+        "method": "Day passes or Suica",
+        "yen": 3200,
+        "gbp": 17
+      },
+      {
+        "route": "Kyoto buses (5 days)",
+        "method": "Day passes",
+        "yen": 3500,
+        "gbp": 18
+      },
+      {
+        "route": "Hiroshima tram",
+        "method": "Day pass",
+        "yen": 700,
+        "gbp": 4
+      }
+    ]
+  },
+  "accommodation": {
+    "perNight": {
+      "budget": { "yen": 8000, "gbp": 42 },
+      "midRange": { "yen": 15000, "gbp": 78 },
+      "nice": { "yen": 25000, "gbp": 130 },
+      "ryokan": { "yen": 35000, "gbp": 182 }
+    },
+    "estimate": {
+      "nights": 17,
+      "breakdown": [
+        { "type": "Mid-range hotels", "nights": 13, "yenPerNight": 15000, "totalYen": 195000 },
+        { "type": "Ryokan (Takayama)", "nights": 1, "yenPerNight": 35000, "totalYen": 35000 },
+        { "type": "Ryokan (Miyajima or Kyoto)", "nights": 1, "yenPerNight": 35000, "totalYen": 35000 },
+        { "type": "Final night Tokyo", "nights": 1, "yenPerNight": 15000, "totalYen": 15000 },
+        { "type": "Airport hotel", "nights": 1, "yenPerNight": 12000, "totalYen": 12000 }
+      ],
+      "totalYen": 292000,
+      "totalGbp": 1521,
+      "perPerson": false,
+      "note": "Per room (double occupancy)"
+    }
+  },
+  "activities": {
+    "entries": [
+      { "name": "Kiyosumi Garden", "city": "tokyo", "yen": 150, "gbp": 1 },
+      { "name": "Kenrokuen Garden", "city": "kanazawa", "yen": 320, "gbp": 2 },
+      { "name": "21st Century Museum", "city": "kanazawa", "yen": 1200, "gbp": 6 },
+      { "name": "Nomura Samurai House", "city": "kanazawa", "yen": 550, "gbp": 3 },
+      { "name": "Myoryuji Ninja Temple", "city": "kanazawa", "yen": 1000, "gbp": 5 },
+      { "name": "Hida Folk Village", "city": "takayama", "yen": 700, "gbp": 4 },
+      { "name": "Sake tasting (Hirase)", "city": "takayama", "yen": 500, "gbp": 3 },
+      { "name": "Tenryu-ji Temple", "city": "kyoto", "yen": 500, "gbp": 3 },
+      { "name": "Okochi Sanso Villa", "city": "kyoto", "yen": 1000, "gbp": 5 },
+      { "name": "Ginkaku-ji", "city": "kyoto", "yen": 500, "gbp": 3 },
+      { "name": "Eikan-do (autumn)", "city": "kyoto", "yen": 1000, "gbp": 5 },
+      { "name": "Gekkeikan Sake Museum", "city": "kyoto", "yen": 600, "gbp": 3 },
+      { "name": "Todai-ji Temple", "city": "nara", "yen": 600, "gbp": 3 },
+      { "name": "Peace Memorial Museum", "city": "hiroshima", "yen": 200, "gbp": 1 },
+      { "name": "Shukkeien Garden", "city": "hiroshima", "yen": 260, "gbp": 1 },
+      { "name": "Itsukushima Shrine", "city": "miyajima", "yen": 300, "gbp": 2 },
+      { "name": "Mt Misen Ropeway (return)", "city": "miyajima", "yen": 1800, "gbp": 9 }
+    ],
+    "totalYen": 11180,
+    "totalGbp": 58,
+    "perPerson": true
+  },
+  "food": {
+    "daily": {
+      "budget": { "yen": 3000, "gbp": 16, "note": "Convenience stores, cheap ramen" },
+      "moderate": { "yen": 6000, "gbp": 31, "note": "Mix of casual restaurants and markets" },
+      "comfortable": { "yen": 10000, "gbp": 52, "note": "Nice restaurants, some splurges" }
+    },
+    "estimate": {
+      "days": 17,
+      "dailyYen": 7000,
+      "dailyGbp": 36,
+      "totalYen": 119000,
+      "totalGbp": 620,
+      "perPerson": true,
+      "note": "Includes breakfast, lunch, dinner, coffee, snacks"
+    },
+    "splurges": [
+      { "name": "Hida beef dinner (Takayama)", "yen": 5000, "gbp": 26 },
+      { "name": "Kaiseki dinner (Kyoto)", "yen": 8000, "gbp": 42 },
+      { "name": "Sushi omakase", "yen": 6000, "gbp": 31 }
+    ]
+  },
+  "summary": {
+    "perPerson": {
+      "flights": { "yen": 150000, "gbp": 780 },
+      "jrPass": { "yen": 70000, "gbp": 365 },
+      "localTransport": { "yen": 12000, "gbp": 63 },
+      "accommodation": { "yen": 146000, "gbp": 760, "note": "Half of room cost" },
+      "activities": { "yen": 11180, "gbp": 58 },
+      "food": { "yen": 119000, "gbp": 620 },
+      "misc": { "yen": 20000, "gbp": 104, "note": "Souvenirs, extras, buffer" }
+    },
+    "totalPerPerson": {
+      "yen": 528180,
+      "gbp": 2750
+    },
+    "totalForTwo": {
+      "yen": 1056360,
+      "gbp": 5500
+    }
+  },
+  "tips": [
+    "Always carry cash - many places don't accept cards",
+    "7-Eleven ATMs accept foreign cards",
+    "Convenience store food is excellent and cheap",
+    "Set a daily budget and track spending",
+    "Lunch sets (teishoku) are great value",
+    "Many temples/shrines are free, gardens usually aren't"
+  ]
+}
