@@ -89,13 +89,13 @@ Parses Apple Health XML exports and Garmin FIT files into a simple markdown runn
 
 → [browse code](./plain-text-running-tracker)
 
-## ⭐ boundless-debug
+## ⭐ Argus
 
-Debug tool for Boundless proof requests. Fetches a proof request from the BoundlessMarket contract on Base, downloads the guest program ELF (supports IPFS), and executes it locally in the RISC Zero zkVM in execute-only mode. Reports cycles, journal output, and any errors. Human-readable output by default, JSON with `--json` for scripting.
+Named after the hundred-eyed giant of Greek mythology. A debug tool for Boundless proof requests. Fetches a proof request from the BoundlessMarket contract on Base, downloads the guest program ELF (supports IPFS), and executes it locally in the RISC Zero zkVM in execute-only mode. Reports cycles, journal output, and any errors. Human-readable output by default, JSON with `--json` for scripting.
 
 **Stack:** Rust · RISC Zero · Nix
 
-→ [browse code](./boundless-debug)
+→ [browse code](./argus)
 
 ## ⭐ practice-problems
 
