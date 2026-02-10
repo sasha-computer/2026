@@ -4,9 +4,9 @@ Monorepo for my 2026 projects.
 
 ## ⭐ pdfcards
 
-A local PDF reader with built-in highlighting and spaced repetition flashcards. Highlight text in any PDF, turn those highlights into flashcards, and review them with an SRS system (Again/Hard/Good/Easy). All data stored locally. Built in response to [Dwarkesh Patel and Andy Matuschak's conversation on studying and spaced repetition](https://www.youtube.com/watch?v=dJRiWnKtEH4). Very early stages but it works.
+A local PDF reader with built-in highlighting and spaced repetition flashcards. Highlight text in any PDF, turn those highlights into flashcards, and review them with an SRS system (Again/Hard/Good/Easy). All data stored locally. Built in response to [Dwarkesh Patel and Andy Matuschak's conversation on studying and spaced repetition](https://www.youtube.com/watch?v=OFuu4pesKf0). Very early stages but it works.
 
-[![Dwarkesh x Andy Matuschak](https://img.youtube.com/vi/dJRiWnKtEH4/maxresdefault.jpg)](https://www.youtube.com/watch?v=dJRiWnKtEH4)
+[![Dwarkesh x Andy Matuschak](./pdfcards/dwarkesh_matuschak.jpg)](https://www.youtube.com/watch?v=OFuu4pesKf0)
 
 **Stack:** Bun · TypeScript · pdf.js
 

@@ -1,8 +1,8 @@
 # pdfcards
 
-> ⚠️ **Early stages.** This works but is very much a prototype. Built in response to [Dwarkesh Patel and Andy Matuschak's conversation on studying and spaced repetition](https://www.youtube.com/watch?v=dJRiWnKtEH4).
+> ⚠️ **Early stages.** This works but is very much a prototype. Built in response to [Dwarkesh Patel and Andy Matuschak's conversation on studying and spaced repetition](https://www.youtube.com/watch?v=OFuu4pesKf0).
 
-[![Dwarkesh x Andy Matuschak](https://img.youtube.com/vi/dJRiWnKtEH4/maxresdefault.jpg)](https://www.youtube.com/watch?v=dJRiWnKtEH4)
+[![Dwarkesh x Andy Matuschak](./dwarkesh_matuschak.jpg)](https://www.youtube.com/watch?v=OFuu4pesKf0)
 
 A local PDF reader with built-in highlighting and spaced repetition flashcards. Highlight text in any PDF, turn highlights into flashcards, and review them with an SRS system. All data stored locally in `~/.config/pdfx/`.
 
