@@ -75,19 +75,11 @@ A tiny CLI tool that turns Claude Code into an autonomous task runner. Give it a
 
 ## ⭐ my-runs
 
-A Hugo frontend for [plain-text-running-tracker](https://github.com/sasha-computer/plain-text-running-tracker), which parses Apple Health exports and Garmin FIT files into a markdown running log. This site takes that data and renders it as an interactive calendar view.
+A Hugo frontend for [plain-text-running-tracker](https://github.com/sasha-computer/personal-software/tree/main/plain-text-running-tracker), which parses Apple Health exports and Garmin FIT files into a markdown running log. This site takes that data and renders it as an interactive calendar view.
 
 **Stack:** Hugo · HTML · CSS · JavaScript
 
 → [browse code](./my-runs)
-
-## ⭐ plain-text-running-tracker
-
-Parses Apple Health XML exports and Garmin FIT files into a simple markdown running log. Extracts every run with date, distance, duration, pace, and heart rate, then writes it all to a single `.md` file. No cloud, no accounts, just your data in plain text. Feeds into [my-runs](./my-runs) for the calendar view.
-
-**Stack:** Python
-
-→ [browse code](./plain-text-running-tracker)
 
 ## ⭐ Argus
 
@@ -98,14 +90,6 @@ Named after the hundred-eyed giant of Greek mythology. A debug tool for Boundles
 **Stack:** Rust · RISC Zero · Nix
 
 → [browse code](./argus)
-
-## ⭐ immich-backup
-
-Automated backup system for [Immich](https://immich.app/) photos. Pulls photos from a NAS over SSH (local or Tailscale), stages them locally, then archives to a LUKS-encrypted USB drive as compressed tarballs. Runs on a systemd timer so backups happen automatically. Includes install/uninstall scripts.
-
-**Stack:** Bash · systemd · LUKS · rsync
-
-→ [browse code](./immich-backup)
 
 ## ⭐ practice-problems
 
