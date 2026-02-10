@@ -75,11 +75,11 @@ A tiny CLI tool that turns Claude Code into an autonomous task runner. Give it a
 
 ## ⭐ sashas-life
 
-My personal website, built with Hugo. A minimal site with a running log that parses Apple Health and Garmin data into a calendar view.
+My personal website, built with Hugo. Acts as a frontend for [plain-text-running-tracker](https://github.com/sasha-computer/plain-text-running-tracker), which parses Apple Health exports and Garmin FIT files into a markdown running log. This site takes that data and renders it as an interactive calendar view.
 
 **Stack:** Hugo · HTML · CSS · JavaScript
 
-→ [browse code](./sashas-life)
+→ [browse code](./sashas-life) · [plain-text-running-tracker](https://github.com/sasha-computer/plain-text-running-tracker)
 
 ## ⭐ boundless-debug
 
