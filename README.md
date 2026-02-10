@@ -8,6 +8,8 @@ A local PDF reader with built-in highlighting and spaced repetition flashcards. 
 
 [![Dwarkesh x Andy Matuschak](./pdfcards/dwarkesh_matuschak.jpg)](https://www.youtube.com/watch?v=OFuu4pesKf0)
 
+![pdfcards](./pdfcards/pdfcards.png)
+
 **Stack:** Bun · TypeScript · pdf.js
 
 → [browse code](./pdfcards)
@@ -112,6 +114,8 @@ A Hugo frontend for [plain-text-running-tracker](https://github.com/sasha-comput
 ## ⭐ explorer-api
 
 Clients for the [Boundless Indexer API](https://d2mdvlnmyov1e1.cloudfront.net/docs/) on Base. A Svelte 5 web app for exploring API endpoints interactively, plus a Cloudflare Workers deployment with Terraform-managed Access policies. Covers all 31 endpoints with documentation on which ones work, which return empty data, and which are broken.
+
+![Boundless Explorer](./explorer-api/explorer.png)
 
 **Stack:** Svelte 5 · TypeScript · Bun · Cloudflare Workers · Terraform · Supabase
 
