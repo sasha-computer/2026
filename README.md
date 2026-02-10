@@ -109,6 +109,14 @@ A Hugo frontend for [plain-text-running-tracker](https://github.com/sasha-comput
 
 → [browse code](./my-runs)
 
+## ⭐ explorer-api
+
+Clients for the [Boundless Indexer API](https://d2mdvlnmyov1e1.cloudfront.net/docs/) on Base. A Svelte 5 web app for exploring API endpoints interactively, plus a Cloudflare Workers deployment with Terraform-managed Access policies. Covers all 31 endpoints with documentation on which ones work, which return empty data, and which are broken.
+
+**Stack:** Svelte 5 · TypeScript · Bun · Cloudflare Workers · Terraform · Supabase
+
+→ [browse code](./explorer-api)
+
 ## ⭐ Argus
 
 ![Argus](./argus/argus_header.png)
