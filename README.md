@@ -99,6 +99,14 @@ Named after the hundred-eyed giant of Greek mythology. A debug tool for Boundles
 
 → [browse code](./argus)
 
+## ⭐ immich-backup
+
+Automated backup system for [Immich](https://immich.app/) photos. Pulls photos from a NAS over SSH (local or Tailscale), stages them locally, then archives to a LUKS-encrypted USB drive as compressed tarballs. Runs on a systemd timer so backups happen automatically. Includes install/uninstall scripts.
+
+**Stack:** Bash · systemd · LUKS · rsync
+
+→ [browse code](./immich-backup)
+
 ## ⭐ practice-problems
 
 A collection of handwritten coding problems in Python and Scheme, worked through alongside [boot.dev](https://www.boot.dev/u/sasha-computer) courses and [SICP](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html) Section 1. Memoized factorials with closures, currying, recursive joins, depth-weighted sums, valid parentheses generation, pattern matching on sum types, and more.
