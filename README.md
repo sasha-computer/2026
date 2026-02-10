@@ -107,6 +107,8 @@ This was part of my broader experimentation with building a personal AI agent (O
 
 A Hugo frontend for [plain-text-running-tracker](https://github.com/sasha-computer/personal-software/tree/main/plain-text-running-tracker), which parses Apple Health exports and Garmin FIT files into a markdown running log. This site takes that data and renders it as an interactive calendar view.
 
+![my-runs](./my-runs/my-runs.png)
+
 **Stack:** Hugo · HTML · CSS · JavaScript
 
 → [browse code](./my-runs)
