@@ -1,0 +1,16 @@
+{{ define "main" }}
+  <h1>{{ .Title }}</h1>
+
+  <nav class="calendar-nav">
+    <button id="prev-month">&larr; Prev</button>
+    <span id="month-label" class="month-label"></span>
+    <button id="next-month">Next &rarr;</button>
+  </nav>
+
+  <div id="calendar" class="calendar"></div>
+{{ end }}
+
+{{ define "scripts" }}
+  <script src="/js/runs.js"></script>
+  <script src="/js/calendar.js"></script>
+{{ end }}

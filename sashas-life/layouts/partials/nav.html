@@ -1,0 +1,4 @@
+<nav class="site-nav">
+  <a href="/"{{ if .IsHome }} class="current"{{ end }}>Home</a>
+  <a href="/running/"{{ if eq .RelPermalink "/running/" }} class="current"{{ end }}>Running</a>
+</nav>
