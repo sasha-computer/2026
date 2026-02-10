@@ -20,6 +20,16 @@ My notes and 80+ flashcards from working through [Structure and Interpretation o
 
 → [browse code](./sicp-notes)
 
+## ⭐ japan-trip
+
+A trip planner I built for my 16-day Japan trip (Tokyo, Kanazawa, Takayama, Kyoto, Hiroshima). Day-by-day itinerary with morning/afternoon/evening schedules, interactive map with routes between cities, places list with categories (food, coffee, nature, activities), budget tracker, and a drag-and-drop planner. All data driven from JSON files so it's easy to tweak.
+
+![Japan Trip](./japan-trip/japan_trip.png)
+
+**Stack:** React · TypeScript · Vite · Tailwind · Google Maps API
+
+→ [browse code](./japan-trip)
+
 ## ⭐ ralph-wiggum
 
 ```
