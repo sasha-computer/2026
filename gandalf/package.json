@@ -1,0 +1,36 @@
+{
+  "name": "gandalf",
+  "version": "1.0.0",
+  "description": "Personal Claude assistant. Lightweight, secure, customizable.",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "bun x tsc",
+    "start": "bun dist/index.js",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "bun x tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "verify:restart": "bun scripts/verify-and-restart.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.2.29",
+    "better-sqlite3": "^11.8.1",
+    "cron-parser": "^5.5.0",
+    "discord.js": "^14.16.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
