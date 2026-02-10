@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# ralph-wiggum: "I'm helping!"
+set -e
+
+# Wipe progress.txt at start
+> progress.txt
+
+gum style --border double --padding "1 2" --border-foreground 212 "ralph-wiggum" "I'm helping!"
+
+MAX_ITERATIONS=${1:-1}
+
+for ((i=1; i<=MAX_ITERATIONS; i++)); do
+  gum style --foreground 212 "=== Iteration $i of $MAX_ITERATIONS ==="
+
+  # Run spinner in background during claude call
+  gum spin --spinner dot --title "Working..." -- sleep infinity &
+  spinner_pid=$!
+
+  result=$(claude --dangerously-skip-permissions -p "$(cat prompt.md)" 2>&1)
+
+  # Kill spinner and clear its line
+  kill $spinner_pid 2>/dev/null || true
+  wait $spinner_pid 2>/dev/null || true
+  printf '\r\033[K'
+
+  # Display result
+  echo "$result"
+
+  if [[ "$result" == *"<promise>COMPLETE</promise>"* ]]; then
+    echo ""
+    gum style --foreground 46 --bold "PRD complete!"
+    exit 0
+  fi
+
+  echo ""
+done
+
+gum style --foreground 208 "End (max iterations reached)"
