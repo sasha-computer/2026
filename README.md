@@ -36,9 +36,17 @@ Debug tool for Boundless proof requests. Fetches a proof request from the Boundl
 
 → [browse code](./boundless-debug)
 
+## ⭐ sicp-notes
+
+My notes and 80+ flashcards from working through [Structure and Interpretation of Computer Programs](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html) (Abelson & Sussman), Chapter 1. Covers expressions, evaluation models, the substitution model, compound procedures, recursive vs iterative processes, tree recursion, and the connection between SICP's terminology and standard CS recursion concepts. Includes detailed reading notes and spaced repetition flashcards.
+
+**Stack:** Scheme · Markdown
+
+→ [browse code](./sicp-notes)
+
 ## ⭐ practice-problems
 
-A collection of handwritten coding practice problems in Python and Scheme. Memoized factorials with closures, recursive joins, depth-weighted sums, parentheses generation, currying, palindromes, and more.
+A collection of handwritten coding problems in Python and Scheme, worked through alongside [boot.dev](https://www.boot.dev/u/sasha-computer) courses and [SICP](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html) Section 1. Memoized factorials with closures, currying, recursive joins, depth-weighted sums, valid parentheses generation, pattern matching on sum types, and more.
 
 **Stack:** Python · Scheme
 

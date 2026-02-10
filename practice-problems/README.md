@@ -1,6 +1,6 @@
 # practice-problems
 
-Handwritten coding problems I worked through while studying [Structure and Interpretation of Computer Programs (SICP)](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html), Section 1, alongside general recursion and functional programming practice.
+Handwritten coding problems I worked through while studying [Structure and Interpretation of Computer Programs (SICP)](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html), Section 1, alongside courses on [boot.dev](https://www.boot.dev/u/sasha-computer) and general recursion and functional programming practice.
 
 The SICP stuff got me thinking in terms of closures, recursion, higher-order functions, and building up from primitives. These problems are the result of that mindset applied to Python and a bit of Scheme.
 
