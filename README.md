@@ -79,7 +79,15 @@ A Hugo frontend for [plain-text-running-tracker](https://github.com/sasha-comput
 
 **Stack:** Hugo · HTML · CSS · JavaScript
 
-→ [browse code](./my-runs) · [plain-text-running-tracker](https://github.com/sasha-computer/plain-text-running-tracker)
+→ [browse code](./my-runs)
+
+## ⭐ plain-text-running-tracker
+
+Parses Apple Health XML exports and Garmin FIT files into a simple markdown running log. Extracts every run with date, distance, duration, pace, and heart rate, then writes it all to a single `.md` file. No cloud, no accounts, just your data in plain text. Feeds into [my-runs](./my-runs) for the calendar view.
+
+**Stack:** Python
+
+→ [browse code](./plain-text-running-tracker)
 
 ## ⭐ boundless-debug
 
