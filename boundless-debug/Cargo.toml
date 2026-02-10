@@ -1,0 +1,50 @@
+[package]
+name = "boundless-debug"
+version = "0.1.0"
+edition = "2021"
+description = "Debug tool for Boundless proof requests - execute guest programs locally"
+license = "MIT"
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+dotenvy = "0.15"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Ethereum
+alloy = { version = "0.8", features = ["full"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# Output formatting
+colored = "2"
+
+# Hex encoding
+hex = "0.4"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# RISC Zero zkVM (for execution)
+risc0-zkvm = { version = "3.0", default-features = false, features = ["std", "client"] }
+
+# Boundless Market SDK
+# boundless-market = { git = "https://github.com/boundless-xyz/boundless", branch = "main" }
+# NOTE: Uncomment above once we verify the exact repo/branch structure
+# For now, we'll implement direct contract interaction
+
+[profile.release]
+opt-level = 3
+lto = true
