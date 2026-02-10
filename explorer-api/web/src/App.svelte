@@ -1,0 +1,2716 @@
+<script lang="ts">
+  import {
+    ENDPOINTS,
+    getCategories,
+    buildUrl,
+    type EndpointConfig,
+    type ParamDef,
+  } from './lib/config';
+  import { BASE_URL } from './lib/api/client';
+  import type { MarketRequest } from './types/types';
+  import {
+    loadTrackerData,
+    saveTrackerDataAsync,
+    type TrackerData,
+    type TrackedRequest,
+  } from './lib/supabase';
+
+  // Tab state
+  type Tab = 'browser' | 'debugger' | 'tracker';
+  let activeTab = $state<Tab>('browser');
+
+  // Theme state
+  let isDarkMode = $state(false);
+  let themeInitialized = false;
+
+  // Endpoint Browser state
+  let selected = $state<EndpointConfig>(ENDPOINTS[0]);
+  let params = $state<Record<string, string | number>>({});
+  let result = $state<string>('');
+  let loading = $state(false);
+  let error = $state<string | null>(null);
+
+  // Request Debugger state
+  let requestId = $state('');
+  let debuggerLoading = $state(false);
+  let debuggerError = $state<string | null>(null);
+  let requestData = $state<MarketRequest | null>(null);
+
+  // Requestor Tracker state
+  let trackerData = $state<TrackerData>({ requestors: [] });
+  let trackerLoading = $state(true);
+  let selectedRequestorIndex = $state<number | null>(null);
+  let newRequestorAddress = $state('');
+  let newRequestorNickname = $state('');
+  let newRequestId = $state('');
+  let editingRequestIndex = $state<number | null>(null);
+  let editNote = $state('');
+  let trackerViewRequestId = $state<string | null>(null);
+  let trackerViewLoading = $state(false);
+  let trackerViewError = $state<string | null>(null);
+  let trackerViewData = $state<MarketRequest | null>(null);
+
+  // Remove confirmation modal state
+  interface RemoveConfirmation {
+    type: 'requestor' | 'request';
+    index: number;
+    name: string;
+  }
+  let removeConfirmation = $state<RemoveConfirmation | null>(null);
+
+  // Duplicate order modal state
+  let showDuplicateModal = $state(false);
+
+  // Auto-populate modal state
+  let showAutoPopulateModal = $state(false);
+  let autoPopulateLoading = $state(false);
+
+  // New orders notification badge
+  let newOrderCount = $state(0);
+  let checkingNewOrders = $state(false);
+
+  // Per-requestor notification badges
+  let requestorNewOrderCounts = $state<Record<number, number>>({});
+  let loadingRequestorBadge = $state<number | null>(null);
+
+  $effect(() => {
+    let cancelled = false;
+
+    const initTracker = async () => {
+      trackerLoading = true;
+      try {
+        const data = await loadTrackerData();
+        if (cancelled) return;
+        trackerData = data;
+      } catch (e) {
+        console.error('Failed to load tracker data:', e);
+        if (!cancelled) {
+          trackerData = { requestors: [] };
+        }
+      } finally {
+        if (!cancelled) {
+          trackerLoading = false;
+        }
+      }
+    };
+
+    void initTracker();
+
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  $effect(() => {
+    if (themeInitialized) return;
+    themeInitialized = true;
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+      isDarkMode = true;
+    }
+  });
+
+  $effect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.dataset.theme = isDarkMode ? 'dark' : 'light';
+    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
+  });
+
+  function toggleTheme() {
+    isDarkMode = !isDarkMode;
+  }
+
+  async function addRequestor() {
+    if (!newRequestorAddress.trim()) return;
+    const addr = newRequestorAddress.trim().toLowerCase();
+    if (trackerData.requestors.some(r => r.address === addr)) return;
+    trackerData.requestors = [...trackerData.requestors, {
+      address: addr,
+      nickname: newRequestorNickname.trim() || addr.slice(0, 10),
+      requests: [],
+      addedAt: Date.now()
+    }];
+    void saveTrackerDataAsync(trackerData);
+    newRequestorAddress = '';
+    newRequestorNickname = '';
+    selectedRequestorIndex = trackerData.requestors.length - 1;
+    // Auto-fetch 10 most recent orders for newly added requestor
+    await autoPopulateOrders(10);
+  }
+
+  function confirmRemoveRequestor(index: number) {
+    const requestor = trackerData.requestors[index];
+    removeConfirmation = {
+      type: 'requestor',
+      index,
+      name: requestor.nickname
+    };
+  }
+
+  function removeRequestor(index: number) {
+    trackerData.requestors = trackerData.requestors.filter((_, i) => i !== index);
+    void saveTrackerDataAsync(trackerData);
+    if (selectedRequestorIndex === index) {
+      selectedRequestorIndex = null;
+    } else if (selectedRequestorIndex !== null && selectedRequestorIndex > index) {
+      selectedRequestorIndex--;
+    }
+  }
+
+  async function addTrackedRequest() {
+    if (selectedRequestorIndex === null || !newRequestId.trim()) return;
+    const reqId = newRequestId.trim();
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    if (requestor.requests.some(r => r.id === reqId)) {
+      showDuplicateModal = true;
+      return;
+    }
+
+    // Get short suffix for display
+    const shortId = getShortOrderId(reqId, requestor.address);
+
+    // Create the request entry with placeholder
+    const newRequest: TrackedRequest = {
+      id: reqId,
+      nickname: shortId,
+      problematic: false,
+      note: '',
+      addedAt: Date.now()
+    };
+
+    requestor.requests = [...requestor.requests, newRequest];
+    trackerData.requestors = [...trackerData.requestors];
+    void saveTrackerDataAsync(trackerData);
+    newRequestId = '';
+
+    // Auto-fetch API data and auto-open view panel
+    const reqIndex = requestor.requests.length - 1;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requests/${reqId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const requestData = Array.isArray(data) && data.length > 0 ? data[0] : data;
+        if (requestData) {
+          // Update metadata
+          requestor.requests[reqIndex].createdAt = requestData.created_at_iso;
+          requestor.requests[reqIndex].status = requestData.request_status;
+          // Auto-flag expired orders as problematic
+          if (requestData.request_status === 'expired') {
+            requestor.requests[reqIndex].problematic = true;
+          }
+          trackerData.requestors = [...trackerData.requestors];
+          void saveTrackerDataAsync(trackerData);
+
+          // Auto-open the view panel with this data
+          trackerViewRequestId = reqId;
+          trackerViewData = requestData;
+          trackerViewError = null;
+          trackerViewLoading = false;
+        }
+      }
+    } catch {
+      // Silently fail - metadata is optional enhancement
+    }
+  }
+
+  function confirmRemoveRequest(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    const request = trackerData.requestors[selectedRequestorIndex].requests[reqIndex];
+    removeConfirmation = {
+      type: 'request',
+      index: reqIndex,
+      name: request.nickname
+    };
+  }
+
+  function removeTrackedRequest(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    requestor.requests = requestor.requests.filter((_, i) => i !== reqIndex);
+    trackerData.requestors = [...trackerData.requestors];
+    void saveTrackerDataAsync(trackerData);
+    if (editingRequestIndex === reqIndex) {
+      editingRequestIndex = null;
+    }
+  }
+
+  function executeRemove() {
+    if (!removeConfirmation) return;
+    if (removeConfirmation.type === 'requestor') {
+      removeRequestor(removeConfirmation.index);
+    } else {
+      removeTrackedRequest(removeConfirmation.index);
+    }
+    removeConfirmation = null;
+  }
+
+  function cancelRemove() {
+    removeConfirmation = null;
+  }
+
+  function toggleProblematic(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    requestor.requests[reqIndex].problematic = !requestor.requests[reqIndex].problematic;
+    trackerData.requestors = [...trackerData.requestors];
+    void saveTrackerDataAsync(trackerData);
+  }
+
+  function startEditingNote(reqIndex: number) {
+    if (selectedRequestorIndex === null) return;
+    editingRequestIndex = reqIndex;
+    editNote = trackerData.requestors[selectedRequestorIndex].requests[reqIndex].note;
+  }
+
+  function saveNote() {
+    if (selectedRequestorIndex === null || editingRequestIndex === null) return;
+    trackerData.requestors[selectedRequestorIndex].requests[editingRequestIndex].note = editNote;
+    trackerData.requestors = [...trackerData.requestors];
+    void saveTrackerDataAsync(trackerData);
+    editingRequestIndex = null;
+    editNote = '';
+  }
+
+  function cancelEditNote() {
+    editingRequestIndex = null;
+    editNote = '';
+  }
+
+  function viewInDebugger(reqId: string) {
+    requestId = reqId;
+    activeTab = 'debugger';
+    fetchRequest();
+  }
+
+  // Check for new orders that aren't in the tracker list
+  async function checkForNewOrders() {
+    if (trackerLoading || selectedRequestorIndex === null || checkingNewOrders) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    if (!requestor) return;
+    checkingNewOrders = true;
+
+    try {
+      // Fetch a reasonable number to check against (10 is enough to detect new ones)
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=10`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.data || [];
+
+      // Count how many are not already tracked
+      let count = 0;
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (reqId && !requestor.requests.some(r => r.id === reqId)) {
+          count++;
+        }
+      }
+      newOrderCount = count;
+    } catch (e) {
+      console.error('Failed to check for new orders:', e);
+      newOrderCount = 0;
+    } finally {
+      checkingNewOrders = false;
+    }
+  }
+
+  // Handle Fetch Recent Orders button click
+  async function handleFetchRecentOrders() {
+    if (newOrderCount > 0) {
+      // Auto-fetch the new orders without showing modal
+      await autoPopulateOrders(newOrderCount);
+      newOrderCount = 0;
+    } else {
+      // Show the modal to choose count
+      showAutoPopulateModal = true;
+    }
+  }
+
+  async function autoPopulateOrders(count: number) {
+    if (selectedRequestorIndex === null) return;
+    const requestor = trackerData.requestors[selectedRequestorIndex];
+    showAutoPopulateModal = false;
+    autoPopulateLoading = true;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=${count}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.data || [];
+
+      let addedCount = 0;
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (!reqId || requestor.requests.some(r => r.id === reqId)) {
+          continue; // Skip if no ID or already tracked
+        }
+
+        const shortId = getShortOrderId(reqId, requestor.address);
+        const newRequest: TrackedRequest = {
+          id: reqId,
+          nickname: shortId,
+          problematic: req.request_status === 'expired',
+          note: '',
+          addedAt: Date.now(),
+          createdAt: req.created_at_iso,
+          status: req.request_status
+        };
+
+        requestor.requests = [...requestor.requests, newRequest];
+        addedCount++;
+      }
+
+      if (addedCount > 0) {
+        trackerData.requestors = [...trackerData.requestors];
+        void saveTrackerDataAsync(trackerData);
+
+        // Auto-select the first added order in view panel
+        const firstNewReq = requestor.requests[requestor.requests.length - addedCount];
+        if (firstNewReq) {
+          trackerViewRequestId = firstNewReq.id;
+          // Set view data from already fetched info
+          trackerViewData = requests.find((r: { request_id: string }) => r.request_id === firstNewReq.id) || null;
+          trackerViewError = null;
+          trackerViewLoading = false;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch orders:', e);
+    } finally {
+      autoPopulateLoading = false;
+    }
+  }
+
+  async function viewRequestInTracker(reqId: string) {
+    trackerViewRequestId = reqId;
+    trackerViewLoading = true;
+    trackerViewError = null;
+    trackerViewData = null;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requests/${reqId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Request not found');
+        }
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        trackerViewData = data[0];
+      } else if (data && !Array.isArray(data)) {
+        trackerViewData = data;
+      } else {
+        throw new Error('Request not found');
+      }
+    } catch (e) {
+      trackerViewError = e instanceof Error ? e.message : 'Unknown error';
+    } finally {
+      trackerViewLoading = false;
+    }
+  }
+
+  // Check for new orders for a specific requestor (by index)
+  async function checkForNewOrdersForRequestor(index: number): Promise<number> {
+    const requestor = trackerData.requestors[index];
+    if (!requestor) return 0;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=10`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.data || [];
+
+      let count = 0;
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (reqId && !requestor.requests.some(r => r.id === reqId)) {
+          count++;
+        }
+      }
+      return count;
+    } catch (e) {
+      console.error('Failed to check for new orders:', e);
+      return 0;
+    }
+  }
+
+  // Check all requestors for new orders
+  async function checkAllRequestorsForNewOrders() {
+    if (trackerLoading) return;
+    const counts: Record<number, number> = {};
+    for (let i = 0; i < trackerData.requestors.length; i++) {
+      const count = await checkForNewOrdersForRequestor(i);
+      if (count > 0) {
+        counts[i] = count;
+      }
+    }
+    requestorNewOrderCounts = counts;
+  }
+
+  // Handle badge click on requestor - fetch new orders and open view
+  async function handleRequestorBadgeClick(index: number, event: MouseEvent) {
+    event.stopPropagation();
+    if (loadingRequestorBadge !== null) return;
+
+    loadingRequestorBadge = index;
+    const requestor = trackerData.requestors[index];
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requestors/${requestor.address}/requests?limit=10`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const requests = Array.isArray(data) ? data : data.data || [];
+
+      let addedCount = 0;
+      let mostRecentNewOrder: MarketRequest | null = null;
+
+      for (const req of requests) {
+        const reqId = req.request_id;
+        if (!reqId || requestor.requests.some(r => r.id === reqId)) {
+          continue;
+        }
+
+        // Track the first (most recent) new order
+        if (!mostRecentNewOrder) {
+          mostRecentNewOrder = req;
+        }
+
+        const shortId = getShortOrderId(reqId, requestor.address);
+        const newRequest: TrackedRequest = {
+          id: reqId,
+          nickname: shortId,
+          problematic: req.request_status === 'expired',
+          note: '',
+          addedAt: Date.now(),
+          createdAt: req.created_at_iso,
+          status: req.request_status
+        };
+
+        requestor.requests = [...requestor.requests, newRequest];
+        addedCount++;
+      }
+
+      if (addedCount > 0) {
+        trackerData.requestors = [...trackerData.requestors];
+        void saveTrackerDataAsync(trackerData);
+      }
+
+      // Clear badge count for this requestor
+      const newCounts = { ...requestorNewOrderCounts };
+      delete newCounts[index];
+      requestorNewOrderCounts = newCounts;
+
+      // Select this requestor
+      selectedRequestorIndex = index;
+
+      // Open the most recent order in the view panel
+      if (mostRecentNewOrder) {
+        trackerViewRequestId = mostRecentNewOrder.request_id;
+        trackerViewData = mostRecentNewOrder;
+        trackerViewError = null;
+        trackerViewLoading = false;
+      }
+
+      // Update the main "Fetch Recent Orders" badge count
+      newOrderCount = 0;
+    } catch (e) {
+      console.error('Failed to fetch orders for requestor:', e);
+    } finally {
+      loadingRequestorBadge = null;
+    }
+  }
+
+  // Check for new orders when requestor changes
+  $effect(() => {
+    if (!trackerLoading && selectedRequestorIndex !== null) {
+      // Reset count when switching requestors
+      newOrderCount = 0;
+      // Check for new orders
+      checkForNewOrders();
+    }
+  });
+
+  // Check all requestors for new orders on initial load
+  $effect(() => {
+    if (!trackerLoading && trackerData.requestors.length > 0) {
+      checkAllRequestorsForNewOrders();
+    }
+  });
+
+  // Derived
+  const categories = getCategories();
+  let fullUrl = $derived(BASE_URL + buildUrl(selected, params));
+
+  // Initialize default params when endpoint changes
+  function selectEndpoint(endpointId: string) {
+    const endpoint = ENDPOINTS.find((e) => e.id === endpointId);
+    if (!endpoint) return;
+
+    selected = endpoint;
+    params = {};
+    result = '';
+    error = null;
+
+    // Set defaults
+    [...(endpoint.pathParams ?? []), ...(endpoint.queryParams ?? [])].forEach(
+      (param) => {
+        if (param.default !== undefined) {
+          params[param.key] = param.default;
+        }
+      }
+    );
+  }
+
+  // Convert datetime-local input to Unix timestamp
+  function datetimeToTimestamp(value: string): number {
+    return Math.floor(new Date(value).getTime() / 1000);
+  }
+
+  // Execute API call
+  async function execute() {
+    loading = true;
+    error = null;
+
+    try {
+      const response = await fetch(fullUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      result = JSON.stringify(data, null, 2);
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Unknown error';
+      result = '';
+    } finally {
+      loading = false;
+    }
+  }
+
+  // Check if all required params are filled
+  function canExecute(): boolean {
+    const allParams = [
+      ...(selected.pathParams ?? []),
+      ...(selected.queryParams ?? []),
+    ];
+    return allParams
+      .filter((p) => p.required)
+      .every((p) => params[p.key] !== undefined && params[p.key] !== '');
+  }
+
+  // Render input based on param type
+  function renderInput(param: ParamDef): string {
+    switch (param.type) {
+      case 'number':
+        return 'number';
+      case 'datetime':
+        return 'datetime-local';
+      default:
+        return 'text';
+    }
+  }
+
+  // Request Debugger functions
+  async function fetchRequest() {
+    if (!requestId.trim()) return;
+
+    debuggerLoading = true;
+    debuggerError = null;
+    requestData = null;
+
+    try {
+      const response = await fetch(`${BASE_URL}/v1/market/requests/${requestId.trim()}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Request not found');
+        }
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      // API returns array, take first element
+      if (Array.isArray(data) && data.length > 0) {
+        requestData = data[0];
+      } else if (data && !Array.isArray(data)) {
+        requestData = data;
+      } else {
+        throw new Error('Request not found');
+      }
+    } catch (e) {
+      debuggerError = e instanceof Error ? e.message : 'Unknown error';
+    } finally {
+      debuggerLoading = false;
+    }
+  }
+
+  function formatTimestamp(unix: number, iso: string): string {
+    return `${iso} (${unix})`;
+  }
+
+  function getStatusColor(status: MarketRequest['request_status']): string {
+    switch (status) {
+      case 'fulfilled': return '#4caf50';
+      case 'locked': return '#ff9800';
+      case 'submitted': return '#2196f3';
+      case 'slashed': return '#f44336';
+      case 'expired': return '#9e9e9e';
+      default: return '#666';
+    }
+  }
+
+  function shortenAddress(addr: string | null): string {
+    if (!addr) return '—';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }
+
+  // Extract short order ID suffix (like git short hash)
+  // Request ID format: 0x + requestor_address (40 chars) + unique_suffix (8+ chars)
+  // e.g., 0x382bba7d7bc9ae86c5de3e16c4ca96bcc0a3478e83572afa
+  //       |------ requestor (42 chars with 0x) ------||suffix|
+  function getOrderSuffix(requestId: string, requestorAddress: string): string {
+    // Normalize addresses
+    const reqId = requestId.toLowerCase();
+    const reqAddr = requestorAddress.toLowerCase();
+
+    // If the request ID starts with the requestor address, extract suffix
+    if (reqId.startsWith(reqAddr)) {
+      return reqId.slice(reqAddr.length);
+    }
+    // Fallback: just return last 8 chars
+    return reqId.slice(-8);
+  }
+
+  // Get short display format for order (like git short commit hash)
+  function getShortOrderId(requestId: string, requestorAddress: string): string {
+    const suffix = getOrderSuffix(requestId, requestorAddress);
+    // Show first 8 chars of suffix (like git's 7-8 char short hash)
+    return suffix.slice(0, 8);
+  }
+
+  // Format ISO timestamp to concise display
+  function formatOrderTime(isoString: string): string {
+    // Input: "2026-01-15T14:20:01Z" or "2026-01-15T14:20:01+00:00"
+    // Output: "2026-01-15 14:20:01 UTC"
+    return isoString
+      .replace('T', ' ')
+      .replace('Z', ' UTC')
+      .replace('+00:00', ' UTC');
+  }
+
+  // Copy to clipboard
+  let copySuccess = $state(false);
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      copySuccess = true;
+      setTimeout(() => copySuccess = false, 1500);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      copySuccess = true;
+      setTimeout(() => copySuccess = false, 1500);
+    }
+  }
+
+  // Format cycles with M/B suffix
+  function formatCycles(cycles: number | null | undefined): string {
+    if (cycles == null) return '—';
+    if (cycles >= 1e9) {
+      return `${(cycles / 1e9).toPrecision(3)}B`;
+    }
+    if (cycles >= 1e6) {
+      return `${(cycles / 1e6).toPrecision(3)}M`;
+    }
+    return cycles.toLocaleString();
+  }
+
+  // Format price to 3 significant figures
+  function formatPrice3sf(formattedPrice: string): string {
+    // Input like "0.001234 ETH" -> "0.00123 ETH"
+    const match = formattedPrice.match(/^([\d.]+)\s*(.*)$/);
+    if (!match) return formattedPrice;
+    const num = parseFloat(match[1]);
+    const unit = match[2];
+    if (isNaN(num)) return formattedPrice;
+    return `${num.toPrecision(3)} ${unit}`.trim();
+  }
+
+  // Calculate proof latency (time between creation and fulfillment)
+  function calculateProofLatency(createdAt: number, fulfilledAt: number | null | undefined): string | null {
+    if (fulfilledAt == null) return null;
+    const diffSeconds = fulfilledAt - createdAt;
+    if (diffSeconds < 60) {
+      return `${diffSeconds}s`;
+    }
+    if (diffSeconds < 3600) {
+      const mins = Math.floor(diffSeconds / 60);
+      const secs = diffSeconds % 60;
+      return `${mins}m ${secs}s`;
+    }
+    const hours = Math.floor(diffSeconds / 3600);
+    const mins = Math.floor((diffSeconds % 3600) / 60);
+    return `${hours}h ${mins}m`;
+  }
+</script>
+
+<header>
+  <h1>Boundless Explorer</h1>
+  <nav class="tabs">
+    <button
+      class="tab"
+      class:active={activeTab === 'browser'}
+      onclick={() => activeTab = 'browser'}
+    >
+      Endpoint Browser
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'debugger'}
+      onclick={() => activeTab = 'debugger'}
+    >
+      Request Debugger
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'tracker'}
+      onclick={() => activeTab = 'tracker'}
+    >
+      Requestor Tracker
+    </button>
+  </nav>
+  <div class="header-actions">
+    <button
+      class="theme-toggle"
+      type="button"
+      aria-pressed={isDarkMode}
+      onclick={toggleTheme}
+    >
+      {isDarkMode ? 'Light mode' : 'Dark mode'}
+    </button>
+    <a href="https://d2mdvlnmyov1e1.cloudfront.net/docs/" target="_blank" rel="noopener">
+      API Docs
+    </a>
+  </div>
+</header>
+
+<main>
+  {#if activeTab === 'browser'}
+  <section class="controls">
+    <div class="field">
+      <label for="endpoint">Endpoint</label>
+      <select
+        id="endpoint"
+        onchange={(e) => selectEndpoint(e.currentTarget.value)}
+      >
+        {#each categories as category}
+          <optgroup label={category}>
+            {#each ENDPOINTS.filter((e) => e.category === category) as endpoint}
+              <option
+                value={endpoint.id}
+                selected={endpoint.id === selected.id}
+                disabled={endpoint.disabled}
+                class:disabled={endpoint.disabled}
+              >
+                {endpoint.label}{endpoint.disabled ? ' (no data)' : ''}
+              </option>
+            {/each}
+          </optgroup>
+        {/each}
+      </select>
+    </div>
+
+    {#if selected.pathParams?.length}
+      <div class="param-group">
+        <h3>Path Parameters</h3>
+        {#each selected.pathParams as param}
+          <div class="field">
+            <label for={param.key}>
+              {param.label}
+              {#if param.required}<span class="required">*</span>{/if}
+            </label>
+            {#if param.type === 'select' && param.options}
+              <select
+                id={param.key}
+                bind:value={params[param.key]}
+              >
+                {#each param.options as opt}
+                  <option value={opt.value}>{opt.label}</option>
+                {/each}
+              </select>
+            {:else}
+              <input
+                type={renderInput(param)}
+                id={param.key}
+                placeholder={param.placeholder}
+                min={param.min}
+                max={param.max}
+                value={params[param.key] ?? ''}
+                oninput={(e) => {
+                  const val = e.currentTarget.value;
+                  if (param.type === 'number') {
+                    params[param.key] = val ? parseInt(val) : '';
+                  } else if (param.type === 'datetime') {
+                    params[param.key] = val ? datetimeToTimestamp(val) : '';
+                  } else {
+                    params[param.key] = val;
+                  }
+                }}
+              />
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    {#if selected.queryParams?.length}
+      <div class="param-group">
+        <h3>Query Parameters</h3>
+        {#each selected.queryParams as param}
+          <div class="field">
+            <label for={param.key}>{param.label}</label>
+            {#if param.type === 'select' && param.options}
+              <select
+                id={param.key}
+                bind:value={params[param.key]}
+              >
+                {#each param.options as opt}
+                  <option value={opt.value}>{opt.label}</option>
+                {/each}
+              </select>
+            {:else}
+              <input
+                type={renderInput(param)}
+                id={param.key}
+                placeholder={param.placeholder}
+                min={param.min}
+                max={param.max}
+                value={params[param.key] ?? ''}
+                oninput={(e) => {
+                  const val = e.currentTarget.value;
+                  if (param.type === 'number') {
+                    params[param.key] = val ? parseInt(val) : '';
+                  } else if (param.type === 'datetime') {
+                    params[param.key] = val ? datetimeToTimestamp(val) : '';
+                  } else {
+                    params[param.key] = val;
+                  }
+                }}
+              />
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    <button onclick={execute} disabled={loading || !canExecute()}>
+      {loading ? 'Loading...' : 'Fetch'}
+    </button>
+  </section>
+
+  <section class="url-preview">
+    <code>{fullUrl}</code>
+  </section>
+
+  <section class="results">
+    {#if error}
+      <div class="error">{error}</div>
+    {/if}
+    {#if result}
+      <pre>{result}</pre>
+    {:else if !error}
+      <p class="placeholder">Select an endpoint and click Fetch to see results</p>
+    {/if}
+  </section>
+  {:else if activeTab === 'debugger'}
+  <section class="debugger">
+    <div class="debugger-input">
+      <label for="request-id">Request Order ID</label>
+      <div class="input-row">
+        <input
+          type="text"
+          id="request-id"
+          placeholder="Enter request ID (e.g., 0x123...)"
+          bind:value={requestId}
+          onkeydown={(e) => e.key === 'Enter' && fetchRequest()}
+        />
+        <button onclick={fetchRequest} disabled={debuggerLoading || !requestId.trim()}>
+          {debuggerLoading ? 'Loading...' : 'Lookup'}
+        </button>
+      </div>
+    </div>
+
+    {#if debuggerError}
+      <div class="debugger-error">{debuggerError}</div>
+    {/if}
+
+    {#if requestData}
+      <div class="request-card">
+        <div class="request-header">
+          <div class="request-status" style="--status-color: {getStatusColor(requestData.request_status)}">
+            {requestData.request_status.toUpperCase()}
+          </div>
+          <div class="request-source">{requestData.source}</div>
+        </div>
+
+        <div class="request-section">
+          <h3>Identifiers</h3>
+          <div class="request-field">
+            <span class="field-label">Request ID</span>
+            <code class="field-value mono">{requestData.request_id}</code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Request Digest</span>
+            <code class="field-value mono">{requestData.request_digest}</code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Chain ID</span>
+            <span class="field-value">{requestData.chain_id}</span>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3>Addresses</h3>
+          <div class="request-field">
+            <span class="field-label">Client</span>
+            <code class="field-value mono" title={requestData.client_address}>{requestData.client_address}</code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Lock Prover</span>
+            <code class="field-value mono" title={requestData.lock_prover_address ?? ''}>
+              {requestData.lock_prover_address ?? '—'}
+            </code>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Fulfill Prover</span>
+            <code class="field-value mono" title={requestData.fulfill_prover_address ?? ''}>
+              {requestData.fulfill_prover_address ?? '—'}
+            </code>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3>Pricing</h3>
+          <div class="request-field">
+            <span class="field-label">Min Price</span>
+            <span class="field-value">{requestData.min_price_formatted}</span>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Max Price</span>
+            <span class="field-value">{requestData.max_price_formatted}</span>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Lock Collateral</span>
+            <span class="field-value">{requestData.lock_collateral_formatted}</span>
+          </div>
+        </div>
+
+        <div class="request-section">
+          <h3>Timing</h3>
+          <div class="request-field">
+            <span class="field-label">Created At</span>
+            <span class="field-value">{formatOrderTime(requestData.created_at_iso)}</span>
+          </div>
+          <div class="request-field">
+            <span class="field-label">Unix Timestamp</span>
+            <span class="field-value mono">{requestData.created_at}</span>
+          </div>
+        </div>
+
+        <details class="raw-json">
+          <summary>Raw JSON</summary>
+          <pre>{JSON.stringify(requestData, null, 2)}</pre>
+        </details>
+      </div>
+    {:else if !debuggerError}
+      <p class="debugger-placeholder">Enter a Request Order ID to view its details</p>
+    {/if}
+  </section>
+  {:else if activeTab === 'tracker'}
+  <section class="tracker">
+    {#if trackerLoading}
+      <div class="tracker-loading">
+        <div class="loading-spinner"></div>
+        <p>Loading tracker data...</p>
+      </div>
+    {:else}
+      <div class="tracker-layout has-detail">
+        <div class="tracker-sidebar">
+          <h3>Tracked Requestors</h3>
+          <div class="add-requestor">
+            <input
+              type="text"
+              placeholder="Requestor address (0x...)"
+              bind:value={newRequestorAddress}
+              onkeydown={(e) => e.key === 'Enter' && addRequestor()}
+            />
+            <input
+              type="text"
+              placeholder="Nickname (optional)"
+              bind:value={newRequestorNickname}
+              onkeydown={(e) => e.key === 'Enter' && addRequestor()}
+            />
+            <button onclick={addRequestor} disabled={!newRequestorAddress.trim()}>
+              Add
+            </button>
+          </div>
+          <ul class="requestor-list">
+            {#each trackerData.requestors as requestor, i}
+              <li class="requestor-item" class:selected={selectedRequestorIndex === i}>
+                <button
+                  class="requestor-select-btn"
+                  onclick={() => selectedRequestorIndex = i}
+                >
+                  <span class="requestor-nickname">{requestor.nickname}</span>
+                  <code class="requestor-address" title={requestor.address}>
+                    {shortenAddress(requestor.address)}
+                  </code>
+                </button>
+                {#if requestorNewOrderCounts[i]}
+                  <button
+                    class="requestor-badge"
+                    class:loading={loadingRequestorBadge === i}
+                    onclick={(e) => handleRequestorBadgeClick(i, e)}
+                    title="Fetch {requestorNewOrderCounts[i]} new orders"
+                  >
+                    {#if loadingRequestorBadge === i}
+                      <span class="spinner"></span>
+                    {:else}
+                      {requestorNewOrderCounts[i]}
+                    {/if}
+                  </button>
+                {/if}
+                <button
+                  class="remove-btn"
+                  onclick={() => confirmRemoveRequestor(i)}
+                  title="Remove requestor"
+                >
+                  x
+                </button>
+              </li>
+            {:else}
+              <li class="empty-message">No requestors tracked yet</li>
+            {/each}
+          </ul>
+        </div>
+
+        <div class="tracker-main">
+          {#if selectedRequestorIndex !== null && trackerData.requestors[selectedRequestorIndex]}
+            {@const requestor = trackerData.requestors[selectedRequestorIndex]}
+            <div class="requestor-header">
+              <h3>{requestor.nickname}</h3>
+              <div class="address-row">
+                <a
+                  href="https://explorer.boundless.network/requestors/{requestor.address}?from=requestors"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="explorer-link"
+                >
+                  <code class="full-address">{requestor.address}</code>
+                  <span class="link-icon">↗</span>
+                </a>
+                <button
+                  class="copy-btn"
+                  class:copied={copySuccess}
+                  onclick={() => copyToClipboard(requestor.address)}
+                  title="Copy address"
+                >
+                  {#if copySuccess}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  {/if}
+                </button>
+              </div>
+              <button
+                class="auto-populate-btn"
+                onclick={handleFetchRecentOrders}
+                disabled={autoPopulateLoading}
+              >
+                {autoPopulateLoading ? 'Loading...' : 'Fetch Recent Orders'}
+                {#if checkingNewOrders}
+                  <span class="notification-badge checking">...</span>
+                {:else if newOrderCount > 0}
+                  <span class="notification-badge">{newOrderCount}</span>
+                {/if}
+              </button>
+            </div>
+
+            <h4 class="orders-heading">Orders</h4>
+            <div class="add-request">
+              <input
+                type="text"
+                placeholder="Request Order ID"
+                bind:value={newRequestId}
+                onkeydown={(e) => e.key === 'Enter' && addTrackedRequest()}
+              />
+              <button onclick={addTrackedRequest} disabled={!newRequestId.trim()}>
+                Add
+              </button>
+            </div>
+
+            <ul class="tracked-requests">
+              {#each requestor.requests as req, ri}
+                <li
+                  class="tracked-request"
+                  class:problematic={req.problematic}
+                  class:selected={trackerViewRequestId === req.id}
+                >
+                  <div class="request-actions-left">
+                    <button
+                      class="action-btn problematic-btn"
+                      class:active={req.problematic}
+                      onclick={(e) => { e.stopPropagation(); toggleProblematic(ri); }}
+                      title={req.problematic ? 'Mark as OK' : 'Mark as problematic'}
+                    >
+                      !
+                    </button>
+                  </div>
+                  <div class="request-row" role="button" tabindex="0" onclick={() => viewRequestInTracker(req.id)} onkeydown={(e) => e.key === 'Enter' && viewRequestInTracker(req.id)}>
+                    <div class="request-main">
+                      <div class="request-header-line">
+                        <code class="short-order-id" title={req.id}>{getShortOrderId(req.id, requestor.address)}</code>
+                        <button
+                          class="action-btn copy-id-btn inline"
+                          onclick={(e) => { e.stopPropagation(); copyToClipboard(req.id); }}
+                          title="Copy request ID"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                        <a
+                          class="action-btn explorer-order-link inline"
+                          href="https://explorer.boundless.network/orders/{req.id}?from=requestors/{requestor.address}"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onclick={(e) => e.stopPropagation()}
+                          title="View on explorer"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        </a>
+                        {#if req.status}
+                          <span class="order-status" style="--status-color: {getStatusColor(req.status as MarketRequest['request_status'])}">{req.status}</span>
+                        {/if}
+                      </div>
+                      {#if req.createdAt}
+                        <span class="order-time">{formatOrderTime(req.createdAt)}</span>
+                      {:else}
+                        <code class="request-id-fallback" title={req.id}>...{getOrderSuffix(req.id, requestor.address)}</code>
+                      {/if}
+                    </div>
+                  </div>
+                  <div class="request-actions">
+                    <button
+                      class="action-btn note-btn"
+                      class:has-note={req.note}
+                      onclick={(e) => { e.stopPropagation(); startEditingNote(ri); }}
+                      title={req.note ? 'Edit note' : 'Add note'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                    </button>
+                    <button
+                      class="action-btn remove-btn"
+                      onclick={(e) => { e.stopPropagation(); confirmRemoveRequest(ri); }}
+                      title="Remove"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  {#if req.note}
+                    <div class="request-note">
+                      <span class="note-label">Note:</span> {req.note}
+                    </div>
+                  {/if}
+                  {#if editingRequestIndex === ri}
+                    <div class="note-editor">
+                      <textarea
+                        bind:value={editNote}
+                        placeholder="Add a note..."
+                        rows="2"
+                      ></textarea>
+                      <div class="note-actions">
+                        <button onclick={saveNote}>Save</button>
+                        <button onclick={cancelEditNote} class="cancel-btn">Cancel</button>
+                      </div>
+                    </div>
+                  {/if}
+                </li>
+              {:else}
+                <li class="empty-message">No requests tracked for this requestor</li>
+              {/each}
+            </ul>
+          {:else}
+            <div class="tracker-placeholder">
+              <p>Select a requestor from the sidebar or add a new one to start tracking requests.</p>
+            </div>
+          {/if}
+        </div>
+
+        <div class="tracker-detail">
+          <div class="detail-header">
+            <h3>Request Details</h3>
+          </div>
+
+          {#if trackerViewLoading}
+            <div class="detail-loading">Loading...</div>
+          {:else if trackerViewError}
+            <div class="detail-error">{trackerViewError}</div>
+          {:else if trackerViewData}
+            <div class="request-card tracker-request-card">
+              <div class="request-header">
+                <div class="request-status" style="--status-color: {getStatusColor(trackerViewData.request_status)}">
+                  {trackerViewData.request_status.toUpperCase()}
+                </div>
+                <div class="request-source">{trackerViewData.source}</div>
+              </div>
+
+              <div class="request-section">
+                <h3>Request ID</h3>
+                <div class="request-field id-field">
+                  <code class="field-value mono" title={trackerViewData.request_id}>{trackerViewData.request_id}</code>
+                  <button
+                    class="copy-btn small"
+                    class:copied={copySuccess}
+                    onclick={() => trackerViewData && copyToClipboard(trackerViewData.request_id)}
+                    title="Copy request ID"
+                  >
+                    {#if copySuccess}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    {:else}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    {/if}
+                  </button>
+                </div>
+              </div>
+
+              <div class="request-section">
+                <h3>Prover</h3>
+                {#if trackerViewData.lock_prover_address}
+                  <div class="request-field">
+                    <a
+                      href="https://explorer.boundless.network/provers/{trackerViewData.lock_prover_address}?from=provers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="explorer-link prover-link"
+                      title="View prover on explorer"
+                    >
+                      <code class="field-value mono">{trackerViewData.lock_prover_address}</code>
+                      <span class="link-icon">↗</span>
+                    </a>
+                  </div>
+                {:else}
+                  <div class="request-field">
+                    <span class="field-value muted">No prover assigned</span>
+                  </div>
+                {/if}
+              </div>
+
+              <div class="request-section">
+                <h3>Timing</h3>
+                <div class="request-field">
+                  <span class="field-label">Created</span>
+                  <span class="field-value">{formatOrderTime(trackerViewData.created_at_iso)}</span>
+                </div>
+                {#if trackerViewData.locked_at_iso}
+                  <div class="request-field">
+                    <span class="field-label">Locked</span>
+                    <span class="field-value">{formatOrderTime(trackerViewData.locked_at_iso)}</span>
+                  </div>
+                {/if}
+                {#if trackerViewData.expires_at_iso}
+                  <div class="request-field">
+                    <span class="field-label">Expires</span>
+                    <span class="field-value">{formatOrderTime(trackerViewData.expires_at_iso)}</span>
+                  </div>
+                {/if}
+                {#if trackerViewData.fulfilled_at_iso}
+                  <div class="request-field">
+                    <span class="field-label">Fulfilled</span>
+                    <span class="field-value">{formatOrderTime(trackerViewData.fulfilled_at_iso)}</span>
+                  </div>
+                  {#if calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}
+                    <div class="request-field highlight">
+                      <span class="field-label">Proof Latency</span>
+                      <span class="field-value">{calculateProofLatency(trackerViewData.created_at, trackerViewData.fulfilled_at)}</span>
+                    </div>
+                  {/if}
+                {/if}
+              </div>
+
+              <div class="request-section">
+                <h3>Pricing</h3>
+                <div class="request-field">
+                  <span class="field-label">Min Price</span>
+                  <span class="field-value">{formatPrice3sf(trackerViewData.min_price_formatted)}</span>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Max Price</span>
+                  <span class="field-value">{formatPrice3sf(trackerViewData.max_price_formatted)}</span>
+                </div>
+                <div class="request-field">
+                  <span class="field-label">Lock Collateral</span>
+                  <span class="field-value">{formatPrice3sf(trackerViewData.lock_collateral_formatted)}</span>
+                </div>
+                {#if trackerViewData.lock_price_formatted}
+                  <div class="request-field">
+                    <span class="field-label">Lock Price</span>
+                    <span class="field-value">{formatPrice3sf(trackerViewData.lock_price_formatted)}</span>
+                  </div>
+                {/if}
+              </div>
+
+              {#if trackerViewData.total_cycles != null}
+                <div class="request-section">
+                  <h3>Cycles</h3>
+                  <div class="request-field">
+                    <span class="field-label">Total Cycles</span>
+                    <span class="field-value">{formatCycles(trackerViewData.total_cycles)}</span>
+                  </div>
+                </div>
+              {/if}
+
+              <details class="raw-json">
+                <summary>Raw JSON</summary>
+                <pre>{JSON.stringify(trackerViewData, null, 2)}</pre>
+              </details>
+            </div>
+          {:else}
+            <div class="detail-placeholder">
+              <p>Select an order to view its details</p>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/if}
+
+    {#if removeConfirmation}
+      <div
+        class="modal-overlay"
+        role="button"
+        tabindex="-1"
+        onclick={cancelRemove}
+        onkeydown={(e) => e.key === 'Escape' && cancelRemove()}
+      >
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          tabindex="-1"
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+        >
+          <h3>Confirm Removal</h3>
+          <p>
+            Remove {removeConfirmation.type === 'requestor' ? 'requestor' : 'request'} <strong>{removeConfirmation.name}</strong>?
+          </p>
+          <div class="modal-actions">
+            <button class="modal-btn cancel" onclick={cancelRemove}>Cancel</button>
+            <button class="modal-btn confirm" onclick={executeRemove}>Remove</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if showDuplicateModal}
+      <div
+        class="modal-overlay"
+        role="button"
+        tabindex="-1"
+        onclick={() => showDuplicateModal = false}
+        onkeydown={(e) => e.key === 'Escape' && (showDuplicateModal = false)}
+      >
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          tabindex="-1"
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+        >
+          <h3>Order already added</h3>
+          <p>This order is already being tracked for this requestor.</p>
+          <div class="modal-actions">
+            <button class="modal-btn cancel" onclick={() => showDuplicateModal = false}>OK</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    {#if showAutoPopulateModal}
+      <div
+        class="modal-overlay"
+        role="button"
+        tabindex="-1"
+        onclick={() => showAutoPopulateModal = false}
+        onkeydown={(e) => e.key === 'Escape' && (showAutoPopulateModal = false)}
+      >
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          tabindex="-1"
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+        >
+          <h3>Fetch Recent Orders</h3>
+          <p>How many recent orders would you like to add?</p>
+          <div class="modal-actions auto-populate-options">
+            <button class="modal-btn option" onclick={() => autoPopulateOrders(3)}>3</button>
+            <button class="modal-btn option" onclick={() => autoPopulateOrders(5)}>5</button>
+            <button class="modal-btn option" onclick={() => autoPopulateOrders(10)}>10</button>
+            <button class="modal-btn cancel" onclick={() => showAutoPopulateModal = false}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+  </section>
+  {/if}
+</main>
+
+<footer>
+  <span>Chain: Base (8453)</span>
+  <span>26 endpoints</span>
+  <a href="https://docs.boundless.network/" target="_blank" rel="noopener">
+    Boundless Docs
+  </a>
+</footer>
+
+<style>
+  header {
+    background: var(--surface-accent);
+    color: var(--text-inverse);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  header a {
+    color: var(--link);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .tab {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: var(--text-subtle);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s;
+  }
+
+  .tab:hover {
+    background: var(--tab-hover-bg);
+    color: var(--text-inverse);
+  }
+
+  .tab.active {
+    background: var(--tab-active-bg);
+    color: var(--link);
+  }
+
+  .theme-toggle {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+    background: transparent;
+    color: var(--text-inverse);
+    border: 1px solid var(--link);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    align-self: center;
+  }
+
+  .theme-toggle:hover {
+    background: var(--tab-hover-bg);
+  }
+
+  main {
+    padding: 1.5rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .field label {
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  .required {
+    color: #f66;
+  }
+
+  .param-group {
+    background: var(--surface-1);
+    padding: 1rem;
+    border-radius: 8px;
+  }
+
+  .param-group h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .param-group .field {
+    margin-bottom: 0.75rem;
+  }
+
+  .param-group .field:last-child {
+    margin-bottom: 0;
+  }
+
+  select,
+  input {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--surface-card);
+    color: var(--app-text);
+  }
+
+  option:disabled {
+    color: var(--text-faint);
+    font-style: italic;
+  }
+
+  select:focus,
+  input:focus {
+    outline: none;
+    border-color: var(--link);
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  button {
+    padding: 0.75rem 1.5rem;
+    background: var(--surface-accent);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    align-self: flex-start;
+  }
+
+  button:hover:not(:disabled) {
+    background: var(--surface-accent-hover);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .url-preview {
+    background: var(--surface-2);
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  }
+
+  .url-preview code {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.875rem;
+    word-break: break-all;
+  }
+
+  .results {
+    background: var(--surface-accent);
+    border-radius: 8px;
+    min-height: 200px;
+  }
+
+  .results pre {
+    margin: 0;
+    padding: 1rem;
+    color: var(--code-text);
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.875rem;
+    overflow: auto;
+    max-height: 60vh;
+  }
+
+  .results .error {
+    color: var(--error-text);
+    padding: 1rem;
+  }
+
+  .results .placeholder {
+    color: var(--text-subtle);
+    padding: 1rem;
+    text-align: center;
+  }
+
+  footer {
+    background: var(--surface-accent);
+    color: var(--text-subtle);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+    margin-top: auto;
+  }
+
+  footer a {
+    color: var(--link);
+  }
+
+  /* Request Debugger styles */
+  .debugger {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .debugger-input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .debugger-input label {
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .input-row input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: 'SF Mono', Monaco, monospace;
+    background: var(--surface-card);
+    color: var(--app-text);
+  }
+
+  .input-row input:focus {
+    outline: none;
+    border-color: var(--link);
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  .input-row button {
+    padding: 0.75rem 1.5rem;
+    background: var(--surface-accent);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .input-row button:hover:not(:disabled) {
+    background: var(--surface-accent-hover);
+  }
+
+  .input-row button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .debugger-error {
+    background: var(--error-bg);
+    color: var(--error-text);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--error-border);
+  }
+
+  .debugger-placeholder {
+    color: var(--text-subtle);
+    text-align: center;
+    padding: 3rem;
+    background: var(--surface-1);
+    border-radius: 8px;
+  }
+
+  .request-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .request-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .request-status {
+    padding: 0.25rem 0.75rem;
+    background: var(--status-color);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .request-source {
+    padding: 0.25rem 0.75rem;
+    background: var(--surface-3);
+    color: var(--text-muted);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .request-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .request-section:last-of-type {
+    border-bottom: none;
+  }
+
+  .request-section h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .request-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    gap: 1rem;
+  }
+
+  .field-label {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .field-value {
+    text-align: right;
+    word-break: break-all;
+    font-size: 0.875rem;
+  }
+
+  .field-value.mono {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.8125rem;
+  }
+
+  .field-value.muted {
+    color: var(--text-faint);
+    font-style: italic;
+  }
+
+  .request-field.id-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .request-field.id-field .field-value {
+    flex: 1;
+    text-align: left;
+    font-size: 0.75rem;
+  }
+
+  .request-field.highlight {
+    background: var(--highlight-bg);
+    margin: 0 -1.5rem;
+    padding: 0.5rem 1.5rem;
+  }
+
+  .prover-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .prover-link:hover {
+    color: #2196f3;
+  }
+
+  .prover-link .field-value {
+    text-align: left;
+    font-size: 0.75rem;
+  }
+
+  .copy-btn.small {
+    padding: 0.25rem;
+    min-width: auto;
+  }
+
+  .copy-id-btn {
+    color: var(--text-muted);
+  }
+
+  .copy-id-btn:hover {
+    color: #2196f3;
+  }
+
+  .copy-id-btn.inline {
+    padding: 0.125rem;
+    background: transparent;
+    margin-left: -0.125rem;
+  }
+
+  .copy-id-btn.inline:hover {
+    background: rgba(33, 150, 243, 0.1);
+  }
+
+  .explorer-order-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .explorer-order-link:hover {
+    color: #2196f3;
+  }
+
+  .explorer-order-link.inline {
+    padding: 0.125rem;
+    background: transparent;
+  }
+
+  .explorer-order-link.inline:hover {
+    background: rgba(33, 150, 243, 0.1);
+  }
+
+  .raw-json {
+    border-top: 1px solid var(--border-light);
+  }
+
+  .raw-json summary {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  .raw-json summary:hover {
+    background: var(--surface-1);
+  }
+
+  .raw-json pre {
+    margin: 0;
+    padding: 1rem 1.5rem;
+    background: var(--surface-accent);
+    color: var(--code-text);
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.75rem;
+    overflow-x: auto;
+    max-height: 300px;
+  }
+
+  /* Requestor Tracker styles */
+  .tracker {
+    height: calc(100vh - 200px);
+  }
+
+  .tracker-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    background: var(--surface-1);
+    border-radius: 8px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .tracker-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr 400px;
+    gap: 1.5rem;
+    height: 100%;
+  }
+
+  .tracker-sidebar {
+    background: var(--surface-1);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tracker-sidebar h3 {
+    margin: 0 0 1rem 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .add-requestor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .add-requestor input {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    background: var(--surface-card);
+    color: var(--app-text);
+  }
+
+  .add-requestor button {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .requestor-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .requestor-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 0.25rem;
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
+    position: relative;
+  }
+
+  .requestor-item:hover {
+    background: var(--surface-2);
+  }
+
+  .requestor-item.selected {
+    background: var(--surface-accent);
+    color: var(--text-inverse);
+    border-color: var(--surface-accent);
+  }
+
+  .requestor-item.selected .requestor-address {
+    color: var(--text-soft);
+  }
+
+  .requestor-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .requestor-badge:hover {
+    background: #d32f2f;
+    transform: scale(1.1);
+  }
+
+  .requestor-badge.loading {
+    background: #ff9800;
+    cursor: wait;
+  }
+
+  .spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .requestor-select-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    overflow: hidden;
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+  }
+
+  .requestor-nickname {
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  .requestor-address {
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+
+  .remove-btn {
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    color: var(--text-faint);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .remove-btn:hover {
+    background: #f44336;
+    color: white;
+  }
+
+  .tracker-main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .requestor-header {
+    margin-bottom: 1rem;
+  }
+
+  .requestor-header h3 {
+    margin: 0 0 0.25rem 0;
+  }
+
+  .full-address {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+
+  .explorer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .explorer-link:hover .full-address {
+    color: var(--link-bright);
+  }
+
+  .explorer-link .link-icon {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    transition: color 0.15s;
+  }
+
+  .explorer-link:hover .link-icon {
+    color: var(--link-bright);
+  }
+
+  .address-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover {
+    background: var(--surface-3);
+    color: var(--app-text);
+  }
+
+  .copy-btn.copied {
+    background: #4caf50;
+    color: white;
+  }
+
+  .auto-populate-btn {
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface-accent-hover);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .auto-populate-btn:hover:not(:disabled) {
+    background: var(--surface-accent-strong);
+  }
+
+  .auto-populate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .notification-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #f44336;
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .notification-badge.checking {
+    background: #ff9800;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .orders-heading {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  .add-request {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .add-request input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    background: var(--surface-card);
+    color: var(--app-text);
+  }
+
+  .add-request button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .tracked-requests {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .tracked-request {
+    background: var(--surface-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tracked-request.problematic {
+    border-color: #f44336;
+    background: var(--problematic-bg);
+  }
+
+  .tracked-request.selected {
+    border-color: var(--link);
+    background: var(--selected-bg);
+  }
+
+  .tracked-request.selected.problematic {
+    border-color: #f44336;
+    background: var(--selected-problematic-bg);
+  }
+
+  .tracked-request {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .request-row {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 1rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+    min-width: 0;
+  }
+
+  .request-row:hover {
+    opacity: 0.8;
+  }
+
+  .request-row:focus {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .request-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow: hidden;
+  }
+
+  .request-header-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .short-order-id {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--short-id-text);
+    background: var(--short-id-bg);
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+  }
+
+  .order-status {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    background: var(--status-color);
+    color: white;
+  }
+
+  .order-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'SF Mono', Monaco, monospace;
+  }
+
+  .request-id-fallback {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+  }
+
+  .request-actions-left {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .request-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .action-btn {
+    padding: 0.25rem 0.5rem;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+
+  .action-btn:hover {
+    background: var(--surface-3);
+  }
+
+  .action-btn.active {
+    background: #f44336;
+    color: white;
+  }
+
+  .action-btn.problematic-btn {
+    opacity: 0.3;
+  }
+
+  .action-btn.problematic-btn:hover {
+    opacity: 1;
+    background: #ff9800;
+    color: white;
+  }
+
+  .action-btn.problematic-btn.active {
+    opacity: 1;
+    background: #f44336;
+    color: white;
+  }
+
+  .action-btn.note-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+  }
+
+  .action-btn.note-btn.has-note {
+    background: var(--link);
+    color: var(--text-inverse);
+  }
+
+  .action-btn.note-btn:hover {
+    background: var(--link);
+    color: var(--text-inverse);
+  }
+
+  .action-btn.remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+  }
+
+  .action-btn.remove-btn:hover {
+    background: #f44336;
+    color: white;
+  }
+
+  .request-note {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .note-label {
+    font-weight: 500;
+    color: var(--text-subtle);
+  }
+
+  .note-editor {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .note-editor textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.875rem;
+    resize: vertical;
+    background: var(--surface-card);
+    color: var(--app-text);
+  }
+
+  .note-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .note-actions button {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .note-actions .cancel-btn {
+    background: var(--surface-2);
+    color: var(--text-muted);
+  }
+
+  .note-actions .cancel-btn:hover {
+    background: var(--surface-3);
+  }
+
+  .tracker-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-subtle);
+    background: var(--surface-1);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .empty-message {
+    color: var(--text-subtle);
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .tracker-detail {
+    background: var(--surface-1);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .detail-header h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .detail-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-subtle);
+    padding: 2rem;
+  }
+
+  .detail-error {
+    margin: 1rem;
+    padding: 1rem;
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-radius: 8px;
+    border: 1px solid var(--error-border);
+  }
+
+  .tracker-request-card {
+    margin: 1rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .detail-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-subtle);
+    padding: 2rem;
+    text-align: center;
+  }
+
+  /* Remove confirmation modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--modal-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal {
+    background: var(--surface-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .modal h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.125rem;
+  }
+
+  .modal p {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-muted);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .modal-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .modal-btn.cancel {
+    background: var(--surface-2);
+    color: var(--text-muted);
+  }
+
+  .modal-btn.cancel:hover {
+    background: var(--surface-3);
+  }
+
+  .modal-btn.confirm {
+    background: #f44336;
+    color: white;
+  }
+
+  .modal-btn.confirm:hover {
+    background: #d32f2f;
+  }
+
+  .auto-populate-options {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .modal-btn.option {
+    background: var(--surface-accent);
+    color: var(--text-inverse);
+    min-width: 60px;
+  }
+
+  .modal-btn.option:hover {
+    background: var(--surface-accent-hover);
+  }
+
+  /* Tracker loading state */
+  .tracker-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 300px;
+    color: var(--text-muted);
+    gap: 1rem;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--surface-3);
+    border-top-color: var(--link);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+</style>
