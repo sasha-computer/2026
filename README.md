@@ -12,6 +12,14 @@ A local PDF reader with built-in highlighting and spaced repetition flashcards. 
 
 → [browse code](./pdfcards)
 
+## ⭐ sicp-notes
+
+My notes and 80+ flashcards from working through [Structure and Interpretation of Computer Programs](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html) (Abelson & Sussman), Chapter 1. Covers expressions, evaluation models, the substitution model, compound procedures, recursive vs iterative processes, tree recursion, and the connection between SICP's terminology and standard CS recursion concepts. Includes detailed reading notes and spaced repetition flashcards.
+
+**Stack:** Scheme · Markdown
+
+→ [browse code](./sicp-notes)
+
 ## ⭐ ralph-wiggum
 
 A tiny CLI tool that turns Claude Code into an autonomous task runner. Give it a PRD, run `./ralph-wiggum 10`, and it works through each task one by one: picks the highest priority item, implements it, commits, updates progress, and moves on. Uses [gum](https://github.com/charmbracelet/gum) for the terminal UI. Stops when the PRD is done or max iterations are hit.
@@ -35,14 +43,6 @@ Debug tool for Boundless proof requests. Fetches a proof request from the Boundl
 **Stack:** Rust · RISC Zero · Nix
 
 → [browse code](./boundless-debug)
-
-## ⭐ sicp-notes
-
-My notes and 80+ flashcards from working through [Structure and Interpretation of Computer Programs](https://mitp-content-server.mit.edu/books/content/sectbyfn/books_pres_0/6515/sicp.zip/index.html) (Abelson & Sussman), Chapter 1. Covers expressions, evaluation models, the substitution model, compound procedures, recursive vs iterative processes, tree recursion, and the connection between SICP's terminology and standard CS recursion concepts. Includes detailed reading notes and spaced repetition flashcards.
-
-**Stack:** Scheme · Markdown
-
-→ [browse code](./sicp-notes)
 
 ## ⭐ practice-problems
 
