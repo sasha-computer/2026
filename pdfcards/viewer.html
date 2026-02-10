@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Viewer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/pdfjs-css/pdf_viewer.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #525659;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+    #toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 48px;
+      background: #323639;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    #toolbar button {
+      background: #4a4d50;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #toolbar button:hover {
+      background: #5a5d60;
+    }
+    #toolbar button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #page-info {
+      color: white;
+      font-size: 14px;
+      min-width: 100px;
+      text-align: center;
+    }
+    #viewer-container {
+      position: fixed;
+      top: 48px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 20px;
+    }
+    .page-row {
+      display: flex;
+      align-items: stretch;
+      gap: 16px;
+    }
+    .margin-column {
+      width: 220px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .page-wrapper {
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+    .text-layer-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+    }
+    .highlight-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .highlight-rect {
+      position: absolute;
+      background: rgba(255, 230, 0, 0.4);
+      mix-blend-mode: multiply;
+      border-radius: 2px;
+    }
+    .highlight-rect:hover {
+      background: rgba(255, 200, 0, 0.5);
+    }
+    .textLayer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      overflow: hidden;
+      line-height: 1;
+    }
+    .textLayer span {
+      position: absolute;
+      white-space: pre;
+      transform-origin: 0 0;
+    }
+    .textLayer span::selection {
+      background: rgba(0, 0, 255, 0.3);
+    }
+    #loading {
+      color: white;
+      font-size: 18px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #bottom-bar {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      z-index: 1000;
+    }
+    #review-btn {
+      background: #6c5ce7;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+    #review-btn:hover {
+      background: #5b4cdb;
+    }
+    #review-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #ff6b6b;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    #jump-latest {
+      background: #4a4d50;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #jump-latest:hover {
+      background: #5a5d60;
+    }
+    #menu-container {
+      position: relative;
+    }
+    #menu-btn {
+      background: #4a4d50;
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    #menu-btn:hover {
+      background: #5a5d60;
+    }
+    #menu-dropdown {
+      display: none;
+      position: absolute;
+      bottom: 50px;
+      right: 0;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      min-width: 150px;
+      overflow: hidden;
+    }
+    #menu-dropdown.show {
+      display: block;
+    }
+    #menu-dropdown button {
+      width: 100%;
+      background: white;
+      color: #333;
+      border: none;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #menu-dropdown button:hover {
+      background: #f5f5f5;
+    }
+    #menu-dropdown #clear-all-btn {
+      color: #e74c3c;
+    }
+    #review-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    #review-modal.show {
+      display: flex;
+    }
+    #review-modal-content {
+      background: #1a1a2e;
+      width: 90%;
+      max-width: 600px;
+      min-height: 400px;
+      max-height: 80vh;
+      border-radius: 12px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    #review-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      z-index: 10;
+    }
+    #review-close:hover {
+      color: white;
+    }
+    #review-header {
+      padding: 16px 20px;
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+    }
+    #review-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px 40px 40px;
+    }
+    .review-screen {
+      text-align: center;
+      width: 100%;
+    }
+    .review-screen i {
+      font-size: 48px;
+      color: #6c5ce7;
+      margin-bottom: 20px;
+    }
+    .review-screen h2 {
+      color: white;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .review-screen p {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    #start-review-btn, #close-review-btn {
+      background: #6c5ce7;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #start-review-btn:hover, #close-review-btn:hover {
+      background: #5b4cdb;
+    }
+    #review-prompt {
+      background: #252542;
+      padding: 30px;
+      border-radius: 8px;
+      color: white;
+      font-size: 18px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      min-height: 80px;
+      text-align: left;
+    }
+    #review-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #show-answer-wrapper {
+      width: 100%;
+      padding: 0 30px;
+      text-align: center;
+    }
+    #show-answer-btn {
+      background: #4a4d50;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #show-answer-btn:hover {
+      background: #5a5d60;
+    }
+    #review-answer {
+      background: #1e3a2f;
+      padding: 30px;
+      border-radius: 8px;
+      color: #a8e6cf;
+      font-size: 16px;
+      line-height: 1.5;
+      margin: 20px 0;
+      border-left: 3px solid #27ae60;
+      text-align: left;
+    }
+    #rating-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .rating-btn {
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 70px;
+    }
+    .rating-btn .rating-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .rating-btn .rating-interval {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    .rating-btn.again {
+      background: #e74c3c;
+      color: white;
+    }
+    .rating-btn.again:hover { background: #c0392b; }
+    .rating-btn.hard {
+      background: #e67e22;
+      color: white;
+    }
+    .rating-btn.hard:hover { background: #d35400; }
+    .rating-btn.good {
+      background: #27ae60;
+      color: white;
+    }
+    .rating-btn.good:hover { background: #1e8449; }
+    .rating-btn.easy {
+      background: #3498db;
+      color: white;
+    }
+    .rating-btn.easy:hover { background: #2980b9; }
+    #review-complete i {
+      color: #27ae60;
+    }
+    .prompt-card {
+      background: #f8f9fa;
+      border-left: 3px solid #6c5ce7;
+      border-radius: 4px;
+      padding: 10px;
+      width: 200px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      font-size: 12px;
+      position: absolute;
+      right: 0;
+      display: flex;
+      gap: 8px;
+    }
+    .prompt-card.right-side {
+      border-left: none;
+      border-right: 3px solid #6c5ce7;
+      right: auto;
+      left: 0;
+    }
+    .prompt-icon {
+      color: #6c5ce7;
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .prompt-fields {
+      flex: 1;
+      min-width: 0;
+    }
+    /* Anchor text display (commented out for now)
+    .prompt-anchor {
+      color: #888;
+      font-size: 10px;
+      font-style: italic;
+      margin-bottom: 8px;
+      max-height: 32px;
+      overflow: hidden;
+      line-height: 1.3;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+    .prompt-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #6c5ce7;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    */
+    .prompt-field {
+      width: 100%;
+      height: 18px;
+      border: none;
+      padding: 2px 0;
+      font-size: 12px;
+      line-height: 14px;
+      font-family: inherit;
+      resize: none;
+      background: transparent;
+      color: #333;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #eee;
+      overflow: hidden;
+    }
+    .prompt-field:focus {
+      outline: none;
+    }
+    .prompt-field::placeholder,
+    .answer-field::placeholder {
+      opacity: 0.5;
+    }
+    .answer-field {
+      width: 100%;
+      min-height: 24px;
+      border: none;
+      padding: 2px 0;
+      font-size: 12px;
+      font-family: inherit;
+      resize: none;
+      background: transparent;
+      color: #333;
+    }
+    .answer-field:focus {
+      outline: none;
+    }
+    .prompt-delete {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+    }
+    .prompt-delete:hover {
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="zoom-out">-</button>
+    <button id="zoom-in">+</button>
+    <span id="page-info">Loading...</span>
+    <button id="fit-width">Fit Width</button>
+    <button id="jump-latest" style="display:none;"><i class="fa-solid fa-forward"></i> Latest</button>
+  </div>
+  <div id="viewer-container">
+    <div id="loading">Loading PDF...</div>
+  </div>
+  <div id="bottom-bar">
+    <button id="review-btn">
+      <i class="fa-solid fa-graduation-cap"></i> Review
+      <span id="review-badge" style="display:none;"></span>
+    </button>
+    <div id="menu-container">
+      <button id="menu-btn"><i class="fa-solid fa-bars"></i></button>
+      <div id="menu-dropdown">
+        <button id="clear-all-btn"><i class="fa-solid fa-trash"></i> Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="review-modal">
+    <div id="review-modal-content">
+      <button id="review-close"><i class="fa-solid fa-xmark"></i></button>
+      <div id="review-header">
+        <span id="review-progress"></span>
+      </div>
+      <div id="review-container">
+        <!-- Start screen -->
+        <div id="review-start" class="review-screen">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <h2>Ready to Review</h2>
+          <p id="review-summary"></p>
+          <button id="start-review-btn">Start Review</button>
+        </div>
+        <!-- Card screen -->
+        <div id="review-card" class="review-screen" style="display:none;">
+          <div id="review-prompt"></div>
+          <div id="show-answer-wrapper">
+            <button id="show-answer-btn">Show Answer</button>
+          </div>
+          <div id="review-answer" style="display:none;"></div>
+          <div id="rating-buttons" style="display:none;">
+            <button class="rating-btn again" data-rating="1">
+              <span class="rating-label">Again</span>
+              <span class="rating-interval" id="interval-again"></span>
+            </button>
+            <button class="rating-btn hard" data-rating="2">
+              <span class="rating-label">Hard</span>
+              <span class="rating-interval" id="interval-hard"></span>
+            </button>
+            <button class="rating-btn good" data-rating="3">
+              <span class="rating-label">Good</span>
+              <span class="rating-interval" id="interval-good"></span>
+            </button>
+            <button class="rating-btn easy" data-rating="4">
+              <span class="rating-label">Easy</span>
+              <span class="rating-interval" id="interval-easy"></span>
+            </button>
+          </div>
+        </div>
+        <!-- Complete screen -->
+        <div id="review-complete" class="review-screen" style="display:none;">
+          <i class="fa-solid fa-check-circle"></i>
+          <h2>Session Complete!</h2>
+          <p id="review-stats"></p>
+          <button id="close-review-btn">Close</button>
+        </div>
+        <!-- Empty state -->
+        <div id="review-empty" class="review-screen" style="display:none;">
+          <i class="fa-solid fa-inbox"></i>
+          <h2>All Caught Up!</h2>
+          <p>No cards due for review.</p>
+          <p id="next-due-info"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pdfjs/pdf.min.mjs" type="module"></script>
+  <script type="module">
+    const pdfjsLib = await import('/pdfjs/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
+
+    let pdfDoc = null;
+    let scale = 1.5;
+    let prompts = [];
+    let saveTimeout = null;
+
+    const container = document.getElementById('viewer-container');
+    const pageInfo = document.getElementById('page-info');
+    const loading = document.getElementById('loading');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    const menuBtn = document.getElementById('menu-btn');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    const reviewBtn = document.getElementById('review-btn');
+    const reviewModal = document.getElementById('review-modal');
+    const reviewClose = document.getElementById('review-close');
+
+    // Review UI elements
+    const reviewStartScreen = document.getElementById('review-start');
+    const reviewCardScreen = document.getElementById('review-card');
+    const reviewCompleteScreen = document.getElementById('review-complete');
+    const reviewEmptyScreen = document.getElementById('review-empty');
+    const reviewProgress = document.getElementById('review-progress');
+    const reviewSummary = document.getElementById('review-summary');
+    const reviewPromptEl = document.getElementById('review-prompt');
+    const reviewAnswerEl = document.getElementById('review-answer');
+    const showAnswerBtn = document.getElementById('show-answer-btn');
+    const ratingButtons = document.getElementById('rating-buttons');
+    const startReviewBtn = document.getElementById('start-review-btn');
+    const closeReviewBtn = document.getElementById('close-review-btn');
+    const reviewStats = document.getElementById('review-stats');
+    const nextDueInfo = document.getElementById('next-due-info');
+    const reviewBadge = document.getElementById('review-badge');
+
+    // Review session state
+    let reviewQueue = [];
+    let currentCardIndex = 0;
+    let sessionStats = { reviewed: 0, again: 0, hard: 0, good: 0, easy: 0 };
+
+    // ========== FSRS Algorithm ==========
+    const FSRS = {
+      requestRetention: 0.9,
+      maxInterval: 365,
+      w: [0.4, 0.6, 2.4, 5.8, 4.93, 0.94, 0.86, 0.01, 1.49, 0.14, 0.94, 2.18, 0.05, 0.34, 1.26, 0.29, 2.61],
+
+      initSRS() {
+        return {
+          stability: 0,
+          difficulty: 5,
+          due: Date.now(),
+          lastReview: null,
+          reps: 0,
+          lapses: 0,
+          state: 'new'
+        };
+      },
+
+      getRetrievability(srs) {
+        if (!srs.lastReview || srs.stability === 0) return 0;
+        const elapsedDays = (Date.now() - srs.lastReview) / (1000 * 60 * 60 * 24);
+        return Math.exp(-elapsedDays / srs.stability);
+      },
+
+      calculateInterval(stability) {
+        const interval = stability * (Math.log(this.requestRetention) / Math.log(0.9));
+        return Math.min(Math.max(Math.round(interval), 1), this.maxInterval);
+      },
+
+      getNextStability(srs, rating, retrievability) {
+        const w = this.w;
+        if (srs.state === 'new' || srs.reps === 0) {
+          // Initial stability based on rating
+          const initialStabilities = [0.4, 0.6, 2.4, 5.8];
+          return initialStabilities[rating - 1] || 1;
+        }
+
+        const s = srs.stability;
+        const d = srs.difficulty;
+
+        if (rating === 1) {
+          // Again - lapse
+          return Math.max(0.1, s * w[11]);
+        }
+
+        // Success - calculate new stability
+        const hardPenalty = rating === 2 ? w[15] : 1;
+        const easyBonus = rating === 4 ? w[16] : 1;
+        const newS = s * (1 + Math.exp(w[8]) * (11 - d) * Math.pow(s, -w[9]) *
+                    (Math.exp((1 - retrievability) * w[10]) - 1) * hardPenalty * easyBonus);
+        return Math.min(newS, this.maxInterval);
+      },
+
+      getNextDifficulty(difficulty, rating) {
+        const w = this.w;
+        const newD = difficulty - w[6] * (rating - 3);
+        return Math.min(Math.max(newD, 1), 10);
+      },
+
+      review(srs, rating) {
+        const now = Date.now();
+        const retrievability = this.getRetrievability(srs);
+        const newStability = this.getNextStability(srs, rating, retrievability);
+        const newDifficulty = this.getNextDifficulty(srs.difficulty, rating);
+        const intervalDays = this.calculateInterval(newStability);
+
+        return {
+          stability: newStability,
+          difficulty: newDifficulty,
+          due: now + intervalDays * 24 * 60 * 60 * 1000,
+          lastReview: now,
+          reps: srs.reps + 1,
+          lapses: rating === 1 ? srs.lapses + 1 : srs.lapses,
+          state: rating === 1 ? 'relearning' : 'review'
+        };
+      },
+
+      predictIntervals(srs) {
+        const intervals = {};
+        for (let rating = 1; rating <= 4; rating++) {
+          const newSRS = this.review({ ...srs }, rating);
+          const days = Math.round((newSRS.due - Date.now()) / (1000 * 60 * 60 * 24));
+          intervals[rating] = this.formatInterval(days);
+        }
+        return intervals;
+      },
+
+      formatInterval(days) {
+        if (days < 1) {
+          const mins = Math.max(1, Math.round(days * 24 * 60));
+          return mins < 60 ? `${mins}m` : `${Math.round(mins / 60)}h`;
+        }
+        if (days < 30) return `${days}d`;
+        if (days < 365) return `${Math.round(days / 30)}mo`;
+        return `${Math.round(days / 365)}y`;
+      }
+    };
+
+    // ========== Review Session Functions ==========
+    function getReviewableCards() {
+      const now = Date.now();
+      return prompts.filter(p => {
+        if (!p.prompt) return false; // Skip cards without prompts
+        if (!p.srs) return true; // New cards
+        return p.srs.due <= now; // Due cards
+      });
+    }
+
+    function getNewCards() {
+      return prompts.filter(p => p.prompt && !p.srs);
+    }
+
+    function getDueCards() {
+      const now = Date.now();
+      return prompts.filter(p => p.prompt && p.srs && p.srs.due <= now);
+    }
+
+    function shuffleArray(arr) {
+      const shuffled = [...arr];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    function showScreen(screen) {
+      [reviewStartScreen, reviewCardScreen, reviewCompleteScreen, reviewEmptyScreen]
+        .forEach(s => s.style.display = 'none');
+      screen.style.display = 'block';
+    }
+
+    function openReviewModal() {
+      const reviewable = getReviewableCards();
+      const newCards = getNewCards();
+      const dueCards = getDueCards();
+
+      if (reviewable.length === 0) {
+        // Find next due card
+        const futureDue = prompts
+          .filter(p => p.prompt && p.srs)
+          .sort((a, b) => a.srs.due - b.srs.due)[0];
+
+        if (futureDue) {
+          const dueIn = Math.ceil((futureDue.srs.due - Date.now()) / (1000 * 60 * 60 * 24));
+          nextDueInfo.textContent = `Next card due in ${dueIn} day${dueIn !== 1 ? 's' : ''}`;
+        } else {
+          nextDueInfo.textContent = 'Add some flashcards to get started!';
+        }
+        showScreen(reviewEmptyScreen);
+      } else {
+        reviewSummary.textContent = `${reviewable.length} card${reviewable.length !== 1 ? 's' : ''} to review (${newCards.length} new, ${dueCards.length} due)`;
+        showScreen(reviewStartScreen);
+      }
+
+      reviewProgress.textContent = '';
+      reviewModal.classList.add('show');
+    }
+
+    function startReviewSession() {
+      reviewQueue = shuffleArray(getReviewableCards());
+      currentCardIndex = 0;
+      sessionStats = { reviewed: 0, again: 0, hard: 0, good: 0, easy: 0 };
+      showCurrentCard();
+    }
+
+    function showCurrentCard() {
+      if (currentCardIndex >= reviewQueue.length) {
+        endSession();
+        return;
+      }
+
+      const card = reviewQueue[currentCardIndex];
+      showScreen(reviewCardScreen);
+      reviewProgress.textContent = `${currentCardIndex + 1} of ${reviewQueue.length}`;
+
+      // Initialize SRS if new card
+      if (!card.srs) {
+        card.srs = FSRS.initSRS();
+      }
+
+      // Show prompt
+      reviewPromptEl.textContent = card.prompt || '(No prompt)';
+      reviewAnswerEl.textContent = card.answer || '(No answer)';
+      reviewAnswerEl.style.display = 'none';
+      showAnswerBtn.parentElement.style.display = 'block';
+      ratingButtons.style.display = 'none';
+
+      // Update interval predictions
+      const intervals = FSRS.predictIntervals(card.srs);
+      document.getElementById('interval-again').textContent = intervals[1];
+      document.getElementById('interval-hard').textContent = intervals[2];
+      document.getElementById('interval-good').textContent = intervals[3];
+      document.getElementById('interval-easy').textContent = intervals[4];
+    }
+
+    function revealAnswer() {
+      showAnswerBtn.parentElement.style.display = 'none';
+      reviewAnswerEl.style.display = 'block';
+      ratingButtons.style.display = 'flex';
+    }
+
+    function rateCard(rating) {
+      const card = reviewQueue[currentCardIndex];
+      card.srs = FSRS.review(card.srs, rating);
+
+      // Update stats
+      sessionStats.reviewed++;
+      if (rating === 1) sessionStats.again++;
+      else if (rating === 2) sessionStats.hard++;
+      else if (rating === 3) sessionStats.good++;
+      else if (rating === 4) sessionStats.easy++;
+
+      // Save and move to next
+      savePrompts();
+      currentCardIndex++;
+      showCurrentCard();
+    }
+
+    function endSession() {
+      showScreen(reviewCompleteScreen);
+      reviewProgress.textContent = 'Complete';
+      reviewStats.textContent = `Reviewed ${sessionStats.reviewed} card${sessionStats.reviewed !== 1 ? 's' : ''}`;
+      updateBadge();
+    }
+
+    function updateBadge() {
+      const count = getReviewableCards().length;
+      if (count > 0) {
+        reviewBadge.textContent = count > 99 ? '99+' : count;
+        reviewBadge.style.display = 'flex';
+      } else {
+        reviewBadge.style.display = 'none';
+      }
+    }
+
+    // Jump to latest flashcard
+    const jumpLatestBtn = document.getElementById('jump-latest');
+
+    function updateJumpButton() {
+      if (prompts.length > 0) {
+        jumpLatestBtn.style.display = 'inline-flex';
+      } else {
+        jumpLatestBtn.style.display = 'none';
+      }
+    }
+
+    function jumpToLatest() {
+      if (prompts.length === 0) return;
+
+      // Find the most recently created prompt
+      const latestPrompt = prompts.reduce((latest, p) =>
+        (p.createdAt || 0) > (latest.createdAt || 0) ? p : latest
+      , prompts[0]);
+
+      const pageNum = latestPrompt.pageNumber;
+      const row = document.getElementById(`row-${pageNum}`);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Ensure the page is rendered
+        if (!renderedPages.has(pageNum)) {
+          renderPageContent(pageNum);
+        }
+      }
+    }
+
+    jumpLatestBtn.addEventListener('click', jumpToLatest);
+
+    // Load prompts from server
+    async function loadPrompts() {
+      try {
+        const res = await fetch('/highlights');
+        const data = await res.json();
+        prompts = data.prompts || data.highlights || [];
+      } catch (e) {
+        console.error('Failed to load prompts:', e);
+        prompts = [];
+      }
+    }
+
+    // Save prompts to server (debounced)
+    function savePrompts() {
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(async () => {
+        try {
+          await fetch('/highlights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompts })
+          });
+        } catch (e) {
+          console.error('Failed to save prompts:', e);
+        }
+      }, 500);
+    }
+
+    function generateId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+
+    // Track rendered pages
+    const renderedPages = new Set();
+    let pageObserver = null;
+
+    function createPagePlaceholder(pageNum, viewport) {
+      const row = document.createElement('div');
+      row.className = 'page-row';
+      row.id = `row-${pageNum}`;
+      row.dataset.pageNum = pageNum;
+
+      const leftMargin = document.createElement('div');
+      leftMargin.className = 'margin-column margin-left';
+      leftMargin.id = `margin-left-${pageNum}`;
+
+      const rightMargin = document.createElement('div');
+      rightMargin.className = 'margin-column margin-right';
+      rightMargin.id = `margin-right-${pageNum}`;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'page-wrapper';
+      wrapper.id = `page-${pageNum}`;
+      wrapper.style.width = Math.floor(viewport.width) + 'px';
+      wrapper.style.height = Math.floor(viewport.height) + 'px';
+      wrapper.style.background = '#e0e0e0';
+
+      row.appendChild(leftMargin);
+      row.appendChild(wrapper);
+      row.appendChild(rightMargin);
+
+      return row;
+    }
+
+    async function renderPageContent(pageNum) {
+      if (renderedPages.has(pageNum)) return;
+      renderedPages.add(pageNum);
+
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale });
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      const wrapper = document.getElementById(`page-${pageNum}`);
+      if (!wrapper) return;
+
+      // Update wrapper dimensions to match actual page size
+      wrapper.style.width = Math.floor(viewport.width) + 'px';
+      wrapper.style.height = Math.floor(viewport.height) + 'px';
+      wrapper.style.background = 'white';
+      wrapper.innerHTML = '';
+
+      // Canvas layer
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = Math.floor(viewport.width * pixelRatio);
+      canvas.height = Math.floor(viewport.height * pixelRatio);
+      canvas.style.width = Math.floor(viewport.width) + 'px';
+      canvas.style.height = Math.floor(viewport.height) + 'px';
+      wrapper.appendChild(canvas);
+
+      // Highlight layer
+      const highlightLayer = document.createElement('div');
+      highlightLayer.className = 'highlight-layer';
+      highlightLayer.id = `highlights-${pageNum}`;
+      wrapper.appendChild(highlightLayer);
+
+      // Text layer
+      const textLayerDiv = document.createElement('div');
+      textLayerDiv.className = 'textLayer';
+      wrapper.appendChild(textLayerDiv);
+
+      // Render canvas
+      context.scale(pixelRatio, pixelRatio);
+      await page.render({
+        canvasContext: context,
+        viewport: viewport
+      }).promise;
+
+      // Render text layer
+      const textContent = await page.getTextContent();
+      const textLayer = new pdfjsLib.TextLayer({
+        textContentSource: textContent,
+        container: textLayerDiv,
+        viewport: viewport
+      });
+      await textLayer.render();
+
+      // Render existing prompts for this page
+      renderAnchorsForPage(pageNum, viewport);
+      renderPromptsForPage(pageNum);
+    }
+
+    function renderAnchorsForPage(pageNum, viewport) {
+      const highlightLayer = document.getElementById(`highlights-${pageNum}`);
+      if (!highlightLayer) return;
+
+      highlightLayer.innerHTML = '';
+      const pagePrompts = prompts.filter(p => p.pageNumber === pageNum);
+
+      for (const p of pagePrompts) {
+        for (const rect of p.rects) {
+          const div = document.createElement('div');
+          div.className = 'highlight-rect';
+          div.style.left = (rect.left * scale) + 'px';
+          div.style.top = (rect.top * scale) + 'px';
+          div.style.width = (rect.width * scale) + 'px';
+          div.style.height = (rect.height * scale) + 'px';
+          div.dataset.promptId = p.id;
+          highlightLayer.appendChild(div);
+        }
+      }
+    }
+
+    function renderPromptsForPage(pageNum) {
+      const leftMargin = document.getElementById(`margin-left-${pageNum}`);
+      const rightMargin = document.getElementById(`margin-right-${pageNum}`);
+      if (!leftMargin || !rightMargin) return;
+
+      leftMargin.innerHTML = '';
+      rightMargin.innerHTML = '';
+
+      const pagePrompts = prompts.filter(p => p.pageNumber === pageNum);
+
+      // Sort by Y position
+      const sortedPrompts = [...pagePrompts].sort((a, b) => {
+        const aTop = a.rects.length > 0 ? a.rects[0].top : 0;
+        const bTop = b.rects.length > 0 ? b.rects[0].top : 0;
+        return aTop - bTop;
+      });
+
+      // Track bottom position for each margin to prevent overlaps
+      let leftBottomY = 0;
+      let rightBottomY = 0;
+      const cardGap = 8;
+
+      for (const p of sortedPrompts) {
+        const card = document.createElement('div');
+        const isRightSide = p.xCenter >= 0.5;
+        card.className = 'prompt-card' + (isRightSide ? ' right-side' : '');
+        card.dataset.promptId = p.id;
+
+        // Calculate desired Y position
+        const desiredY = p.rects.length > 0 ? p.rects[0].top * scale : 0;
+
+        // Get the current bottom for this margin and ensure no overlap
+        const currentBottom = isRightSide ? rightBottomY : leftBottomY;
+        const actualY = Math.max(desiredY, currentBottom);
+        card.style.top = actualY + 'px';
+
+        // Anchor text display (commented out for now)
+        // const anchorDiv = document.createElement('div');
+        // anchorDiv.className = 'prompt-anchor';
+        // anchorDiv.textContent = p.anchorText.length > 60 ? p.anchorText.substring(0, 60) + '...' : p.anchorText;
+
+        const promptField = document.createElement('textarea');
+        promptField.className = 'prompt-field';
+        promptField.placeholder = 'Type a prompt here';
+        promptField.value = p.prompt || '';
+        promptField.rows = 1;
+
+        const autoResize = (el) => {
+          el.style.height = '18px';
+          el.style.height = el.scrollHeight + 'px';
+        };
+
+        promptField.addEventListener('input', () => {
+          p.prompt = promptField.value;
+          savePrompts();
+          autoResize(promptField);
+        });
+
+        // Initial resize if there's existing content
+        if (p.prompt) setTimeout(() => autoResize(promptField), 0);
+
+        const answerField = document.createElement('textarea');
+        answerField.className = 'answer-field';
+        answerField.placeholder = 'Type a response here';
+        answerField.value = p.answer || '';
+        answerField.addEventListener('input', () => {
+          p.answer = answerField.value;
+          savePrompts();
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'prompt-delete';
+        deleteBtn.textContent = '\u00d7';
+        deleteBtn.title = 'Delete prompt';
+        deleteBtn.addEventListener('click', () => {
+          prompts = prompts.filter(x => x.id !== p.id);
+          savePrompts();
+          renderAllPages();
+          updateBadge();
+        });
+
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-note-sticky prompt-icon';
+
+        const fieldsContainer = document.createElement('div');
+        fieldsContainer.className = 'prompt-fields';
+        fieldsContainer.appendChild(promptField);
+        fieldsContainer.appendChild(answerField);
+
+        card.appendChild(deleteBtn);
+        // card.appendChild(anchorDiv);
+        card.appendChild(icon);
+        card.appendChild(fieldsContainer);
+
+        // Position in closest margin and update tracking
+        if (isRightSide) {
+          rightMargin.appendChild(card);
+          // Update bottom position after card is in DOM
+          rightBottomY = actualY + card.offsetHeight + cardGap;
+        } else {
+          leftMargin.appendChild(card);
+          leftBottomY = actualY + card.offsetHeight + cardGap;
+        }
+      }
+    }
+
+    async function renderAllPages(preserveScroll = false) {
+      // Store scroll position if preserving
+      let scrollRatio = 0;
+      let scrollTop = 0;
+      if (preserveScroll && container.scrollHeight > 0) {
+        scrollTop = container.scrollTop;
+        scrollRatio = scrollTop / container.scrollHeight;
+      }
+
+      // Clean up old observer
+      if (pageObserver) {
+        pageObserver.disconnect();
+        pageObserver = null;
+      }
+      renderedPages.clear();
+      container.innerHTML = '';
+
+      // Create placeholders for all pages with actual dimensions
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale });
+        const row = createPagePlaceholder(i, viewport);
+        container.appendChild(row);
+      }
+
+      pageInfo.textContent = `${pdfDoc.numPages} page${pdfDoc.numPages > 1 ? 's' : ''}`;
+
+      // Restore scroll position
+      if (preserveScroll && scrollRatio > 0) {
+        container.scrollTop = scrollRatio * container.scrollHeight;
+      }
+
+      // Set up IntersectionObserver for lazy loading
+      pageObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const pageNum = parseInt(entry.target.dataset.pageNum);
+            if (pageNum && !renderedPages.has(pageNum)) {
+              renderPageContent(pageNum);
+            }
+          }
+        }
+      }, {
+        root: container,
+        rootMargin: '200px 0px', // Preload pages 200px before they're visible
+        threshold: 0
+      });
+
+      // Observe all page rows
+      document.querySelectorAll('.page-row').forEach(row => {
+        pageObserver.observe(row);
+      });
+
+      // Update jump button visibility
+      updateJumpButton();
+    }
+
+    // Get selection rects relative to page
+    function getSelectionRects(pageWrapper, viewport) {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return null;
+
+      const range = selection.getRangeAt(0);
+      const text = selection.toString().trim();
+      if (!text) return null;
+
+      const pageRect = pageWrapper.getBoundingClientRect();
+      const clientRects = range.getClientRects();
+      const rects = [];
+
+      for (const rect of clientRects) {
+        rects.push({
+          left: (rect.left - pageRect.left) / scale,
+          top: (rect.top - pageRect.top) / scale,
+          width: rect.width / scale,
+          height: rect.height / scale
+        });
+      }
+
+      if (rects.length === 0) return null;
+
+      // Calculate horizontal center (0-1)
+      const avgX = rects.reduce((sum, r) => sum + r.left + r.width / 2, 0) / rects.length;
+      const xCenter = avgX / (viewport.width / scale);
+
+      return { text, rects, xCenter };
+    }
+
+    // Handle text selection - create prompt immediately
+    document.addEventListener('mouseup', async (e) => {
+      // Ignore clicks on prompt cards or clear button
+      if (e.target.closest('.prompt-card') || e.target === clearAllBtn) return;
+
+      const selection = window.getSelection();
+      const text = selection?.toString().trim();
+
+      if (!text || text.length < 3) return;
+
+      // Find which page the selection is in
+      const textLayer = e.target.closest('.textLayer');
+      if (!textLayer) return;
+
+      const pageWrapper = textLayer.closest('.page-wrapper');
+      if (!pageWrapper) return;
+
+      // Capture selection data
+      const pageId = pageWrapper.id;
+      const pageNum = parseInt(pageId.replace('page-', ''));
+      const pageRect = pageWrapper.getBoundingClientRect();
+      const range = selection.getRangeAt(0);
+      const clientRects = range.getClientRects();
+      const rects = [];
+
+      for (const rect of clientRects) {
+        rects.push({
+          left: (rect.left - pageRect.left) / scale,
+          top: (rect.top - pageRect.top) / scale,
+          width: rect.width / scale,
+          height: rect.height / scale
+        });
+      }
+
+      if (rects.length === 0) return;
+
+      // Calculate horizontal center (0-1)
+      const pageWidth = pageWrapper.offsetWidth / scale;
+      const avgX = rects.reduce((sum, r) => sum + r.left + r.width / 2, 0) / rects.length;
+      const xCenter = avgX / pageWidth;
+
+      // Create prompt immediately
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale });
+
+      const prompt = {
+        id: generateId(),
+        pageNumber: pageNum,
+        anchorText: text,
+        prompt: '',
+        answer: '',
+        rects: rects,
+        xCenter: xCenter,
+        createdAt: Date.now()
+      };
+
+      prompts.push(prompt);
+      savePrompts();
+      updateBadge();
+      updateJumpButton();
+
+      // Re-render this page's anchors and prompts
+      renderAnchorsForPage(pageNum, viewport);
+      renderPromptsForPage(pageNum);
+
+      // Clear selection
+      window.getSelection().removeAllRanges();
+    });
+
+    // Menu toggle
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuDropdown.classList.toggle('show');
+    });
+
+    document.addEventListener('click', () => {
+      menuDropdown.classList.remove('show');
+    });
+
+    // Clear all prompts
+    clearAllBtn.addEventListener('click', async () => {
+      if (!confirm('Clear all prompts for this PDF?')) return;
+      prompts = [];
+      await fetch('/highlights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompts: [] })
+      });
+      menuDropdown.classList.remove('show');
+      renderAllPages();
+      updateBadge();
+    });
+
+    // Review modal
+    reviewBtn.addEventListener('click', openReviewModal);
+
+    reviewClose.addEventListener('click', () => {
+      reviewModal.classList.remove('show');
+    });
+
+    closeReviewBtn.addEventListener('click', () => {
+      reviewModal.classList.remove('show');
+    });
+
+    reviewModal.addEventListener('click', (e) => {
+      if (e.target === reviewModal) {
+        reviewModal.classList.remove('show');
+      }
+    });
+
+    startReviewBtn.addEventListener('click', startReviewSession);
+    showAnswerBtn.addEventListener('click', revealAnswer);
+
+    // Rating button handlers
+    document.querySelectorAll('.rating-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rating = parseInt(btn.dataset.rating);
+        rateCard(rating);
+      });
+    });
+
+    async function loadPDF() {
+      try {
+        await loadPrompts();
+        pdfDoc = await pdfjsLib.getDocument('/pdf').promise;
+        loading.style.display = 'none';
+        await renderAllPages();
+        updateBadge();
+      } catch (error) {
+        loading.textContent = 'Error loading PDF: ' + error.message;
+        console.error(error);
+      }
+    }
+
+    document.getElementById('zoom-in').addEventListener('click', () => {
+      scale *= 1.25;
+      renderAllPages(true); // Preserve scroll
+    });
+
+    document.getElementById('zoom-out').addEventListener('click', () => {
+      scale /= 1.25;
+      renderAllPages(true); // Preserve scroll
+    });
+
+    document.getElementById('fit-width').addEventListener('click', async () => {
+      if (!pdfDoc) return;
+      const page = await pdfDoc.getPage(1);
+      const viewport = page.getViewport({ scale: 1 });
+      // Account for margins (220px each side + gaps)
+      const availableWidth = container.clientWidth - 220 - 220 - 32 - 40;
+      scale = availableWidth / viewport.width;
+      renderAllPages(true); // Preserve scroll
+    });
+
+    loadPDF();
+  </script>
+</body>
+</html>
