@@ -143,22 +143,84 @@ A collection of handwritten coding problems in Python and Scheme, worked through
 
 ---
 
-## Standalone repos (2026)
+## Standalone repos
 
-Projects that got their own repo instead of living here.
+Projects from 2026 that got their own repo. Reverse chronological.
 
-| Repo | What it does |
-|------|-------------|
-| [readwise-triage](https://github.com/sasha-computer/readwise-triage) | Swipe through your Readwise Reader inbox like Tinder. Bun + SQLite. |
-| [sidebar](https://github.com/sasha-computer/sidebar) | Permanent macOS desktop sidebar. Svelte + Tailwind in a Hammerspoon webview. |
-| [pi-ghostty-sync](https://github.com/sasha-computer/pi-ghostty-sync) | Auto-switching dark/light themes for pi + Ghostty. |
-| [pi-chat-fzf](https://github.com/sasha-computer/pi-chat-fzf) | Fuzzy find and resume pi coding agent sessions. Python + fzf. |
-| [pi-auto-summary](https://github.com/sasha-computer/pi-auto-summary) | Auto-save structured session logs when exiting pi. |
-| [pi-auto-router](https://github.com/sasha-computer/pi-auto-router) | Automatically routes prompts to Sonnet or Opus based on complexity. |
-| [x-likes](https://github.com/sasha-computer/x-likes) | Fuzzy search 13K+ X/Twitter likes from the terminal. SQLite FTS5 + fzf. |
-| [pif](https://github.com/sasha-computer/pif) | Run a command. If it fails, send the output to pi for help. |
-| [claude-code-usage](https://github.com/sasha-computer/claude-code-usage) | See your Claude Code rate limits in the macOS menu bar. Swift. |
-| [domain-search](https://github.com/sasha-computer/domain-search) | Search every TLD for available domains, right in the terminal. |
-| [plain-text-running-tracker](https://github.com/sasha-computer/plain-text-running-tracker) | Parse Apple Health exports and Garmin FIT files into a markdown running log. |
-| [runelite-firemaking](https://github.com/sasha-computer/runelite-firemaking) | RuneLite plugin that tracks firemaking session stats. |
-| [raycast-goodies](https://github.com/sasha-computer/raycast-goodies) | Raycast script commands for display control, focus modes, search, DNS switching. |
+## ⭐ [pi-auto-router](https://github.com/sasha-computer/pi-auto-router)
+
+A [pi](https://github.com/badlogic/pi-mono) extension that automatically routes prompts to the right model. Haiku classifies each prompt (~300ms, fractions of a cent), then switches to Sonnet or Opus before the agent runs. No more manual model switching.
+
+**Stack:** TypeScript · pi extension
+
+## ⭐ [pi-auto-summary](https://github.com/sasha-computer/pi-auto-summary)
+
+Auto-save structured session logs when exiting pi. If the session was substantial (5+ exchanges), generates a summary and saves it as a markdown log. Auto-commits to git if you're in a repo.
+
+**Stack:** TypeScript · pi extension
+
+## ⭐ [raycast-goodies](https://github.com/sasha-computer/raycast-goodies)
+
+Raycast script commands for display control, focus modes, search, DNS switching, and more. Small utilities that fill gaps in the default Raycast experience.
+
+**Stack:** Bash · AppleScript
+
+## ⭐ [sidebar](https://github.com/sasha-computer/sidebar)
+
+Permanent macOS desktop sidebar pinned to the right edge of a widescreen monitor. Shows calendar, Todoist tasks, Spotify now playing, clipboard history, system stats, downloads, screenshots, and a quick note input. Built as a Svelte + Tailwind app inside a Hammerspoon webview. Auto-hides when undocked.
+
+**Stack:** Svelte 5 · Tailwind v4 · Hammerspoon · Lua · Bun
+
+## ⭐ [readwise-triage](https://github.com/sasha-computer/readwise-triage)
+
+Tinder for your Readwise Reader inbox. Syncs your library to a local SQLite database, then shows articles one at a time as swipeable cards. Left to archive, right to keep. Down arrow gets an AI summary so you can decide without opening the article. Burns through a backlog of 200+ articles in a few minutes.
+
+**Stack:** TypeScript · Bun · SQLite · OpenRouter
+
+## ⭐ [pi-ghostty-sync](https://github.com/sasha-computer/pi-ghostty-sync)
+
+Matching dark/light themes for pi and Ghostty that follow your system appearance. Three pairs (Catppuccin, Everforest, High Contrast) where the terminal and pi's TUI use the exact same hex values. Polls macOS appearance and switches both automatically.
+
+**Stack:** TypeScript · pi extension
+
+## ⭐ [x-likes](https://github.com/sasha-computer/x-likes)
+
+Search your X/Twitter likes with fzf. Indexes 13K+ liked tweets in SQLite with full-text search so you can actually find that tweet you liked six months ago.
+
+**Stack:** Python · SQLite · fzf
+
+## ⭐ [plain-text-running-tracker](https://github.com/sasha-computer/plain-text-running-tracker)
+
+Parses Apple Health XML exports and Garmin FIT files into a single markdown file. Every run with date, distance, duration, pace, and heart rate. No cloud accounts, no subscriptions, just a `.md` file you can read, search, and version control. Plain text is forever.
+
+**Stack:** Python · uv
+
+## ⭐ [pif](https://github.com/sasha-computer/pif)
+
+Run a command. If it fails, send the output to [pi](https://github.com/badlogic/pi-mono) for help. That's it.
+
+**Stack:** Python · uv
+
+## ⭐ [pi-chat-fzf](https://github.com/sasha-computer/pi-chat-fzf)
+
+Fuzzy find and resume pi coding agent sessions. Indexes every message across all sessions so you can find that thing you worked on three days ago by typing a few words you remember.
+
+**Stack:** Python · uv · fzf
+
+## ⭐ [domain-search](https://github.com/sasha-computer/domain-search)
+
+Searches for available domains across basically every TLD right in the terminal. No API keys, no paid services. Uses DNS + RDAP checks with async lookups, finds domain hacks (e.g. `creati.ve`), and exports results to JSON/CSV.
+
+**Stack:** Python · asyncio · uv
+
+## ⭐ [claude-code-usage](https://github.com/sasha-computer/claude-code-usage)
+
+See your Claude Code rate limits in the macOS menu bar. Shows 5-hour and weekly usage percentages, color-coded so you know at a glance how close you are.
+
+**Stack:** Swift · macOS 14+
+
+## ⭐ [runelite-firemaking](https://github.com/sasha-computer/runelite-firemaking)
+
+RuneLite plugin that tracks firemaking session stats. XP, logs burned, time elapsed. The important things in life.
+
+**Stack:** Java · RuneLite
