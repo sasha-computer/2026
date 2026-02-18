@@ -140,3 +140,25 @@ A collection of handwritten coding problems in Python and Scheme, worked through
 **Stack:** Python · Scheme
 
 → [browse code](./practice-problems)
+
+---
+
+## Standalone repos (2026)
+
+Projects that got their own repo instead of living here.
+
+| Repo | What it does |
+|------|-------------|
+| [readwise-triage](https://github.com/sasha-computer/readwise-triage) | Swipe through your Readwise Reader inbox like Tinder. Bun + SQLite. |
+| [sidebar](https://github.com/sasha-computer/sidebar) | Permanent macOS desktop sidebar. Svelte + Tailwind in a Hammerspoon webview. |
+| [pi-ghostty-sync](https://github.com/sasha-computer/pi-ghostty-sync) | Auto-switching dark/light themes for pi + Ghostty. |
+| [pi-chat-fzf](https://github.com/sasha-computer/pi-chat-fzf) | Fuzzy find and resume pi coding agent sessions. Python + fzf. |
+| [pi-auto-summary](https://github.com/sasha-computer/pi-auto-summary) | Auto-save structured session logs when exiting pi. |
+| [pi-auto-router](https://github.com/sasha-computer/pi-auto-router) | Automatically routes prompts to Sonnet or Opus based on complexity. |
+| [x-likes](https://github.com/sasha-computer/x-likes) | Fuzzy search 13K+ X/Twitter likes from the terminal. SQLite FTS5 + fzf. |
+| [pif](https://github.com/sasha-computer/pif) | Run a command. If it fails, send the output to pi for help. |
+| [claude-code-usage](https://github.com/sasha-computer/claude-code-usage) | See your Claude Code rate limits in the macOS menu bar. Swift. |
+| [domain-search](https://github.com/sasha-computer/domain-search) | Search every TLD for available domains, right in the terminal. |
+| [plain-text-running-tracker](https://github.com/sasha-computer/plain-text-running-tracker) | Parse Apple Health exports and Garmin FIT files into a markdown running log. |
+| [runelite-firemaking](https://github.com/sasha-computer/runelite-firemaking) | RuneLite plugin that tracks firemaking session stats. |
+| [raycast-goodies](https://github.com/sasha-computer/raycast-goodies) | Raycast script commands for display control, focus modes, search, DNS switching. |
